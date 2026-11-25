@@ -10,7 +10,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      includeAssets: ['logo.svg', 'logo-192.png'],
+      includeAssets: ['app-icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'LePtiGrp',
         short_name: 'LePtiGrp',
@@ -21,9 +21,9 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
-          { src: 'logo-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'logo-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'logo-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'apple-touch-icon.png', sizes: '192x192', type: 'image/png' },
+          { src: 'app-icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'app-icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png}'] },

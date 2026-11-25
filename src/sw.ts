@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     if (wins.some((w) => w.visibilityState === 'visible' && new URL(w.url).pathname === data.url)) return
     await self.registration.showNotification(data.title, {
-      body: data.body, tag: data.tag, data: { url: data.url }, icon: '/logo-192.png', badge: '/logo-192.png',
+      body: data.body, tag: data.tag, data: { url: data.url }, icon: '/app-icon-192.png', badge: '/app-icon-192.png',
     })
   })())
 })

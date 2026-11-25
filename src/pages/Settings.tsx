@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -8,7 +8,8 @@ import { IconBack, IconShare } from '../components/Icons'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { ask, notify } from '../components/Dialog'
 import { Toggle } from '../components/Sheet'
-import { pushState, enablePush, disablePush, type PushState } from '../lib/push'
+import { pushState, enablePush, disablePush, isIos, type PushState } from '../lib/push'
+import { useOnResume } from '../lib/network'
 import { errMsg } from '../lib/supabase'
 
 export default function Settings() {
@@ -18,9 +19,18 @@ export default function Settings() {
   const appUrl = window.location.origin
   const [push, setPush] = useState<PushState | null>(null)
   useEffect(() => { pushState().then(setPush) }, [])
+  // Au retour des réglages du téléphone : si l'autorisation a été donnée, on active tout de suite
+  const recheck = useCallback(async () => {
+    const st = await pushState()
+    if (st === 'off' && 'Notification' in window && Notification.permission === 'granted') {
+      try { await enablePush() } catch { /* on laisse l'interrupteur */ }
+      setPush(await pushState())
+    } else setPush(st)
+  }, [])
+  useOnResume(recheck)
 
   const togglePush = async (on: boolean) => {
-    try { await (on ? enablePush() : disablePush()) } catch (e) { notify(errMsg(e)) }
+    try { await (on ? enablePush() : disablePush()) } catch (e) { if (errMsg(e) !== 'denied') notify(errMsg(e)) }
     setPush(await pushState())
   }
 
@@ -50,7 +60,7 @@ export default function Settings() {
       <div className="card">
         {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (voir plus bas), puis ouvre-la depuis l'icône pour activer les notifications.</p>
           : push === 'unsupported' ? <p className="muted small help">Ce navigateur ne gère pas les notifications.</p>
-          : push === 'denied' ? <p className="muted small help">Notifications bloquées : autorise-les pour LePtiGrp dans les réglages du téléphone.</p>
+          : push === 'denied' ? <DeniedGuide onCheck={recheck} />
           : push && <Toggle label="Activer sur cet appareil" checked={push === 'on'} onChange={togglePush} />}
         <p className="muted small help">Le détail (tous les messages, mentions, épinglés) se règle dans chaque conversation.</p>
       </div>
@@ -74,5 +84,22 @@ export default function Settings() {
 
       <ProfileEditor open={editProfile} onClose={() => setEditProfile(false)} />
     </Screen>
+  )
+}
+
+/** Le navigateur ne peut plus redemander l'autorisation : on explique où la rendre, selon le téléphone */
+function DeniedGuide({ onCheck }: { onCheck: () => void }) {
+  const steps = isIos()
+    ? ['Ouvre l\'app Réglages de l\'iPhone', 'Notifications', 'LePtiGrp', 'Active « Autoriser les notifications »']
+    : /android/i.test(navigator.userAgent)
+      ? ['Appui long sur l\'icône LePtiGrp', 'Infos sur l\'appli (ⓘ)', 'Notifications', 'Active « Toutes les notifications »']
+      : ['Clique sur le cadenas à gauche de l\'adresse du site', 'Notifications', 'Autoriser']
+  return (
+    <div className="denied-guide">
+      <p><b>Les notifications sont bloquées sur ce téléphone.</b> L'appli ne peut plus te les redemander, il faut les autoriser dans les réglages :</p>
+      <ol>{steps.map((s) => <li key={s}>{s}</li>)}</ol>
+      <p className="muted small">Reviens ensuite dans l'appli : elles s'activeront toutes seules.</p>
+      <button className="btn" onClick={onCheck}>Vérifier</button>
+    </div>
   )
 }

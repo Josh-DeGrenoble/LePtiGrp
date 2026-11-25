@@ -5,7 +5,7 @@ const VAPID = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
 export type PushState = 'unsupported' | 'needs-install' | 'denied' | 'on' | 'off'
 
-const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent)
+export const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent)
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
 
 export async function pushState(): Promise<PushState> {
@@ -30,7 +30,9 @@ async function save(sub: PushSubscription) {
 }
 
 export async function enablePush() {
-  if ((await Notification.requestPermission()) !== 'granted') throw new Error('Notifications refusées dans les réglages du téléphone')
+  const perm = await Notification.requestPermission()
+  if (perm === 'denied') throw new Error('denied')
+  if (perm !== 'granted') throw new Error('Tu as fermé la demande : réessaie et choisis « Autoriser ».')
   const reg = await navigator.serviceWorker.ready
   const sub = (await reg.pushManager.getSubscription())
     ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyToBytes(VAPID!) }))
