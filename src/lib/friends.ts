@@ -9,6 +9,8 @@ export async function loadFriends(): Promise<{ friends: FriendWithTags[]; tags: 
     supabase.from('tags').select('id,name,color').order('name'),
     supabase.from('friend_tags').select('tag_id,friend_id'),
   ])
+  const err = f.error ?? t.error ?? ft.error
+  if (err) throw err
   const tags = (t.data ?? []) as Tag[]
   const byId = new Map(tags.map((x) => [x.id, x]))
   const links = (ft.data ?? []) as { tag_id: string; friend_id: string }[]

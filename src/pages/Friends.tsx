@@ -21,7 +21,8 @@ export default function Friends() {
   const [filter, setFilter] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const r = await loadFriends()
+    let r
+    try { r = await loadFriends() } catch (e) { setMsg(`Erreur : ${errMsg(e)}`); return }
     setFriends(r.friends); setTags(r.tags)
     setEditing((e) => (e ? r.friends.find((f) => f.id === e.id) ?? null : null))
   }, [])
