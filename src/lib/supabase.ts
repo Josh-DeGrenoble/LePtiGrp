@@ -18,7 +18,7 @@ export type ConvSummary = {
 
 export type Conversation = {
   id: string; is_group: boolean; name: string | null; avatar_url: string | null
-  everyone_admin: boolean; admins_manage_pins: boolean; admins_manage_members: boolean
+  everyone_admin: boolean; permissions: Partial<Record<string, 'all' | 'admins' | 'super'>>
 }
 
 export type Member = {

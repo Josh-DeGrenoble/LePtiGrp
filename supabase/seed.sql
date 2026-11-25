@@ -105,7 +105,7 @@ begin
     (c_zamis, (u->>'camille')::uuid, '@Léa tu peux passer me chercher ?', array[(u->>'lea')::uuid], false, null, null, null, now() - interval '1 hour');
 
   -- Groupe "Escalade du jeudi" : Hugo est super admin, tu es simple membre
-  insert into public.conversations (is_group, name, created_by, admins_manage_pins) values (true, 'Escalade du jeudi', (u->>'hugo')::uuid, true)
+  insert into public.conversations (is_group, name, created_by, permissions) values (true, 'Escalade du jeudi', (u->>'hugo')::uuid, '{"mention_all":"admins"}')
     returning id into c_escalade;
   insert into public.members (conversation_id, user_id, role, joined_at) values
     (c_escalade, (u->>'hugo')::uuid, 'super_admin', now() - interval '10 days'),

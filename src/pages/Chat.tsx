@@ -75,7 +75,9 @@ export default function Chat() {
       <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
       <button className={`icon-btn pin-filter${pinnedOnly ? ' on' : ''}`} onClick={() => setPinnedOnly(!pinnedOnly)}
         aria-pressed={pinnedOnly} aria-label="Afficher uniquement les messages épinglés"><IconPin filled={pinnedOnly} /></button>
-    </>} footer={!pinnedOnly && c.mine && <Composer convId={id} members={c.members} me={me} />}>
+    </>} footer={!pinnedOnly && c.mine && (c.can('write')
+      ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
+      : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
       <div className="messages">
         {pinnedOnly && shown.length === 0 && <p className="empty">Aucun message épinglé.</p>}
         {shown.map((m) => (
@@ -87,7 +89,7 @@ export default function Chat() {
 
       <Sheet open={!!selected} onClose={() => { setSelected(null); setPinDate('') }} title="Message">
         {selected && <>
-          {c.canPin && <>
+          {c.can('pin') && <>
             {isPinned(selected) && <div className="pin-status">
               <IconPin size={16} filled /> Épinglé {selected.pinned_until ? `jusqu'au ${new Date(selected.pinned_until).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}` : 'sans limite'}
             </div>}
@@ -105,7 +107,7 @@ export default function Chat() {
             {isPinned(selected) && <SheetButton onClick={() => act(() => supabase.rpc('unpin_message', { msg: selected.id }))}>Désépingler</SheetButton>}
           </>}
           <SheetButton onClick={() => { navigator.clipboard?.writeText(selected.content); setSelected(null) }}>Copier</SheetButton>
-          {(selected.author_id === me || (c.isAdmin && c.conv?.is_group)) && <>
+          {(selected.author_id === me || c.can('delete_others')) && <>
             <div className="sheet-sep" />
             <SheetButton danger onClick={async () => (await ask('Supprimer ce message ?')) && act(() => supabase.rpc('delete_message', { msg: selected.id }))}>Supprimer</SheetButton>
           </>}
@@ -139,7 +141,7 @@ function renderMentions(text: string, names: Map<string, string>) {
 }
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-function Composer({ convId, members, me }: { convId: string; members: Member[]; me: string }) {
+function Composer({ convId, members, me, canMentionAll }: { convId: string; members: Member[]; me: string; canMentionAll: boolean }) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const input = useRef<HTMLTextAreaElement>(null)
@@ -148,7 +150,7 @@ function Composer({ convId, members, me }: { convId: string; members: Member[]; 
   // Suggestions quand le mot en cours commence par @
   const query = /(?:^|\s)@([^\s@]*)$/.exec(text)?.[1]
   const suggestions = query === undefined ? [] : [
-    ...('tous'.startsWith(query.toLowerCase()) ? [{ id: '*', name: 'tous' }] : []),
+    ...(canMentionAll && 'tous'.startsWith(query.toLowerCase()) ? [{ id: '*', name: 'tous' }] : []),
     ...others.map((m) => ({ id: m.user_id, name: m.profiles!.display_name }))
       .filter((s) => s.name.toLowerCase().startsWith(query.toLowerCase())),
   ]
@@ -164,7 +166,7 @@ function Composer({ convId, members, me }: { convId: string; members: Member[]; 
     const mentions = others.filter((m) => content.includes(`@${m.profiles!.display_name}`)).map((m) => m.user_id)
     setSending(true)
     const { error } = await supabase.from('messages').insert({
-      conversation_id: convId, author_id: me, content, mentions, mention_all: /(^|\s)@tous\b/.test(content),
+      conversation_id: convId, author_id: me, content, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(content),
     })
     setSending(false)
     if (error) return notify(errMsg(error))

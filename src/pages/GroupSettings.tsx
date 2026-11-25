@@ -1,4 +1,3 @@
-import { ask, notify } from '../components/Dialog'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, type Member, type Role } from '../lib/supabase'
@@ -9,6 +8,9 @@ import { Avatar } from '../components/Avatar'
 import { FriendPicker } from '../components/FriendPicker'
 import { IconBack, IconDown, IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconUserMinus } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
+import { ask, notify } from '../components/Dialog'
+import { AvatarChooser } from '../components/AvatarChooser'
+import { PERMISSIONS, LEVEL_LABEL, levelOf, type Level } from '../lib/permissions'
 
 const ROLE_LABEL: Record<Role, string> = { super_admin: 'Super admin', admin: 'Admin', member: 'Membre' }
 
@@ -21,6 +23,7 @@ export default function GroupSettings() {
   const [adding, setAdding] = useState(false)
   const [toAdd, setToAdd] = useState<string[]>([])
   const [renaming, setRenaming] = useState(false)
+  const [editPhoto, setEditPhoto] = useState(false)
 
   if (!c.conv || !c.mine) return null
   const conv = c.conv
@@ -33,13 +36,11 @@ export default function GroupSettings() {
     return !error
   }
 
-  const updateGroup = (patch: Partial<typeof conv>) => {
-    const next = { ...conv, ...patch }
-    call('update_group', {
-      conv: id, group_name: next.name, p_everyone_admin: next.everyone_admin,
-      p_admins_manage_pins: next.admins_manage_pins, p_admins_manage_members: next.admins_manage_members,
-    })
-  }
+  const updateInfo = (patch: { name?: string; avatar_url?: string | null }) =>
+    call('update_group_info', { conv: id, group_name: patch.name ?? conv.name, group_avatar: 'avatar_url' in patch ? patch.avatar_url : conv.avatar_url })
+
+  const updateSettings = (everyoneAdmin: boolean, permissions = conv.permissions) =>
+    call('update_group_settings', { conv: id, p_everyone_admin: everyoneAdmin, p_permissions: permissions })
 
   const toggleFav = async () => {
     await supabase.from('members').update({ is_favorite: !c.mine!.is_favorite }).eq('conversation_id', id).eq('user_id', me)
@@ -58,17 +59,21 @@ export default function GroupSettings() {
   }
 
   const effectiveRole = (m: Member): Role => (m.role === 'member' && conv.everyone_admin ? 'admin' : m.role)
+  // Super admin : tout le monde sauf soi ; sinon (droit "manage_admins") : pas les super admins
+  const canSetRole = (m: Member) => conv.is_group && m.user_id !== me && c.can('manage_admins') && (isSuper || m.role !== 'super_admin')
 
   return (
     <Screen header={<>
       <button className="icon-btn" onClick={() => nav(`/c/${id}`)} aria-label="Retour"><IconBack /></button>
       <div className="chat-title">
-        <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={conv.is_group} />
+        <button className="avatar-btn" disabled={!conv.is_group || !c.can('edit_info')} onClick={() => setEditPhoto(true)} aria-label="Changer la photo">
+          <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={conv.is_group} />
+        </button>
         {renaming ? (
           <input className="title-input" defaultValue={conv.name ?? ''} maxLength={40} autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(false) }}
-            onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== conv.name) updateGroup({ name: v }); setRenaming(false) }} />
-        ) : conv.is_group && isSuper ? (
+            onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== conv.name) updateInfo({ name: v }); setRenaming(false) }} />
+        ) : conv.is_group && c.can('edit_info') ? (
           <button className="title-edit" onClick={() => setRenaming(true)} aria-label="Renommer le groupe">
             <span>{c.title}</span><IconPencil />
           </button>
@@ -86,29 +91,39 @@ export default function GroupSettings() {
           return (
             <div key={m.user_id} className="member-row">
               <Avatar name={m.profiles?.display_name ?? '?'} url={m.profiles?.avatar_url} size={38} />
-              <button className="member-name" disabled={!isSuper || m.user_id === me || !conv.is_group} onClick={() => setRoleFor(m)}>
+              <button className="member-name" disabled={!canSetRole(m)} onClick={() => setRoleFor(m)}>
                 {m.profiles?.display_name}{m.user_id === me && ' (moi)'}
                 {conv.is_group && r !== 'member' && <span className="role-star" title={ROLE_LABEL[r]}><IconStar size={18} filled={r === 'super_admin'} /></span>}
               </button>
-              {c.canManageMembers && m.user_id !== me && (m.role !== 'super_admin' || isSuper) && (
+              {c.can('kick') && m.user_id !== me && (m.role === 'member' || isSuper) && (
                 <button className="icon-btn" onClick={() => kick(m)} aria-label="Exclure"><IconUserMinus /></button>
               )}
             </div>
           )
         })}
-        {c.canManageMembers && <button className="icon-btn add-member" onClick={() => setAdding(true)} aria-label="Ajouter des membres"><IconPlus /></button>}
+        {c.can('invite') && <button className="icon-btn add-member" onClick={() => setAdding(true)} aria-label="Ajouter des membres"><IconPlus /></button>}
       </div>
 
       {conv.is_group && (
         <div className="settings-block">
-          <Check label="Tout le monde admin ?" checked={conv.everyone_admin} disabled={!isSuper} onChange={(v) => updateGroup({ everyone_admin: v })} />
-          <Check label="Les admins peuvent gérer les msg importants" checked={conv.admins_manage_pins} disabled={!isSuper} onChange={(v) => updateGroup({ admins_manage_pins: v })} />
-          <Check label="Les admins peuvent exclure/inviter des membres" checked={conv.admins_manage_members} disabled={!isSuper} onChange={(v) => updateGroup({ admins_manage_members: v })} />
-          {!isSuper && <p className="muted small">Seul un super admin peut modifier ces options.</p>}
+          <div className="section-title">Droits</div>
+          <Check label="Tout le monde admin" checked={conv.everyone_admin} disabled={!isSuper} onChange={(v) => updateSettings(v)} />
+          {PERMISSIONS.map((p) => (
+            <div key={p.action} className={`perm-row${isSuper ? '' : ' disabled'}`}>
+              <span>{p.label}</span>
+              <div className="segmented">
+                {(['all', 'admins', 'super'] as Level[]).map((l) => (
+                  <button key={l} className={levelOf(conv, p.action) === l ? 'on' : ''} disabled={!isSuper}
+                    onClick={() => updateSettings(conv.everyone_admin, { ...conv.permissions, [p.action]: l })}>{LEVEL_LABEL[l]}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {!isSuper && <p className="muted small">Seul un super admin peut modifier les droits.</p>}
         </div>
       )}
 
-      {c.canPin && (
+      {c.can('pin') && (
         <button className="settings-row" onClick={async () => (await ask('Désépingler tous les messages ?')) && call('unpin_all', { conv: id })}>
           <IconPin filled /><span>Désépingler tous les messages</span>
         </button>
@@ -118,11 +133,15 @@ export default function GroupSettings() {
       </button>
 
       <Sheet open={!!roleFor} onClose={() => setRoleFor(null)} title={`Rôle de ${roleFor?.profiles?.display_name ?? ''}`}>
-        {roleFor && (['super_admin', 'admin', 'member'] as Role[]).map((r) => (
+        {roleFor && (['super_admin', 'admin', 'member'] as Role[]).filter((r) => isSuper || r !== 'super_admin').map((r) => (
           <SheetButton key={r} onClick={async () => { await call('set_member_role', { conv: id, member: roleFor.user_id, new_role: r }); setRoleFor(null) }}>
             {roleFor.role === r ? '✓ ' : ''}{ROLE_LABEL[r]}
           </SheetButton>
         ))}
+      </Sheet>
+
+      <Sheet open={editPhoto} onClose={() => setEditPhoto(false)} title="Photo du groupe">
+        <AvatarChooser name={c.title} value={conv.avatar_url} group onChange={async (url) => { await updateInfo({ avatar_url: url }); setEditPhoto(false) }} />
       </Sheet>
 
       <Sheet open={adding} onClose={() => { setAdding(false); setToAdd([]) }} title="Ajouter des membres">

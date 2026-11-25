@@ -8,7 +8,7 @@ Appli de chat de groupe (V1 : chat uniquement). PWA installable sur iPhone et An
 
 1. **Base de données** : Supabase > *SQL Editor* > *New query* > colle le contenu de [`supabase/schema.sql`](supabase/schema.sql) > *Run*.
    Pour avoir des amis et des convs de test : crée ton compte dans l'appli, puis lance [`supabase/seed.sql`](supabase/seed.sql) de la même façon.
-2. **Photos de profil** : lance aussi [`supabase/avatars.sql`](supabase/avatars.sql).
+2. **Photos et droits** : lance ensuite, dans l'ordre, [`supabase/avatars.sql`](supabase/avatars.sql) puis [`supabase/permissions.sql`](supabase/permissions.sql).
 3. **Auth** : Supabase > *Authentication* > *Sign In / Providers* > Email.
    Pour tester vite, tu peux désactiver *Confirm email* (sinon chaque inscrit doit cliquer un lien reçu par mail).
 4. **URL du site** : une fois l'appli en ligne, renseigne son adresse dans *Authentication* > *URL Configuration* > *Site URL*.
@@ -45,14 +45,14 @@ Alternatives : Netlify ou Cloudflare Pages (même principe, `npm run build`, dos
 
 Pas encore actifs : bouton réglages, flèche ▽, onglets Dépenses et Courses, médias, notifications push.
 
-## Rôles
+## Rôles et droits des groupes
 
-| | Super admin ★ | Admin ☆ | Membre |
-|---|---|---|---|
-| Écrire, supprimer ses messages | ✓ | ✓ | ✓ |
-| Supprimer les messages des autres | ✓ | ✓ | |
-| Épingler | ✓ | si option cochée | |
-| Inviter / exclure | ✓ | si option cochée | |
-| Modifier le groupe et les rôles | ✓ | | |
+Rôles : ★ super admin, ☆ admin, membre. Le super admin peut tout faire et règle les droits.
+Chaque droit se règle sur **Tous**, **Admins** ou **Super** (défaut entre parenthèses) :
+
+- Écrire des messages (Tous) · Mentionner @tous (Tous) · Épingler (Admins)
+- Supprimer les messages des autres (Admins) · Modifier nom et photo (Admins)
+- Inviter (Admins) · Exclure (Super) · Nommer/retirer des admins (Super)
 
 « Tout le monde admin » fait passer tous les membres au rang d'admin.
+Les règles sont appliquées dans la base (`public.can()`), l'appli ne fait que les refléter (`src/lib/permissions.ts`).
