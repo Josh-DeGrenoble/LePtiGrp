@@ -194,3 +194,4 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .title-edit { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 600; }
 .title-edit svg { color: var(--muted); flex: none; }
 .title-input { font-size: 18px; font-weight: 600; padding: 4px 10px; min-width: 0; }
+.pin-status { display: flex; align-items: center; gap: 6px; margin: 4px 6px; padding: 8px 12px; border-radius: 10px; background: var(--pinned); color: var(--pinned-text); font-weight: 600; font-size: 14px; }

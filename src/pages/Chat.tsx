@@ -87,10 +87,11 @@ export default function Chat() {
 
       <Sheet open={!!selected} onClose={() => { setSelected(null); setPinDate('') }} title="Message">
         {selected && <>
-          {c.canPin && (isPinned(selected) ? (
-            <SheetButton onClick={() => act(() => supabase.rpc('unpin_message', { msg: selected.id }))}>Désépingler</SheetButton>
-          ) : <>
-            <div className="sheet-section">Épingler pendant…</div>
+          {c.canPin && <>
+            {isPinned(selected) && <div className="pin-status">
+              <IconPin size={16} filled /> Épinglé {selected.pinned_until ? `jusqu'au ${new Date(selected.pinned_until).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}` : 'sans limite'}
+            </div>}
+            <div className="sheet-section">{isPinned(selected) ? 'Changer la durée :' : 'Épingler pendant…'}</div>
             <div className="pin-grid">
               {PIN_DURATIONS.map((d) => (
                 <button key={d.label} className="btn" onClick={() => pin(d.ms ? new Date(Date.now() + d.ms) : null)}>{d.label}</button>
@@ -101,7 +102,8 @@ export default function Chat() {
               <input type="datetime-local" value={pinDate} onChange={(e) => setPinDate(e.target.value)} />
               <button className="btn" disabled={!pinDate || new Date(pinDate) <= new Date()} onClick={() => pin(new Date(pinDate))}>OK</button>
             </div>
-          </>)}
+            {isPinned(selected) && <SheetButton onClick={() => act(() => supabase.rpc('unpin_message', { msg: selected.id }))}>Désépingler</SheetButton>}
+          </>}
           <SheetButton onClick={() => { navigator.clipboard?.writeText(selected.content); setSelected(null) }}>Copier</SheetButton>
           {(selected.author_id === me || (c.isAdmin && c.conv?.is_group)) && <>
             <div className="sheet-sep" />
