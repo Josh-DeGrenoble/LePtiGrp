@@ -7,7 +7,7 @@ export const PRESET_AVATARS = EMOJIS.map((e, i) => `emoji:${e}:${BGS[i % BGS.len
 /** Envoie une image recadrée dans Storage et renvoie son URL publique */
 export async function uploadAvatar(uid: string, blob: Blob) {
   const path = `${uid}/${Date.now()}.jpg`
-  const { error } = await supabase.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg', upsert: true })
+  const { error } = await supabase.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg' })
   if (error) throw error
   return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
 }
