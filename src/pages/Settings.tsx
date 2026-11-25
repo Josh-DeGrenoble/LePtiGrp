@@ -1,0 +1,59 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
+import { Screen } from '../components/Layout'
+import { Avatar } from '../components/Avatar'
+import { IconBack, IconShare } from '../components/Icons'
+import { ProfileEditor } from '../components/ProfileEditor'
+import { ask } from '../components/Dialog'
+
+export default function Settings() {
+  const { session, profile } = useAuth()
+  const [editProfile, setEditProfile] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const appUrl = window.location.origin
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(appUrl)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
+  const share = () => navigator.share?.({ title: 'LePtiGrp', text: 'Rejoins-moi sur LePtiGrp !', url: appUrl }).catch(() => {})
+
+  return (
+    <Screen header={<>
+      <Link to="/" className="icon-btn" aria-label="Retour"><IconBack /></Link>
+      <h1>Paramètres</h1><span className="icon-btn" />
+    </>}>
+      {profile && (
+        <button className="card me-card wide-btn" onClick={() => setEditProfile(true)}>
+          <Avatar name={profile.display_name} url={profile.avatar_url} size={52} />
+          <div className="me-info">
+            <div className="me-name">{profile.display_name}</div>
+            <div className="muted small">{session?.user.email}</div>
+          </div>
+          <span className="link">Modifier</span>
+        </button>
+      )}
+
+      <div className="section-title">Télécharger l'appli</div>
+      <div className="card">
+        <div className="copy-row">
+          <input readOnly value={appUrl} onFocus={(e) => e.target.select()} />
+          <button className="btn primary" onClick={copy}>{copied ? 'Copié !' : 'Copier'}</button>
+          {'share' in navigator && <button className="icon-btn" onClick={share} aria-label="Partager"><IconShare /></button>}
+        </div>
+        <p className="muted small help">
+          <b>iPhone</b> : ouvrir le lien dans Safari, Partager, « Sur l'écran d'accueil ».<br />
+          <b>Android</b> : ouvrir le lien dans Chrome, menu ⋮, « Installer l'application ».
+        </p>
+      </div>
+
+      <button className="settings-row danger" onClick={async () => (await ask('Se déconnecter ?')) && supabase.auth.signOut()}>
+        Se déconnecter
+      </button>
+
+      <ProfileEditor open={editProfile} onClose={() => setEditProfile(false)} />
+    </Screen>
+  )
+}

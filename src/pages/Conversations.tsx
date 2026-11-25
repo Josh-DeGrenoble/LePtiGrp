@@ -53,7 +53,7 @@ export default function Conversations() {
     <Screen header={<>
       <Link to="/friends" className="icon-btn" aria-label="Amis"><IconUser /></Link>
       <h1>Chat</h1>
-      <button className="icon-btn" disabled aria-label="Réglages (bientôt)"><IconGear /></button>
+      <Link to="/settings" className="icon-btn" aria-label="Paramètres"><IconGear /></Link>
     </>}>
       {loaded && convs.length === 0 && (
         <div className="empty">

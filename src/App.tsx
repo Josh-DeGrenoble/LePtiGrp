@@ -9,6 +9,7 @@ import Tags from './pages/Tags'
 import { DialogHost } from './components/Dialog'
 import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
+import Settings from './pages/Settings'
 import GroupSettings from './pages/GroupSettings'
 
 function Routed() {
@@ -21,6 +22,7 @@ function Routed() {
       <Route path="/friends" element={<Friends />} />
       <Route path="/add/:code" element={<AddFriend />} />
       <Route path="/tags" element={<Tags />} />
+      <Route path="/settings" element={<Settings />} />
       <Route path="/new" element={<NewGroup />} />
       <Route path="/c/:id" element={<Chat />} />
       <Route path="/c/:id/settings" element={<GroupSettings />} />

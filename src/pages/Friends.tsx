@@ -135,8 +135,6 @@ export default function Friends() {
         {friends.length === 0 && <p className="empty">Partage ton code ou ton lien pour ajouter tes premiers amis.</p>}
       </div>
 
-      <button className="link center-block" onClick={() => supabase.auth.signOut()}>Se déconnecter</button>
-
       <ProfileEditor open={editProfile} onClose={() => setEditProfile(false)} />
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing ? `Tags de ${editing.display_name}` : ''}>
