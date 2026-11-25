@@ -182,3 +182,6 @@ button.tag-row { width: 100%; }
 .crop-frame img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; pointer-events: none; }
 .cropper input[type=range] { width: 260px; padding: 0; accent-color: var(--primary); }
 .me-avatar { border-radius: 50%; }
+
+/* Pendant la saisie (clavier ouvert), la barre du bas se masque au lieu de remonter avec le clavier */
+.screen:has(.composer textarea:focus) .bottomnav { display: none; }
