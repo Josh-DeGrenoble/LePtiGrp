@@ -176,7 +176,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .search { margin: 12px 0 2px; }
 .tag-friend { display: flex; align-items: center; gap: 12px; padding: 7px 8px; border-radius: 12px; text-align: left; opacity: .5; filter: grayscale(1); transition: .15s; }
 .tag-friend.on { opacity: 1; filter: none; font-weight: 600; }
-.tag-friend span:nth-child(2) { flex: 1; }
+.tag-friend > span:nth-child(2) { flex: 1; }
 .tag-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted); flex: none; }
 /* Profil & recadrage */
 .profile-head { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
@@ -199,3 +199,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .copy-row { display: flex; gap: 8px; align-items: center; }
 .copy-row input { background: var(--bg); font-size: 14px; }
 .help { margin: 10px 2px 0; line-height: 1.6; }
+.picker-friend { opacity: 1; filter: none; }
+.picker-friend.on { background: var(--mention); }
+.picker-friend.on .tag-dot { background: var(--primary); border-color: var(--primary); }
+.picker-friend .chips .chip { font-size: 11px; padding: 0 7px; }
