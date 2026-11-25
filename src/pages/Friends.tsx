@@ -111,7 +111,7 @@ export default function Friends() {
       {msg && <p className="info center">{msg}</p>}
 
       {tags.length > 0 && (
-        <div className="chip-filter">
+        <div className="chip-filter truncate">
           {tags.map((t) => (
             <span key={t.id} className={filter && filter !== t.id ? 'dim' : ''}>
               <TagChip tag={t} onClick={() => setFilter(filter === t.id ? null : t.id)} />

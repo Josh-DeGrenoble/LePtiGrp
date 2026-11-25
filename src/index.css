@@ -196,3 +196,4 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .picker-friend.on { background: var(--mention); }
 .picker-friend.on .tag-dot { background: var(--primary); border-color: var(--primary); }
 .picker-friend .chips .chip { font-size: 11px; padding: 0 7px; }
+.chips .chip, .chip-filter.truncate .chip { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
