@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, errMsg, type Tag } from '../lib/supabase'
+import { norm } from '../lib/format'
 import { loadFriends, TAG_COLORS, type FriendWithTags } from '../lib/friends'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { IconBack, IconPencil, IconPlus } from '../components/Icons'
 import { ask, notify } from '../components/Dialog'
-
-const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
 /**
  * Page Tags : barre de tags en haut (un tag sélectionné), puis réglages du tag
@@ -94,10 +93,10 @@ export default function Tags() {
         {tags.map((t) => (
           <button key={t.id} className={`tag-tab${t.id === selId ? ' on' : ''}`} onClick={() => { setSelId(t.id); setRenaming(false) }}
             style={t.id === selId ? { background: t.color, borderColor: t.color } : { color: t.color, borderColor: t.color }}>
-            {t.name} <small>{friends.filter((f) => f.tags.some((x) => x.id === t.id)).length}</small>
+            <span className="tag-tab-name">{t.name}</span><small>{friends.filter((f) => f.tags.some((x) => x.id === t.id)).length}</small>
           </button>
         ))}
-        <button className="tag-tab new" onClick={create} aria-label="Nouveau tag"><IconPlus size={18} /></button>
+        <button className="tag-tab new" onClick={create} aria-label="Nouveau tag"><IconPlus size={16} /></button>
       </div>
 
       {!tag ? <p className="empty">Crée ton premier tag avec le bouton +. Les tags ne sont visibles que par toi.</p> : <>

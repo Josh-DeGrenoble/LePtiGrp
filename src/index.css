@@ -164,12 +164,14 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 
 /* Page Tags */
 .tag-bar { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; margin: 0 -10px; padding-inline: 10px; scrollbar-width: none; }
-.tag-tab { flex: none; padding: 6px 14px; border-radius: 99px; border: 2px solid; font-weight: 700; font-size: 14px; white-space: nowrap; }
+.tag-tab { flex: none; display: flex; align-items: center; gap: 4px; max-width: 130px; padding: 3px 10px; border-radius: 99px; border: 2px solid; font-weight: 700; font-size: 12px; white-space: nowrap; }
+.tag-tab-name { overflow: hidden; text-overflow: ellipsis; }
 .tag-tab.on { color: #fff; }
-.tag-tab small { opacity: .75; font-weight: 600; margin-left: 2px; }
-.tag-tab.new { border-style: dashed; border-color: var(--muted); color: var(--muted); display: grid; place-items: center; padding: 4px 10px; }
+.tag-tab small { opacity: .75; font-weight: 600; flex: none; }
+.tag-tab.new { border-style: dashed; border-color: var(--muted); color: var(--muted); padding: 2px 8px; }
 .tag-settings { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; background: var(--surface); border-radius: 16px; }
-.tag-settings .title-edit { font-size: 20px; }
+.tag-settings .title-edit { font-size: 20px; max-width: 100%; }
+.title-edit span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .small-colors .color { width: 24px; height: 24px; }
 .search { margin: 12px 0 2px; }
 .tag-friend { display: flex; align-items: center; gap: 12px; padding: 7px 8px; border-radius: 12px; text-align: left; opacity: .5; filter: grayscale(1); transition: .15s; }

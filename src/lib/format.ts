@@ -39,3 +39,6 @@ export function remaining(until: string | null) {
   if (h < 24) return `${h}h`
   return `${Math.round(h / 24)}j`
 }
+
+/** Pour la recherche : minuscules, sans accents ("Inès" = "ines" = "INES") */
+export const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
