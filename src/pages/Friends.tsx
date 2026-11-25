@@ -9,6 +9,7 @@ import { Avatar } from '../components/Avatar'
 import { TagChip } from '../components/TagChip'
 import { IconBack, IconShare, IconTag } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
+import { ProfileEditor } from '../components/ProfileEditor'
 
 export default function Friends() {
   const { profile } = useAuth()
@@ -20,6 +21,7 @@ export default function Friends() {
   const [editing, setEditing] = useState<FriendWithTags | null>(null)
   const [newTag, setNewTag] = useState('')
   const [filter, setFilter] = useState<string | null>(null)
+  const [editProfile, setEditProfile] = useState(false)
 
   const load = useCallback(async () => {
     let r
@@ -89,8 +91,10 @@ export default function Friends() {
     </>}>
       {profile && (
         <div className="card me-card">
-          <Avatar name={profile.display_name} url={profile.avatar_url} size={52} />
-          <div className="me-info">
+          <button className="me-avatar" onClick={() => setEditProfile(true)} aria-label="Modifier mon profil">
+            <Avatar name={profile.display_name} url={profile.avatar_url} size={52} />
+          </button>
+          <div className="me-info" onClick={() => setEditProfile(true)}>
             <div className="me-name">{profile.display_name}</div>
             <div className="me-code">Mon code : <b>{profile.friend_code}</b></div>
           </div>
@@ -132,6 +136,8 @@ export default function Friends() {
       </div>
 
       <button className="link center-block" onClick={() => supabase.auth.signOut()}>Se déconnecter</button>
+
+      <ProfileEditor open={editProfile} onClose={() => setEditProfile(false)} />
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing ? `Tags de ${editing.display_name}` : ''}>
         {editing && <>

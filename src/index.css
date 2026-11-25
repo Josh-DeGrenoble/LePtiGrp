@@ -171,3 +171,14 @@ button.tag-row { width: 100%; }
 .friend-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .friend-pill { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; border-radius: 99px; border: 2px solid var(--border); font-weight: 600; filter: grayscale(1); opacity: .45; transition: .15s; }
 .friend-pill.on { filter: none; opacity: 1; }
+
+/* Profil & recadrage */
+.profile-head { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px; margin-top: 6px; }
+.preset { display: grid; place-items: center; padding: 3px; border-radius: 50%; border: 3px solid transparent; }
+.preset.on { border-color: var(--primary); }
+.cropper { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.crop-frame { position: relative; overflow: hidden; border-radius: 50%; touch-action: none; cursor: grab; background: var(--surface); box-shadow: 0 0 0 3px var(--primary); }
+.crop-frame img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; pointer-events: none; }
+.cropper input[type=range] { width: 260px; padding: 0; accent-color: var(--primary); }
+.me-avatar { border-radius: 50%; }

@@ -7,6 +7,11 @@ function hash(s: string) {
 }
 
 export function Avatar({ name, url, size = 44, group }: { name: string; url?: string | null; size?: number; group?: boolean }) {
+  // Avatar prédéfini : "emoji:🦊:#f59e0b"
+  if (url?.startsWith('emoji:')) {
+    const [, emoji, bg] = url.split(':')
+    return <div className="avatar" style={{ width: size, height: size, background: bg, fontSize: size * 0.55 }}>{emoji}</div>
+  }
   if (url) return <img src={url} alt="" className="avatar" style={{ width: size, height: size }} />
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?'
   return (
