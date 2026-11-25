@@ -7,7 +7,7 @@ import { useConversation } from '../lib/conversation'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { FriendPicker } from '../components/FriendPicker'
-import { IconBack, IconDown, IconImages, IconLeave, IconPin, IconPlus, IconStar, IconUserMinus } from '../components/Icons'
+import { IconBack, IconDown, IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconUserMinus } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 
 const ROLE_LABEL: Record<Role, string> = { super_admin: 'Super admin', admin: 'Admin', member: 'Membre' }
@@ -20,6 +20,7 @@ export default function GroupSettings() {
   const [roleFor, setRoleFor] = useState<Member | null>(null)
   const [adding, setAdding] = useState(false)
   const [toAdd, setToAdd] = useState<string[]>([])
+  const [renaming, setRenaming] = useState(false)
 
   if (!c.conv || !c.mine) return null
   const conv = c.conv
@@ -63,19 +64,20 @@ export default function GroupSettings() {
       <button className="icon-btn" onClick={() => nav(`/c/${id}`)} aria-label="Retour"><IconBack /></button>
       <div className="chat-title">
         <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={conv.is_group} />
-        <span>{c.title}</span>
+        {renaming ? (
+          <input className="title-input" defaultValue={conv.name ?? ''} maxLength={40} autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(false) }}
+            onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== conv.name) updateGroup({ name: v }); setRenaming(false) }} />
+        ) : conv.is_group && isSuper ? (
+          <button className="title-edit" onClick={() => setRenaming(true)} aria-label="Renommer le groupe">
+            <span>{c.title}</span><IconPencil />
+          </button>
+        ) : <span>{c.title}</span>}
       </div>
       <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
       <button className="icon-btn star" onClick={toggleFav} aria-label="Favori"><IconStar size={24} filled={c.mine.is_favorite} /></button>
     </>}>
       <div className="settings-row disabled"><span>Médias</span><IconImages /></div>
-
-      {conv.is_group && isSuper && (
-        <div className="settings-block">
-          <input className="plain-input" defaultValue={conv.name ?? ''} maxLength={40} placeholder="Nom du groupe"
-            onBlur={(e) => e.target.value.trim() && e.target.value !== conv.name && updateGroup({ name: e.target.value.trim() })} />
-        </div>
-      )}
 
       <div className="settings-block">
         <div className="section-title">Amis dans le groupe ({c.members.length})</div>

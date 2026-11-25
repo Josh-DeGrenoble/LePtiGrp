@@ -149,7 +149,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .settings-row.disabled { justify-content: flex-start; opacity: .6; }
 .settings-row.danger { color: var(--danger); font-weight: 600; }
 .settings-block { border-bottom: 1px solid var(--border); padding: 4px 4px 10px; }
-.plain-input { margin-top: 10px; }
 .member-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
 .member-name { flex: 1; display: flex; align-items: center; gap: 8px; text-align: left; }
 .role-star { color: var(--pinned); display: inline-flex; }
@@ -185,3 +184,6 @@ button.tag-row { width: 100%; }
 
 /* Pendant la saisie (clavier ouvert), la barre du bas se masque au lieu de remonter avec le clavier */
 .screen:has(.composer textarea:focus) .bottomnav { display: none; }
+.title-edit { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 600; }
+.title-edit svg { color: var(--muted); flex: none; }
+.title-input { font-size: 18px; font-weight: 600; padding: 4px 10px; min-width: 0; }
