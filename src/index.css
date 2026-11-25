@@ -88,7 +88,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 
 /* Sheet */
 .sheet-backdrop { position: fixed; inset: 0; background: #0006; display: flex; align-items: flex-end; justify-content: center; z-index: 10; animation: fade .15s; }
-.sheet { background: var(--bg); width: 100%; max-width: 640px; border-radius: 20px 20px 0 0; padding: 8px 16px calc(16px + env(safe-area-inset-bottom)); max-height: 85dvh; overflow-y: auto; animation: up .2s ease-out; }
+.sheet { background: var(--bg); width: 100%; max-width: 640px; border-radius: 20px 20px 0 0; padding: 8px 16px calc(16px + env(safe-area-inset-bottom)); max-height: 85dvh; overflow-y: auto; animation: up .2s ease-out; transition: transform .2s; overscroll-behavior: contain; }
 .sheet-handle { width: 40px; height: 4px; background: var(--surface2); border-radius: 4px; margin: 4px auto 10px; }
 .sheet-title { font-weight: 700; text-align: center; margin-bottom: 8px; }
 .sheet-btn { display: block; width: 100%; text-align: left; padding: 13px 6px; border-radius: 10px; }

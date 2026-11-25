@@ -48,7 +48,7 @@ export function ImageCropper({ file, onCancel, onDone }: { file: File; onCancel:
 
   return (
     <div className="cropper">
-      <div className="crop-frame" style={{ width: VIEW, height: VIEW }}
+      <div className="crop-frame" data-no-swipe style={{ width: VIEW, height: VIEW }}
         onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { x: e.clientX - p.x, y: e.clientY - p.y } }}
         onPointerMove={(e) => drag.current && setPos({ x: e.clientX - drag.current.x, y: e.clientY - drag.current.y })}
         onPointerUp={() => { drag.current = null }}
