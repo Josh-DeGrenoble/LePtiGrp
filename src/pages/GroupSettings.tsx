@@ -1,3 +1,4 @@
+import { LimitedInput } from '../components/LimitedInput'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, type Member, type Role } from '../lib/supabase'
@@ -70,7 +71,7 @@ export default function GroupSettings() {
           <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={conv.is_group} />
         </button>
         {renaming ? (
-          <input className="title-input" defaultValue={conv.name ?? ''} maxLength={40} autoFocus
+          <LimitedInput className="title-input" defaultValue={conv.name ?? ''} max={40} autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(false) }}
             onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== conv.name) updateInfo({ name: v }); setRenaming(false) }} />
         ) : conv.is_group && c.can('edit_info') ? (

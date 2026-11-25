@@ -1,3 +1,4 @@
+import { LimitedInput } from './LimitedInput'
 import { supabase, errMsg } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { AvatarChooser } from './AvatarChooser'
@@ -18,7 +19,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Sheet open={open} onClose={onClose} title="Mon profil">
       <AvatarChooser name={profile.display_name} value={profile.avatar_url} onChange={(url) => save({ avatar_url: url })}>
-        <input defaultValue={profile.display_name} maxLength={30} placeholder="Ton nom"
+        <LimitedInput defaultValue={profile.display_name} max={30} placeholder="Ton nom"
           onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== profile.display_name) save({ display_name: v }) }} />
       </AvatarChooser>
     </Sheet>

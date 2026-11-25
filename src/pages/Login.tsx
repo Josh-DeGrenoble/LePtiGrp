@@ -1,3 +1,4 @@
+import { LimitedInput } from '../components/LimitedInput'
 import { useState } from 'react'
 import { supabase, errMsg } from '../lib/supabase'
 
@@ -32,7 +33,7 @@ export default function Login() {
       <h1 className="logo">LePtiGrp</h1>
       <form onSubmit={submit} className="card form">
         {mode === 'signup' && (
-          <input placeholder="Ton prénom / pseudo" value={name} onChange={(e) => setName(e.target.value)} required maxLength={30} />
+          <LimitedInput placeholder="Ton prénom / pseudo" value={name} onChange={(e) => setName(e.target.value)} required max={30} />
         )}
         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
         <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}

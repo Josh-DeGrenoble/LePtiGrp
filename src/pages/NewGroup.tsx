@@ -1,3 +1,4 @@
+import { LimitedInput } from '../components/LimitedInput'
 import { notify } from '../components/Dialog'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -29,7 +30,7 @@ export default function NewGroup() {
         Créer le groupe{ids.length ? ` (${ids.length + 1})` : ''}
       </button></div>
     }>
-      <div className="card form"><input placeholder="Nom du groupe" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} autoFocus /></div>
+      <div className="card form"><LimitedInput placeholder="Nom du groupe" value={name} max={40} onChange={(e) => setName(e.target.value)} autoFocus /></div>
       <div className="section-title">Membres</div>
       <FriendPicker selected={ids} onChange={setIds} />
     </Screen>

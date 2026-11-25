@@ -1,3 +1,4 @@
+import { LimitedInput } from '../components/LimitedInput'
 import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -152,7 +153,7 @@ export default function Friends() {
             })}
           </div>
           <form className="inline-form" onSubmit={createTagFor}>
-            <input placeholder="Nouveau tag" value={newTag} maxLength={30} onChange={(e) => setNewTag(e.target.value)} />
+            <LimitedInput placeholder="Nouveau tag" value={newTag} max={30} onChange={(e) => setNewTag(e.target.value)} />
             <button className="btn" disabled={!newTag.trim()}>Créer</button>
           </form>
           <div className="sheet-sep" />

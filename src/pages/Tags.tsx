@@ -1,3 +1,4 @@
+import { LimitedInput } from '../components/LimitedInput'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, errMsg, type Tag } from '../lib/supabase'
@@ -103,7 +104,7 @@ export default function Tags() {
       {!tag ? <p className="empty">Crée ton premier tag avec le bouton +. Les tags ne sont visibles que par toi.</p> : <>
         <div className="tag-settings">
           {renaming ? (
-            <input className="title-input" defaultValue={tag.name} maxLength={30} autoFocus onFocus={(e) => e.target.select()}
+            <LimitedInput className="title-input" defaultValue={tag.name} max={30} autoFocus onFocus={(e) => e.target.select()}
               onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(false) }}
               onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== tag.name) update({ name: v }); setRenaming(false) }} />
           ) : (
