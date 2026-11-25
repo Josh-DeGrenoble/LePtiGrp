@@ -7,6 +7,9 @@ import Friends from './pages/Friends'
 import AddFriend from './pages/AddFriend'
 import Tags from './pages/Tags'
 import { DialogHost } from './components/Dialog'
+import { useEffect } from 'react'
+import { startOutbox, useOnline } from './lib/network'
+import { syncPush } from './lib/push'
 import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
@@ -14,9 +17,13 @@ import GroupSettings from './pages/GroupSettings'
 
 function Routed() {
   const { session, loading } = useAuth()
+  const online = useOnline()
+  const uid = session?.user.id
+  useEffect(() => { if (uid) { startOutbox(); syncPush() } }, [uid])
   if (loading) return <div className="splash">LePtiGrp</div>
   if (!session) return <Login />
-  return (
+  return (<>
+    {!online && <div className="offline-banner">Hors connexion · tes messages partiront dès le retour du réseau</div>}
     <Routes>
       <Route path="/" element={<Conversations />} />
       <Route path="/friends" element={<Friends />} />
@@ -28,7 +35,7 @@ function Routed() {
       <Route path="/c/:id/settings" element={<GroupSettings />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  )
+  </>)
 }
 
 export default function App() {

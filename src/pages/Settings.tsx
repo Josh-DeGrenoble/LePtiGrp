@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -6,13 +6,23 @@ import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { IconBack, IconShare } from '../components/Icons'
 import { ProfileEditor } from '../components/ProfileEditor'
-import { ask } from '../components/Dialog'
+import { ask, notify } from '../components/Dialog'
+import { Toggle } from '../components/Sheet'
+import { pushState, enablePush, disablePush, type PushState } from '../lib/push'
+import { errMsg } from '../lib/supabase'
 
 export default function Settings() {
   const { session, profile } = useAuth()
   const [editProfile, setEditProfile] = useState(false)
   const [copied, setCopied] = useState(false)
   const appUrl = window.location.origin
+  const [push, setPush] = useState<PushState | null>(null)
+  useEffect(() => { pushState().then(setPush) }, [])
+
+  const togglePush = async (on: boolean) => {
+    try { await (on ? enablePush() : disablePush()) } catch (e) { notify(errMsg(e)) }
+    setPush(await pushState())
+  }
 
   const copy = async () => {
     await navigator.clipboard.writeText(appUrl)
@@ -35,6 +45,15 @@ export default function Settings() {
           <span className="link">Modifier</span>
         </button>
       )}
+
+      <div className="section-title">Notifications</div>
+      <div className="card">
+        {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (voir plus bas), puis ouvre-la depuis l'icône pour activer les notifications.</p>
+          : push === 'unsupported' ? <p className="muted small help">Ce navigateur ne gère pas les notifications.</p>
+          : push === 'denied' ? <p className="muted small help">Notifications bloquées : autorise-les pour LePtiGrp dans les réglages du téléphone.</p>
+          : push && <Toggle label="Activer sur cet appareil" checked={push === 'on'} onChange={togglePush} />}
+        <p className="muted small help">Le détail (tous les messages, mentions, épinglés) se règle dans chaque conversation.</p>
+      </div>
 
       <div className="section-title">Télécharger l'appli</div>
       <div className="card">

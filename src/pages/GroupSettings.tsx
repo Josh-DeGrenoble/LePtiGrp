@@ -11,6 +11,7 @@ import { IconBack, IconDown, IconImages, IconPencil, IconLeave, IconPin, IconPlu
 import { Sheet, SheetButton } from '../components/Sheet'
 import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
+import { NotifToggles, type NotifPrefs } from '../components/NotifToggles'
 import { PERMISSIONS, LEVEL_LABEL, levelOf, type Level } from '../lib/permissions'
 
 const ROLE_LABEL: Record<Role, string> = { super_admin: 'Super admin', admin: 'Admin', member: 'Membre' }
@@ -42,6 +43,12 @@ export default function GroupSettings() {
 
   const updateSettings = (everyoneAdmin: boolean, permissions = conv.permissions) =>
     call('update_group_settings', { conv: id, p_everyone_admin: everyoneAdmin, p_permissions: permissions })
+
+  const setNotif = async (patch: Partial<NotifPrefs>) => {
+    const { error } = await supabase.from('members').update(patch).eq('conversation_id', id).eq('user_id', me)
+    if (error) notify(errMsg(error))
+    c.reload()
+  }
 
   const toggleFav = async () => {
     await supabase.from('members').update({ is_favorite: !c.mine!.is_favorite }).eq('conversation_id', id).eq('user_id', me)
@@ -103,6 +110,11 @@ export default function GroupSettings() {
           )
         })}
         {c.can('invite') && <button className="icon-btn add-member" onClick={() => setAdding(true)} aria-label="Ajouter des membres"><IconPlus /></button>}
+      </div>
+
+      <div className="settings-block">
+        <div className="section-title">Mes notifications</div>
+        <NotifToggles prefs={c.mine} onChange={setNotif} />
       </div>
 
       {conv.is_group && (

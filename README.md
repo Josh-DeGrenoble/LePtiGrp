@@ -15,6 +15,21 @@ Appli de chat de groupe (V1 : chat uniquement). PWA installable sur iPhone et An
 
 Les clés Supabase (publiques) sont dans `.env`.
 
+## Notifications push
+
+1. SQL Editor : lancer [`supabase/push.sql`](supabase/push.sql).
+2. SQL Editor : créer le secret `push_secret` dans le Vault (`select vault.create_secret('<secret>', 'push_secret');`).
+3. Edge Functions > *Deploy a new function* > *Via Editor* : nom `push`, coller [`supabase/functions/push/index.ts`](supabase/functions/push/index.ts), *Deploy*, puis désactiver *Verify JWT* dans ses réglages.
+4. Edge Functions > *Secrets* : `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUSH_SECRET` (même valeur que l'étape 2).
+5. Dans l'appli : Paramètres > Notifications > Activer (sur iPhone, depuis l'appli installée sur l'écran d'accueil).
+
+La clé VAPID publique est aussi dans `.env` (`VITE_VAPID_PUBLIC_KEY`).
+
+## Hors-ligne
+
+L'appli s'ouvre sans réseau (dernières convs et messages en cache). Un message écrit hors-ligne est mis en attente
+et part automatiquement au retour du réseau, sans doublon (`messages.client_id`). Les convs se rechargent au retour du réseau.
+
 ## Développement
 
 ```bash

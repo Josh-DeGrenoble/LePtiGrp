@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/supabase'
 import { useMe } from '../lib/auth'
+import { queueMessage, readCache, writeCache, useOnResume, usePending, dropPending, retryPending, type Pending } from '../lib/network'
 import { useConversation } from '../lib/conversation'
 import { messageDate, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
@@ -23,7 +24,8 @@ export default function Chat() {
   const me = useMe()
   const nav = useNavigate()
   const c = useConversation(id, me)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(`msgs:${id}`, []))
+  const pending = usePending(id)
   const [pinnedOnly, setPinnedOnly] = useState(false)
   const [selected, setSelected] = useState<Message | null>(null)
   const [pinDate, setPinDate] = useState('')
@@ -34,10 +36,19 @@ export default function Chat() {
     supabase.from('members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', id).eq('user_id', me).then()
   }, [id, me])
 
-  useEffect(() => {
-    supabase.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending: false }).limit(300)
-      .then(({ data }) => setMessages(((data ?? []) as Message[]).reverse()))
+  // Chargement (et rechargement au retour du réseau, pour rattraper les messages manqués)
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', id)
+      .order('created_at', { ascending: false }).limit(300)
+    if (error) return
+    const ms = (data as Message[]).reverse()
+    setMessages(ms); writeCache(`msgs:${id}`, ms.slice(-100))
     markRead()
+  }, [id, markRead])
+  useOnResume(load)
+
+  useEffect(() => {
+    load()
     const ch = supabase.channel(`msgs-${id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
         (p) => { setMessages((ms) => ms.some((m) => m.id === p.new.id) ? ms : [...ms, p.new as Message]); markRead() })
@@ -49,10 +60,12 @@ export default function Chat() {
     // rafraîchit les durées d'épinglage restantes
     const t = window.setInterval(() => tick((x) => x + 1), 60e3)
     return () => { supabase.removeChannel(ch); window.clearInterval(t) }
-  }, [id, markRead])
+  }, [id, markRead, load])
 
   const shown = pinnedOnly ? messages.filter((m) => isPinned(m)) : messages
-  useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [shown.length])
+  const sentIds = new Set(messages.map((m) => m.client_id))
+  const waiting = pinnedOnly ? [] : pending.filter((p) => !sentIds.has(p.client_id))
+  useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [shown.length, waiting.length])
 
   if (c.notFound) return <Screen header={<><Link to="/" className="icon-btn"><IconBack /></Link><h1>Introuvable</h1><span className="icon-btn" /></>}><p className="empty">Cette conversation n'existe plus ou tu n'en fais plus partie.</p></Screen>
 
@@ -84,6 +97,7 @@ export default function Chat() {
           <Bubble key={m.id} m={m} mine={m.author_id === me} author={names.get(m.author_id ?? '') ?? 'Ancien membre'}
             names={names} me={me} onMenu={() => setSelected(m)} />
         ))}
+        {waiting.map((p) => <PendingBubble key={p.client_id} p={p} />)}
         <div ref={bottom} />
       </div>
 
@@ -143,7 +157,6 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 function Composer({ convId, members, me, canMentionAll }: { convId: string; members: Member[]; me: string; canMentionAll: boolean }) {
   const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
   const input = useRef<HTMLTextAreaElement>(null)
   const others = useMemo(() => members.filter((m) => m.user_id !== me && m.profiles), [members, me])
 
@@ -162,14 +175,10 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
 
   const send = async () => {
     const content = text.trim()
-    if (!content || sending) return
+    if (!content) return
     const mentions = others.filter((m) => content.includes(`@${m.profiles!.display_name}`)).map((m) => m.user_id)
-    setSending(true)
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: convId, author_id: me, content, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(content),
-    })
-    setSending(false)
-    if (error) return notify(errMsg(error))
+    // Le message part dans la file d'attente : envoyé tout de suite, ou au retour du réseau
+    queueMessage({ conversation_id: convId, author_id: me, content, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(content) })
     setText('')
     input.current?.focus()
   }
@@ -189,8 +198,22 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
         <textarea ref={input} rows={1} placeholder="Message… (@ pour mentionner)" value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); send() } }} />
-        <button className="send" onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={send} disabled={!text.trim() || sending} aria-label="Envoyer"><IconSend /></button>
+        <button className="send" onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={send} disabled={!text.trim()} aria-label="Envoyer"><IconSend /></button>
       </div>
+    </div>
+  )
+}
+
+/** Message pas encore arrivé sur le serveur */
+function PendingBubble({ p }: { p: Pending }) {
+  return (
+    <div className={`bubble mine pending${p.failed ? ' failed' : ''}`}>
+      <div className="bubble-head">{p.failed ? '⚠️ Non envoyé' : '🕓 En attente de réseau…'}</div>
+      <div className="bubble-text">{p.content}</div>
+      {p.failed && <div className="pending-actions">
+        <button onClick={() => retryPending(p.client_id)}>Réessayer</button>
+        <button onClick={() => dropPending(p.client_id)}>Supprimer</button>
+      </div>}
     </div>
   )
 }

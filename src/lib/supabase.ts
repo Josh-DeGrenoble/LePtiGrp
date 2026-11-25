@@ -31,6 +31,7 @@ export type Message = {
   id: number; conversation_id: string; author_id: string | null; content: string
   mentions: string[]; mention_all: boolean
   pinned_at: string | null; pinned_until: string | null; pinned_by: string | null; created_at: string
+  client_id?: string | null
 }
 
 export function isPinned(m: Message, now = Date.now()) {

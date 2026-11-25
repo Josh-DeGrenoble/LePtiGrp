@@ -7,6 +7,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['logo.svg', 'logo-192.png'],
       manifest: {
         name: 'LePtiGrp',
@@ -23,7 +26,7 @@ export default defineConfig({
           { src: 'logo-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { navigateFallback: '/index.html' },
+      injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png}'] },
     }),
   ],
 })

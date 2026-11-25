@@ -7,20 +7,24 @@ import { shortDate } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { IconGear, IconPlus, IconUser, IconDown } from '../components/Icons'
-import { Sheet, SheetButton, Toggle } from '../components/Sheet'
+import { Sheet, SheetButton } from '../components/Sheet'
+import { NotifToggles } from '../components/NotifToggles'
+import { readCache, writeCache, useOnResume } from '../lib/network'
 import { useLongPress } from '../components/useLongPress'
 
 export default function Conversations() {
   const me = useMe()
-  const [convs, setConvs] = useState<ConvSummary[]>([])
+  const [convs, setConvs] = useState<ConvSummary[]>(() => readCache<ConvSummary[]>('convs', []))
   const [loaded, setLoaded] = useState(false)
   const [selected, setSelected] = useState<ConvSummary | null>(null)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc('my_conversations')
-    if (!error) setConvs(data as ConvSummary[])
+    if (!error) { setConvs(data as ConvSummary[]); writeCache('convs', data) }
     setLoaded(true)
   }, [])
+
+  useOnResume(load)
 
   useEffect(() => {
     load()
@@ -75,9 +79,7 @@ export default function Conversations() {
             {selected.is_favorite ? '☆ Retirer des favoris' : '★ Ajouter aux favoris'}
           </SheetButton>
           <div className="sheet-section">Notifications</div>
-          <Toggle label="Recevoir les notifications" checked={selected.notify_all} onChange={(v) => updateMember({ notify_all: v })} />
-          <Toggle label="Quand on me mentionne" checked={selected.notify_mentions} onChange={(v) => updateMember({ notify_mentions: v })} />
-          <Toggle label="Quand un message est épinglé" checked={selected.notify_pins} onChange={(v) => updateMember({ notify_pins: v })} />
+          <NotifToggles prefs={selected} onChange={updateMember} />
           <div className="sheet-sep" />
           <SheetButton danger onClick={async () => { await updateMember({ hidden_at: new Date().toISOString() }); setSelected(null) }}>
             Supprimer la conversation
