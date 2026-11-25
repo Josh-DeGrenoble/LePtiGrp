@@ -155,3 +155,19 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .role-star { color: var(--pinned); display: inline-flex; }
 .star { color: var(--pinned); }
 .add-member { margin: 4px 0 0 0; }
+
+/* Fenêtres de confirmation */
+.center-modal { align-items: center; padding: 24px; }
+.dialog { background: var(--bg); border-radius: 18px; padding: 20px; width: 100%; max-width: 340px; box-shadow: var(--shadow); animation: fade .15s; }
+.dialog p { margin: 0 0 18px; }
+.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.danger-btn { background: var(--danger); color: #fff; }
+
+/* Tag déplié */
+button.tag-row { width: 100%; }
+.tag-panel { border: 2px solid; border-radius: 16px; padding: 12px; margin: 8px 0; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.tag-panel-head { display: flex; gap: 8px; width: 100%; align-items: center; }
+.tag-name { font-weight: 700; }
+.friend-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.friend-pill { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; border-radius: 99px; border: 2px solid var(--border); font-weight: 600; filter: grayscale(1); opacity: .45; transition: .15s; }
+.friend-pill.on { filter: none; opacity: 1; }

@@ -1,3 +1,4 @@
+import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase, errMsg, type Tag } from '../lib/supabase'
@@ -47,7 +48,7 @@ export default function Friends() {
 
   const openDm = async (friendId: string) => {
     const { data, error } = await supabase.rpc('get_or_create_dm', { friend: friendId })
-    if (error) return alert(errMsg(error))
+    if (error) return notify(errMsg(error))
     nav(`/c/${data}`)
   }
 
@@ -57,7 +58,7 @@ export default function Friends() {
       ? supabase.from('friend_tags').insert({ tag_id: tag.id, friend_id: editing.id })
       : supabase.from('friend_tags').delete().eq('tag_id', tag.id).eq('friend_id', editing.id)
     const { error } = await q
-    if (error) alert(errMsg(error))
+    if (error) notify(errMsg(error))
     load()
   }
 
@@ -66,15 +67,15 @@ export default function Friends() {
     if (!editing || !newTag.trim()) return
     const { data, error } = await supabase.from('tags')
       .insert({ name: newTag.trim(), color: TAG_COLORS[tags.length % TAG_COLORS.length] }).select().single()
-    if (error) return alert(errMsg(error))
+    if (error) return notify(errMsg(error))
     await supabase.from('friend_tags').insert({ tag_id: data.id, friend_id: editing.id })
     setNewTag(''); load()
   }
 
   const remove = async () => {
-    if (!editing || !confirm(`Retirer ${editing.display_name} de tes amis ?`)) return
+    if (!editing || !(await ask(`Retirer ${editing.display_name} de tes amis ?`))) return
     const { error } = await supabase.rpc('remove_friend', { friend: editing.id })
-    if (error) return alert(errMsg(error))
+    if (error) return notify(errMsg(error))
     setEditing(null); load()
   }
 

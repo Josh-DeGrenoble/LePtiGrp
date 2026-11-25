@@ -1,3 +1,4 @@
+import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase, errMsg, type ConvSummary } from '../lib/supabase'
@@ -36,15 +37,15 @@ export default function Conversations() {
   const updateMember = async (patch: Partial<ConvSummary> & { hidden_at?: string }) => {
     if (!selected) return
     const { error } = await supabase.from('members').update(patch).eq('conversation_id', selected.id).eq('user_id', me)
-    if (error) return alert(errMsg(error))
+    if (error) return notify(errMsg(error))
     setSelected({ ...selected, ...patch })
     load()
   }
 
   const leave = async () => {
-    if (!selected || !confirm(`Quitter « ${selected.name} » ?`)) return
+    if (!selected || !(await ask(`Quitter « ${selected.name} » ?`))) return
     const { error } = await supabase.rpc('leave_conversation', { conv: selected.id })
-    if (error) return alert(errMsg(error))
+    if (error) return notify(errMsg(error))
     setSelected(null); load()
   }
 
@@ -93,7 +94,10 @@ function ConvRow({ c, onMenu }: { c: ConvSummary; onMenu: () => void }) {
   const name = c.name ?? 'Discussion'
   return (
     <div className="conv-row" {...press} role="button" tabIndex={0}>
-      <Avatar name={name} url={c.avatar_url} group={c.is_group} />
+      <button className="avatar-btn" aria-label="Paramètres" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
+        onClick={() => nav(`/c/${c.id}/settings`)}>
+        <Avatar name={name} url={c.avatar_url} group={c.is_group} />
+      </button>
       <div className="conv-main">
         <div className="conv-name">{name}</div>
         <div className="conv-last">{c.last_content ? `${c.last_author ?? '?'} : ${c.last_content}` : <i>Aucun message</i>}</div>

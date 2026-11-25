@@ -1,3 +1,4 @@
+import { ask, notify } from '../components/Dialog'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, type Member, type Role } from '../lib/supabase'
@@ -26,7 +27,7 @@ export default function GroupSettings() {
 
   const call = async (fn: string, args: Record<string, unknown>) => {
     const { error } = await supabase.rpc(fn, args)
-    if (error) alert(errMsg(error))
+    if (error) notify(errMsg(error))
     c.reload()
     return !error
   }
@@ -44,12 +45,12 @@ export default function GroupSettings() {
     c.reload()
   }
 
-  const kick = (m: Member) => confirm(`Exclure ${m.profiles?.display_name} ?`) && call('remove_member', { conv: id, member: m.user_id })
+  const kick = async (m: Member) => (await ask(`Exclure ${m.profiles?.display_name} ?`)) && call('remove_member', { conv: id, member: m.user_id })
 
   const leave = async () => {
     if (conv.is_group) {
-      if (confirm('Quitter la conversation ?') && (await call('leave_conversation', { conv: id }))) nav('/', { replace: true })
-    } else if (confirm('Supprimer la conversation de ta liste ?')) {
+      if ((await ask('Quitter la conversation ?')) && (await call('leave_conversation', { conv: id }))) nav('/', { replace: true })
+    } else if (await ask('Supprimer la conversation de ta liste ?')) {
       await supabase.from('members').update({ hidden_at: new Date().toISOString() }).eq('conversation_id', id).eq('user_id', me)
       nav('/', { replace: true })
     }
@@ -106,7 +107,7 @@ export default function GroupSettings() {
       )}
 
       {c.canPin && (
-        <button className="settings-row" onClick={() => confirm('Désépingler tous les messages ?') && call('unpin_all', { conv: id })}>
+        <button className="settings-row" onClick={async () => (await ask('Désépingler tous les messages ?')) && call('unpin_all', { conv: id })}>
           <IconPin filled /><span>Désépingler tous les messages</span>
         </button>
       )}

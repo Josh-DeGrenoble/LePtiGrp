@@ -13,7 +13,7 @@ export default defineConfig({
         short_name: 'LePtiGrp',
         description: 'Le chat de ton petit groupe',
         lang: 'fr',
-        theme_color: '#4f5bd5',
+        theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

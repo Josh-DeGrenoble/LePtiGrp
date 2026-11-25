@@ -1,3 +1,4 @@
+import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/supabase'
@@ -59,7 +60,7 @@ export default function Chat() {
 
   const act = async (fn: () => PromiseLike<{ error: unknown }>) => {
     const { error } = await fn()
-    if (error) alert(errMsg(error))
+    if (error) notify(errMsg(error))
     setSelected(null); setPinDate('')
   }
   const pin = (until: Date | null) => selected && act(() => supabase.rpc('pin_message', { msg: selected.id, until: until?.toISOString() ?? null }))
@@ -104,7 +105,7 @@ export default function Chat() {
           <SheetButton onClick={() => { navigator.clipboard?.writeText(selected.content); setSelected(null) }}>Copier</SheetButton>
           {(selected.author_id === me || (c.isAdmin && c.conv?.is_group)) && <>
             <div className="sheet-sep" />
-            <SheetButton danger onClick={() => confirm('Supprimer ce message ?') && act(() => supabase.rpc('delete_message', { msg: selected.id }))}>Supprimer</SheetButton>
+            <SheetButton danger onClick={async () => (await ask('Supprimer ce message ?')) && act(() => supabase.rpc('delete_message', { msg: selected.id }))}>Supprimer</SheetButton>
           </>}
         </>}
       </Sheet>
@@ -164,7 +165,7 @@ function Composer({ convId, members, me }: { convId: string; members: Member[]; 
       conversation_id: convId, author_id: me, content, mentions, mention_all: /(^|\s)@tous\b/.test(content),
     })
     setSending(false)
-    if (error) return alert(errMsg(error))
+    if (error) return notify(errMsg(error))
     setText('')
     input.current?.focus()
   }

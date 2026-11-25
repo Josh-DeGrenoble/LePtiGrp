@@ -1,3 +1,4 @@
+import { notify } from '../components/Dialog'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase, type Conversation, type Member, type Role } from './supabase'
 
@@ -12,7 +13,7 @@ export function useConversation(id: string, me: string) {
       supabase.from('conversations').select('*').eq('id', id).maybeSingle(),
       supabase.from('members').select('*, profiles(*)').eq('conversation_id', id).order('joined_at'),
     ])
-    if (c.error) { alert(`Erreur : ${c.error.message}`); return }
+    if (c.error) { notify(`Erreur : ${c.error.message}`); return }
     if (!c.data) { setNotFound(true); return }
     setConv(c.data as Conversation)
     setMembers((m.data ?? []) as Member[])

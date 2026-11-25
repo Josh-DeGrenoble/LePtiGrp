@@ -5,7 +5,8 @@ import Login from './pages/Login'
 import Conversations from './pages/Conversations'
 import Friends from './pages/Friends'
 import AddFriend from './pages/AddFriend'
-import { TagEdit, TagsList } from './pages/Tags'
+import Tags from './pages/Tags'
+import { DialogHost } from './components/Dialog'
 import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
 import GroupSettings from './pages/GroupSettings'
@@ -19,8 +20,7 @@ function Routed() {
       <Route path="/" element={<Conversations />} />
       <Route path="/friends" element={<Friends />} />
       <Route path="/add/:code" element={<AddFriend />} />
-      <Route path="/tags" element={<TagsList />} />
-      <Route path="/tags/:id" element={<TagEdit />} />
+      <Route path="/tags" element={<Tags />} />
       <Route path="/new" element={<NewGroup />} />
       <Route path="/c/:id" element={<Chat />} />
       <Route path="/c/:id/settings" element={<GroupSettings />} />
@@ -34,6 +34,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter><Routed /></BrowserRouter>
+      <DialogHost />
     </AuthProvider>
   )
 }

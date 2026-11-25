@@ -1,3 +1,4 @@
+import { notify } from '../components/Dialog'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase, errMsg } from '../lib/supabase'
@@ -15,7 +16,7 @@ export default function NewGroup() {
     setBusy(true)
     const { data, error } = await supabase.rpc('create_group', { group_name: name, member_ids: ids })
     setBusy(false)
-    if (error) return alert(errMsg(error))
+    if (error) return notify(errMsg(error))
     nav(`/c/${data}`, { replace: true })
   }
 
