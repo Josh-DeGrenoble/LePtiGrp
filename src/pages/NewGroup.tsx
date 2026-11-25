@@ -21,7 +21,7 @@ export default function NewGroup() {
   }
 
   return (
-    <Screen nav={false} header={<>
+    <Screen header={<>
       <Link to="/" className="icon-btn" aria-label="Retour"><IconBack /></Link>
       <h1>Nouveau groupe</h1><span className="icon-btn" />
     </>} footer={

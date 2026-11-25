@@ -7,7 +7,7 @@ import { loadFriends, friendLink, TAG_COLORS, type FriendWithTags } from '../lib
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { TagChip } from '../components/TagChip'
-import { IconBack, IconShare, IconTag } from '../components/Icons'
+import { IconBack, IconShare, IconTag, IconDown } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { ProfileEditor } from '../components/ProfileEditor'
 
@@ -87,6 +87,7 @@ export default function Friends() {
     <Screen header={<>
       <Link to="/" className="icon-btn" aria-label="Retour"><IconBack /></Link>
       <h1>Amis</h1>
+      <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
       <Link to="/tags" className="icon-btn" aria-label="Gérer les tags"><IconTag /></Link>
     </>}>
       {profile && (

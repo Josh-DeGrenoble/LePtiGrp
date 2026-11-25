@@ -35,10 +35,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .icon-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; color: var(--text); flex: none; }
 .icon-btn:not(:disabled):active { background: var(--surface); }
 .icon-btn:disabled { opacity: .35; }
-.bottomnav { display: flex; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
-.bottomnav > * { flex: 1; display: grid; place-items: center; height: 56px; color: var(--muted); }
-.bottomnav .active { background: var(--surface); color: var(--primary); }
-.bottomnav button:disabled { opacity: .45; }
 .footer-bar { padding: 10px; border-top: 1px solid var(--border); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
 
 /* Communs */
@@ -84,7 +80,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .conv-date { font-style: italic; font-size: 14px; color: var(--muted); }
 .badge { background: var(--primary); color: var(--primary-text); font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 7px; }
-.fab { position: fixed; right: max(20px, calc(50vw - 300px)); bottom: calc(76px + env(safe-area-inset-bottom)); width: 60px; height: 60px; border-radius: 50%; background: var(--text); color: var(--bg); display: grid; place-items: center; box-shadow: var(--shadow); }
+.fab { position: fixed; right: max(20px, calc(50vw - 300px)); bottom: calc(24px + env(safe-area-inset-bottom)); width: 60px; height: 60px; border-radius: 50%; background: var(--text); color: var(--bg); display: grid; place-items: center; box-shadow: var(--shadow); }
 
 /* Sheet */
 .sheet-backdrop { position: fixed; inset: 0; background: #0006; display: flex; align-items: flex-end; justify-content: center; z-index: 10; animation: fade .15s; }
@@ -189,9 +185,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .cropper input[type=range] { width: 260px; padding: 0; accent-color: var(--primary); }
 .me-avatar { border-radius: 50%; }
 
-/* Pendant une saisie (clavier ouvert), sur toutes les pages, la barre du bas se masque au lieu de remonter avec le clavier */
-.screen:has(textarea:focus, input:not([type=checkbox], [type=range], [type=file]):focus) .bottomnav { display: none; }
-.title-edit { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 600; }
 .title-edit svg { color: var(--muted); flex: none; }
 .title-input { font-size: 18px; font-weight: 600; padding: 4px 10px; min-width: 0; }
 .pin-status { display: flex; align-items: center; gap: 6px; margin: 4px 6px; padding: 8px 12px; border-radius: 10px; background: var(--pinned); color: var(--pinned-text); font-weight: 600; font-size: 14px; }

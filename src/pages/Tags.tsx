@@ -5,7 +5,7 @@ import { norm } from '../lib/format'
 import { loadFriends, TAG_COLORS, type FriendWithTags } from '../lib/friends'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBack, IconPencil, IconPlus } from '../components/Icons'
+import { IconBack, IconPencil, IconPlus, IconDown } from '../components/Icons'
 import { ask, notify } from '../components/Dialog'
 
 /**
@@ -87,7 +87,8 @@ export default function Tags() {
   return (
     <Screen header={<>
       <Link to="/friends" className="icon-btn" aria-label="Retour"><IconBack /></Link>
-      <h1>Tags</h1><span className="icon-btn" />
+      <h1>Tags</h1>
+      <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
     </>}>
       <div className="tag-bar">
         {tags.map((t) => (
