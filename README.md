@@ -1,0 +1,56 @@
+# LePtiGrp
+
+Appli de chat de groupe (V1 : chat uniquement). PWA installable sur iPhone et Android depuis un simple lien.
+
+**Stack** : React + TypeScript + Vite (PWA) · Supabase (Postgres, auth, temps réel).
+
+## Mise en route (une seule fois)
+
+1. **Base de données** : Supabase > *SQL Editor* > *New query* > colle le contenu de [`supabase/schema.sql`](supabase/schema.sql) > *Run*.
+2. **Auth** : Supabase > *Authentication* > *Sign In / Providers* > Email.
+   Pour tester vite, tu peux désactiver *Confirm email* (sinon chaque inscrit doit cliquer un lien reçu par mail).
+3. **URL du site** : une fois l'appli en ligne, renseigne son adresse dans *Authentication* > *URL Configuration* > *Site URL*.
+
+Les clés Supabase (publiques) sont dans `.env`.
+
+## Développement
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # version de prod dans dist/
+```
+
+## Mise en ligne (gratuit)
+
+**Vercel** (recommandé) : vercel.com > *Add New Project* > importe le dépôt GitHub > *Deploy*. Chaque push sur `main` redéploie.
+Alternatives : Netlify ou Cloudflare Pages (même principe, `npm run build`, dossier `dist`).
+
+## Installer l'appli sur un téléphone
+
+- **iPhone** : ouvre le lien dans Safari > bouton Partager > *Sur l'écran d'accueil*.
+- **Android** : ouvre le lien dans Chrome > menu ⋮ > *Installer l'application*.
+
+## Fonctionnalités V1
+
+- Compte email + mot de passe
+- Amis : code perso fixe à 5 chiffres ou lien `/add/12345`, ajout instantané, tags privés
+- Page tags : création, couleur, cocher/décocher les amis qui ont le tag
+- Discussions : privées (toucher un ami) ou groupes (bouton +), favoris en haut
+- Appui long sur une conv : favori, notifications, supprimer (masquer), quitter
+- Discussion : mentions `@prénom` / `@tous`, épinglage (durée ou date), filtre des épinglés, suppression
+- Paramètres de groupe : rôles (★ super admin, ☆ admin), inviter/exclure, options, désépingler tout, quitter
+
+Pas encore actifs : bouton réglages, flèche ▽, onglets Dépenses et Courses, médias, notifications push.
+
+## Rôles
+
+| | Super admin ★ | Admin ☆ | Membre |
+|---|---|---|---|
+| Écrire, supprimer ses messages | ✓ | ✓ | ✓ |
+| Supprimer les messages des autres | ✓ | ✓ | |
+| Épingler | ✓ | si option cochée | |
+| Inviter / exclure | ✓ | si option cochée | |
+| Modifier le groupe et les rôles | ✓ | | |
+
+« Tout le monde admin » fait passer tous les membres au rang d'admin.
