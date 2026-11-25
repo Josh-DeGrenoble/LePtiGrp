@@ -7,6 +7,7 @@ Appli de chat de groupe (V1 : chat uniquement). PWA installable sur iPhone et An
 ## Mise en route (une seule fois)
 
 1. **Base de données** : Supabase > *SQL Editor* > *New query* > colle le contenu de [`supabase/schema.sql`](supabase/schema.sql) > *Run*.
+   Pour avoir des amis et des convs de test : crée ton compte dans l'appli, puis lance [`supabase/seed.sql`](supabase/seed.sql) de la même façon.
 2. **Auth** : Supabase > *Authentication* > *Sign In / Providers* > Email.
    Pour tester vite, tu peux désactiver *Confirm email* (sinon chaque inscrit doit cliquer un lien reçu par mail).
 3. **URL du site** : une fois l'appli en ligne, renseigne son adresse dans *Authentication* > *URL Configuration* > *Site URL*.
