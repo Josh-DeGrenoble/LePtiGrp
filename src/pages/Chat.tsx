@@ -177,7 +177,7 @@ function Composer({ convId, members, me }: { convId: string; members: Member[]; 
       {suggestions.length > 0 && (
         <div className="suggestions">
           {suggestions.map((s) => (
-            <button key={s.id} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(s.name)}>
+            <button key={s.id} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(s.name)}>
               {s.id === '*' ? <b>@tous</b> : <><Avatar name={s.name} size={24} /> {s.name}</>}
             </button>
           ))}
@@ -187,7 +187,7 @@ function Composer({ convId, members, me }: { convId: string; members: Member[]; 
         <textarea ref={input} rows={1} placeholder="Message… (@ pour mentionner)" value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); send() } }} />
-        <button className="send" onClick={send} disabled={!text.trim() || sending} aria-label="Envoyer"><IconSend /></button>
+        <button className="send" onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={send} disabled={!text.trim() || sending} aria-label="Envoyer"><IconSend /></button>
       </div>
     </div>
   )

@@ -189,8 +189,8 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .cropper input[type=range] { width: 260px; padding: 0; accent-color: var(--primary); }
 .me-avatar { border-radius: 50%; }
 
-/* Pendant la saisie (clavier ouvert), la barre du bas se masque au lieu de remonter avec le clavier */
-.screen:has(.composer textarea:focus) .bottomnav { display: none; }
+/* Pendant une saisie (clavier ouvert), sur toutes les pages, la barre du bas se masque au lieu de remonter avec le clavier */
+.screen:has(textarea:focus, input:not([type=checkbox], [type=range], [type=file]):focus) .bottomnav { display: none; }
 .title-edit { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 600; }
 .title-edit svg { color: var(--muted); flex: none; }
 .title-input { font-size: 18px; font-weight: 600; padding: 4px 10px; min-width: 0; }
