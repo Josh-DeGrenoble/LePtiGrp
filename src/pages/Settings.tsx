@@ -144,8 +144,8 @@ function DeleteAccount({ open, onClose }: { open: boolean; onClose: () => void }
   }
   return (
     <Sheet open={open} onClose={onClose} title="Supprimer mon compte">
-      <p className="small">C'est <b>définitif</b> : ton profil, tes amis, tes clés de chiffrement, tes pense-bêtes, comptes et sondages perso, et tes dépenses seront effacés.
-        Tes messages restent visibles des autres, signés « ancien compte ». Dans les groupes, un autre membre prend le relais.</p>
+      <p className="small">C'est <b>définitif</b> : ton nom, ta photo, tes amis, tes clés de chiffrement et tes outils perso seront effacés, et tu quitteras toutes tes conversations.
+        Pour que les autres s'y retrouvent, tes messages, tes dépenses et ce que tu as pris dans les pense-bêtes restent, signés « Compte supprimé ».</p>
       <p className="small">Tape <b>SUPPRIMER</b> pour confirmer :</p>
       <input value={word} onChange={(e) => setWord(e.target.value)} placeholder="SUPPRIMER" autoCapitalize="characters" autoComplete="off" />
       <div className="inline-form">

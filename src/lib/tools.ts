@@ -98,3 +98,14 @@ export function usePeople(item: Pick<Shared, 'conversation_id' | 'participants'>
   }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
   return people
 }
+
+/** Profils cités (dépenses, prises) mais plus parmi les gens de l'outil : comptes supprimés, anciens membres */
+export function useGhosts(people: Profile[], ids: string[]) {
+  const missing = [...new Set(ids)].filter((id) => !people.some((p) => p.id === id)).sort().join()
+  const [ghosts, setGhosts] = useState<Profile[]>([])
+  useEffect(() => {
+    if (!missing || !people.length) return setGhosts([])
+    supabase.from('profiles').select('*').in('id', missing.split(',')).then(({ data }) => setGhosts((data as Profile[] | null) ?? []))
+  }, [missing]) // eslint-disable-line react-hooks/exhaustive-deps
+  return ghosts
+}

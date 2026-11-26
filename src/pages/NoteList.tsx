@@ -10,7 +10,7 @@ import { ask, notify } from '../components/Dialog'
 import { IconBack, IconPencil, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type List, type ListItem } from '../lib/supabase'
 import { readCache, writeCache, useOnResume } from '../lib/network'
-import { cachedTools, itemStatus, usePeople } from '../lib/tools'
+import { cachedTools, itemStatus, useGhosts, usePeople } from '../lib/tools'
 import { between, sections } from '../lib/notes'
 import { useMe } from '../lib/auth'
 
@@ -39,7 +39,8 @@ export default function NoteList() {
   const [qtyFor, setQtyFor] = useState<ListItem | null>(null)
   const [collapsed, setCollapsed] = useState<string[]>(() => readCache<string[]>(`collapsed:${id}`, []))
   const people = usePeople(list)
-  const nameOf = new Map(people.map((p) => [p.id, p.id === me ? 'Moi' : p.display_name]))
+  const ghosts = useGhosts(people, items.flatMap((i) => i.list_claims.map((c) => c.user_id)))
+  const nameOf = new Map([...people, ...ghosts].map((p) => [p.id, p.id === me ? 'Moi' : p.display_name]))
 
   const load = async () => {
     const [{ data: l }, { data: its, error }] = await Promise.all([

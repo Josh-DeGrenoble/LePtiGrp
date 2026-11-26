@@ -11,7 +11,7 @@ import { IconClose, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type Expense, type Ledger } from '../lib/supabase'
 import { readCache, writeCache, useOnResume } from '../lib/network'
 import { useMe } from '../lib/auth'
-import { cachedTools, euro, usePeople } from '../lib/tools'
+import { cachedTools, euro, useGhosts, usePeople } from '../lib/tools'
 
 /** Soldes en centimes : ce que chacun a payé moins sa part */
 function balances(expenses: Expense[]) {
@@ -56,7 +56,9 @@ export default function LedgerPage() {
   // dépense ouverte dans la fenêtre : 'new' pour en ajouter une
   const [editing, setEditing] = useState<Expense | 'new' | null>(null)
   const people = usePeople(ledger)
-  const nameOf = (uid: string) => (uid === me ? 'Moi' : people.find((p) => p.id === uid)?.display_name ?? '?')
+  const ghosts = useGhosts(people, expenses.flatMap((e) => [e.paid_by, ...e.split]))
+  const everyone = [...people, ...ghosts]
+  const nameOf = (uid: string) => (uid === me ? 'Moi' : everyone.find((p) => p.id === uid)?.display_name ?? '?')
 
   const load = async () => {
     const [{ data: l }, { data: ex }] = await Promise.all([
@@ -101,7 +103,7 @@ export default function LedgerPage() {
       footer={<div className="footer-bar"><button className="btn primary wide" onClick={() => setEditing('new')} disabled={!people.length}>Ajouter une dépense</button></div>}>
       <div className="card ledger-summary">
         <div className="ledger-total"><small>Total</small><b>{euro(total)}</b></div>
-        {people.map((p) => {
+        {everyone.map((p) => {
           const v = (bal.get(p.id) ?? 0) / 100
           return (
             <div key={p.id} className="ledger-person">
