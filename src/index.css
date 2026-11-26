@@ -721,3 +721,7 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .sgroup-card > .toggle-row + .toggle-row, .sgroup-card > .perm-row, .sgroup-card > .member-row + .member-row, .sgroup-card > .member-row + .srow { border-top: 1px solid var(--border); }
 .sgroup-card > .member-row { min-height: 0; padding: 8px 14px; }
 .sgroup-card > .member-row .member-name { flex: 1; text-align: left; display: flex; align-items: center; gap: 6px; }
+
+/* Message en cours d'envoi : coche grisée, qui devient normale à l'arrivée */
+.tick.wait { opacity: .35; }
+.tick { transition: opacity .25s; }

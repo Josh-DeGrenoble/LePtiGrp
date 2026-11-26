@@ -6,7 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/supabase'
 import { useAuth, useMe } from '../lib/auth'
-import { queueMessage, readCache, writeCache, useOnResume, usePending, dropPending, retryPending, type Pending } from '../lib/network'
+import { queueMessage, readCache, writeCache, useOnResume, usePending, dropPending, retryPending, onSent, type Pending } from '../lib/network'
 import { useConversation } from '../lib/conversation'
 import { eventLabel, hhmm, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
@@ -78,16 +78,22 @@ export default function Chat() {
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' },
         (p) => setMessages((ms) => ms.filter((m) => m.id !== (p.old as { id: number }).id)))
       .subscribe()
+    const off = onSent((m) => { if (m.conversation_id === id) setMessages((ms) => ms.some((x) => x.id === m.id) ? ms : [...ms, m]) })
     // rafraîchit les durées d'épinglage restantes
     const t = window.setInterval(() => tick((x) => x + 1), 60e3)
-    return () => { supabase.removeChannel(ch); window.clearInterval(t) }
+    return () => { supabase.removeChannel(ch); window.clearInterval(t); off() }
   }, [id, markRead, load])
 
   const keep = (it: Item) => !filter || (!!it.m && (filter === 'pinned' ? isPinned(it.m) : filter === 'polls' ? !!it.m.poll_id
     : filter === 'activity' ? it.m.kind === 'activity' : it.author === filter))
   const sentIds = new Set(messages.map((m) => m.client_id))
   const waiting = pending.filter((p) => !sentIds.has(p.client_id))
-  useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [messages.length, waiting.length])
+  // Bas de la conversation : d'un coup à l'ouverture, en douceur quand un message arrive
+  const opened = useRef(false)
+  useLayoutEffect(() => {
+    bottom.current?.scrollIntoView(opened.current ? { behavior: 'smooth', block: 'end' } : undefined)
+    opened.current = true
+  }, [messages.length, waiting.length])
   // Filtre épinglés : les autres messages se replient (CSS) ; on suit le bas pendant l'animation
   useEffect(() => {
     const end = Date.now() + 400
@@ -407,7 +413,8 @@ function PendingLine({ p }: { p: Pending }) {
   return (
     <div className={`line new${p.failed ? ' failed' : slow ? ' slow' : ''}`}>
       {p.photo && <Photo photo={p.photo} />}
-      {p.content && <div className="bubble-text">{p.content}</div>}
+      {/* même mise en page que le message envoyé (heure + coche grisée) : rien ne bouge quand il arrive */}
+      {p.content && <div className="bubble-text">{p.content}<span className="msg-meta">{hhmm(new Date(p.created_at))}<span className="tick wait" aria-label="Envoi…">✓</span></span></div>}
       {p.failed ? <>
         <div className="line-status">⚠️ Non envoyé</div>
         <div className="pending-actions">

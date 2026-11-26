@@ -301,6 +301,9 @@ export async function encryptMessage(p: { conversation_id: string; client_id: st
   if (p.content.length > 4000) throw new Error('Message trop long (4000 caractères max).')
   await ready()
   const { epoch, key } = await sendEpoch(p.conversation_id)
+  // Mon propre message : déjà connu en clair, pas besoin de le déchiffrer à son retour (pas de « Déchiffrement… » qui clignote)
+  plainCache.set(cacheKey({ conversation_id: p.conversation_id, client_id: p.client_id, epoch, author_id: null, content: null }),
+    { status: 'ok', text: p.content, mentions: p.mentions, mention_all: p.mention_all, photo: p.photo })
   return { epoch, ciphertext: sealMessage(me!, key, p.conversation_id, epoch, p.client_id, { t: p.content, m: p.mentions, a: p.mention_all, ...(p.photo ? { p: p.photo } : {}) }) }
 }
 

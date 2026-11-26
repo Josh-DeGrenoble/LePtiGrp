@@ -40,6 +40,11 @@ const listeners = new Set<() => void>()
 let outbox: Pending[] = readCache<Pending[]>(KEY, [])
 let flushing = false
 
+// Message enregistré par le serveur : transmis tout de suite au chat, sans attendre le temps réel
+// (sinon il disparaît un instant entre la fin de l'envoi et son retour)
+const sentListeners = new Set<(m: Message) => void>()
+export function onSent(cb: (m: Message) => void) { sentListeners.add(cb); return () => { sentListeners.delete(cb) } }
+
 function set(next: Pending[]) { outbox = next; writeCache(KEY, next); listeners.forEach((l) => l()) }
 
 export function usePending(convId: string) {
@@ -69,7 +74,9 @@ export async function flushOutbox() {
       let error: { message: string } | null
       try {
         const enc = await encryptMessage(p)
-        ;({ error } = await supabase.from('messages').upsert({ ...row, ...enc, content: null, has_media: !!photo }, { onConflict: 'client_id', ignoreDuplicates: true }))
+        let data: Message[] | null
+        ;({ data, error } = await supabase.from('messages').upsert({ ...row, ...enc, content: null, has_media: !!photo }, { onConflict: 'client_id', ignoreDuplicates: true }).select())
+        if (!error) data?.forEach((m) => sentListeners.forEach((l) => l(m)))
       } catch (e) {
         error = { message: (e as Error)?.message ?? String(e) }
       }
