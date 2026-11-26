@@ -9,7 +9,9 @@ import { useConversation } from '../lib/conversation'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { FriendPicker } from '../components/FriendPicker'
-import { IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconTrash, IconUserMinus } from '../components/Icons'
+import { IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconTrash, IconUserMinus, IconCalendar } from '../components/Icons'
+import { DatePicker } from '../components/DatePicker'
+import { eventLabel } from '../lib/format'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
@@ -31,6 +33,7 @@ export default function GroupSettings() {
   const [adding, setAdding] = useState(false)
   const [toAdd, setToAdd] = useState<string[]>([])
   const [renaming, setRenaming] = useState(false)
+  const [pickDate, setPickDate] = useState(false)
   const [editPhoto, setEditPhoto] = useState(false)
   const [friendIds, setFriendIds] = useState(() => cachedFriends().friends.map((f) => f.id))
   const [copied, setCopied] = useState(false)
@@ -49,6 +52,9 @@ export default function GroupSettings() {
 
   const updateInfo = (patch: { name?: string; avatar_url?: string | null }) =>
     call('update_group_info', { conv: id, group_name: patch.name ?? conv.name, group_avatar: 'avatar_url' in patch ? patch.avatar_url : conv.avatar_url })
+
+  const setEventDate = (d: Date | null) => call('set_group_event', { conv: id,
+    day: d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : null })
 
   const updateSettings = (everyoneAdmin: boolean, permissions = conv.permissions) =>
     call('update_group_settings', { conv: id, p_everyone_admin: everyoneAdmin, p_permissions: permissions })
@@ -101,6 +107,7 @@ export default function GroupSettings() {
         <button className="avatar-btn" disabled={!conv.is_group || !c.can('edit_info')} onClick={() => setEditPhoto(true)} aria-label="Changer la photo">
           <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={c.members.length > 2} />
         </button>
+        <div className="title-stack">
         {renaming ? (
           <LimitedInput className="title-input" defaultValue={conv.name ?? ''} max={40} autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(false) }}
@@ -110,10 +117,22 @@ export default function GroupSettings() {
             <span>{c.title}</span><IconPencil />
           </button>
         ) : <span>{c.title}</span>}
+        {conv.is_group && (conv.event_date || c.can('edit_info')) && (
+          <button className={`event-chip${conv.event_date ? ' set' : ''}`} disabled={!c.can('edit_info')} onClick={() => setPickDate(true)}
+            aria-label="Date de l'événement">
+            <IconCalendar size={15} />{conv.event_date ? eventLabel(conv.event_date) : 'Date'}
+          </button>
+        )}
+        </div>
       </div>
       <HeaderMenu convId={id} />
       <button className="icon-btn star" onClick={toggleFav} aria-label="Favori"><IconStar size={24} filled={c.mine.is_favorite} /></button>
     </>}>
+      <Sheet open={pickDate} onClose={() => setPickDate(false)} title="Date de l'événement">
+        <DatePicker single max={1} value={conv.event_date ? [new Date(conv.event_date + 'T12:00')] : []}
+          onChange={(ds) => { setEventDate(ds[0] ?? null); setPickDate(false) }} />
+        {conv.event_date && <SheetButton danger onClick={() => { setEventDate(null); setPickDate(false) }}>Retirer la date</SheetButton>}
+      </Sheet>
       <Link to={`/c/${id}/media`} className="settings-row"><span>Médias</span><IconImages /></Link>
       {other && (
         <button className="settings-row" onClick={copyCode}>

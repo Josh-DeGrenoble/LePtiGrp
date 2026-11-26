@@ -26,6 +26,8 @@ export type ConvSummary = {
 
 export type Conversation = {
   id: string; is_group: boolean; name: string | null; avatar_url: string | null
+  /** Date de l'événement du groupe (AAAA-MM-JJ), facultative */
+  event_date?: string | null
   everyone_admin: boolean; permissions: Partial<Record<string, 'all' | 'admins' | 'super'>>
 }
 

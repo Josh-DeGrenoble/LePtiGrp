@@ -28,6 +28,14 @@ export function messageDate(iso: string) {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${hhmm(d)}`
 }
 
+/** Date d'événement (AAAA-MM-JJ) : « Sam. 28 nov. », avec l'année si ce n'est pas cette année */
+export function eventLabel(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const s = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', ...(y !== new Date().getFullYear() ? { year: 'numeric' } : {}) })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 /** Temps restant d'un épinglage : "2j", "4h", "12min", "--" (sans limite) */
 export function remaining(until: string | null) {
   if (!until) return '--'

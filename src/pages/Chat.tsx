@@ -8,7 +8,7 @@ import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/su
 import { useAuth, useMe } from '../lib/auth'
 import { queueMessage, readCache, writeCache, useOnResume, usePending, dropPending, retryPending, type Pending } from '../lib/network'
 import { useConversation } from '../lib/conversation'
-import { hhmm, remaining } from '../lib/format'
+import { eventLabel, hhmm, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar, colorOf } from '../components/Avatar'
 import { IconCheck, IconClose, IconFilter, IconPin, IconPoll, IconBell, IconSend, IconCamera, IconImage } from '../components/Icons'
@@ -137,7 +137,7 @@ export default function Chat() {
       <Link to={`/c/${id}/settings`} className="chat-title">
         <Avatar name={c.title} url={c.conv?.is_group ? c.conv.avatar_url : c.other?.avatar_url} size={38} group={c.members.length > 2} />
         <span className="chat-title-text"><span>{c.title}</span>
-          <small>{c.conv?.is_group ? `${c.members.length} membres` : 'Infos de la discussion'}</small></span>
+          <small>{c.conv?.is_group ? `${c.members.length} membres${c.conv.event_date ? ` · ${eventLabel(c.conv.event_date)}` : ''}` : 'Infos de la discussion'}</small></span>
       </Link>
       <HeaderMenu convId={id} />
       <button className={`icon-btn chat-filter${filter ? ' on' : ''}`} onClick={() => setFilterOpen(true)}

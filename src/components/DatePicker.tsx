@@ -15,14 +15,15 @@ export const dateLabel = (d: Date) => {
  * Calendrier pour choisir des dates : jours un par un, ou plage (du… au…).
  * `value` est trié du plus tôt au plus tard ; `max` limite le nombre de jours.
  */
-export function DatePicker({ value, onChange, max }: { value: Date[]; onChange: (d: Date[]) => void; max: number }) {
+export function DatePicker({ value, onChange, max, single }: { value: Date[]; onChange: (d: Date[]) => void; max: number; single?: boolean }) {
   const today = startOfDay(new Date())
-  const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
+  const [month, setMonth] = useState(() => { const f = value[0] && value[0] > today ? value[0] : today; return new Date(f.getFullYear(), f.getMonth(), 1) })
   const [range, setRange] = useState(false)
   const [start, setStart] = useState<Date | null>(null)  // 1er jour de plage en attente du 2e
   const picked = new Set(value.map(key))
 
   const tap = (d: Date) => {
+    if (single) return onChange([d])  // une seule date (date d'un événement)
     if (!range) {
       const next = picked.has(key(d)) ? value.filter((x) => key(x) !== key(d)) : [...value, d]
       return onChange(next.sort((a, b) => +a - +b).slice(0, max))
@@ -42,10 +43,10 @@ export function DatePicker({ value, onChange, max }: { value: Date[]; onChange: 
 
   return (
     <div className="datepicker">
-      <div className="segmented share-modes">
+      {!single && <div className="segmented share-modes">
         <button className={!range ? 'on' : ''} onClick={() => { setRange(false); setStart(null) }}>Jours choisis</button>
         <button className={range ? 'on' : ''} onClick={() => { setRange(true); setStart(null); onChange([]) }}>Plage</button>
-      </div>
+      </div>}
       <div className="dp-head">
         <button className="icon-btn" onClick={() => shift(-1)} disabled={month <= new Date(today.getFullYear(), today.getMonth(), 1)} aria-label="Mois précédent"><IconBack size={20} /></button>
         <b>{month.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</b>
@@ -57,10 +58,10 @@ export function DatePicker({ value, onChange, max }: { value: Date[]; onChange: 
           ? <button key={i} className={`dp-day${picked.has(key(d)) ? ' on' : ''}${+d === +today ? ' today' : ''}`} disabled={d < today} onClick={() => tap(d)}>{d.getDate()}</button>
           : <span key={i} />)}
       </div>
-      <p className="muted small share-hint">
+      {!single && <p className="muted small share-hint">
         {range ? (start ? 'Touche le dernier jour de la plage.' : 'Touche le premier jour de la plage.') : 'Touche les jours à proposer.'}
         {value.length > 0 && ` ${value.length} jour${value.length > 1 ? 's' : ''} sélectionné${value.length > 1 ? 's' : ''}${value.length >= max ? ` (max ${max})` : ''}.`}
-      </p>
+      </p>}
     </div>
   )
 }
