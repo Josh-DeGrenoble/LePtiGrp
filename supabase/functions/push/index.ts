@@ -64,14 +64,16 @@ const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 async function sendTest(req: Request) {
   const { data: { user } } = await db.auth.getUser((req.headers.get('authorization') ?? '').replace('Bearer ', ''))
   if (!user) return Response.json({ error: 'not signed in' }, { status: 401, headers: cors })
-  const { data: subs } = await db.from('push_subscriptions').select('*').eq('user_id', user.id)
+  const { data: subs, error: subsError } = await db.from('push_subscriptions').select('*').eq('user_id', user.id)
+  // la fonction n'arrive pas à lire la base (clé service_role refusée…) : on le dit au lieu de répondre « aucun appareil »
+  if (subsError) return Response.json({ db_error: subsError.message, user: user.id }, { headers: cors })
   const payload = JSON.stringify({ title: '🔔 Test', body: 'Les notifications marchent !', url: '/settings', tag: 'test' })
   const results = await sendAll(subs ?? [], payload)
   return Response.json({
     subs: results.length,
     sent: results.filter((r) => r.status === 'fulfilled').length,
     errors: results.flatMap((r) => (r.status === 'rejected' ? [`${(r.reason as { statusCode?: number }).statusCode ?? '?'} ${String((r.reason as { body?: string }).body ?? r.reason).slice(0, 120)}`] : [])),
-    trigger_secret: !!Deno.env.get('PUSH_SECRET'), vapid: !!Deno.env.get('VAPID_PRIVATE_KEY'),
+    trigger_secret: !!Deno.env.get('PUSH_SECRET'), vapid: !!Deno.env.get('VAPID_PRIVATE_KEY'), user: user.id,
   }, { headers: cors })
 }
 
