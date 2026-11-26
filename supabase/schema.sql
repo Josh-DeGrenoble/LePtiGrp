@@ -25,7 +25,7 @@ create table public.tags (
   id         uuid primary key default gen_random_uuid(),
   owner_id   uuid not null default auth.uid() references public.profiles on delete cascade,
   name       text not null check (length(trim(name)) between 1 and 30),
-  color      text not null default '#7c8cf8',
+  color      text not null default '#2563eb',
   created_at timestamptz not null default now(),
   unique (owner_id, name)
 );
