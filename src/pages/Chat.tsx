@@ -66,6 +66,12 @@ export default function Chat() {
   const sentIds = new Set(messages.map((m) => m.client_id))
   const waiting = pinnedOnly ? [] : pending.filter((p) => !sentIds.has(p.client_id))
   useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [shown.length, waiting.length])
+  // Clavier ouvert / fermé : on garde les derniers messages visibles, comme WhatsApp
+  useEffect(() => {
+    const keep = () => bottom.current?.scrollIntoView({ block: 'end' })
+    window.addEventListener('app-resize', keep)
+    return () => window.removeEventListener('app-resize', keep)
+  }, [])
 
   if (c.notFound) return <Screen header={<><BackButton to="/" /><h1>Introuvable</h1><span className="icon-btn" /></>}><p className="empty">Cette conversation n'existe plus ou tu n'en fais plus partie.</p></Screen>
 
