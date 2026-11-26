@@ -14,6 +14,7 @@ export type ConvSummary = {
   id: string; is_group: boolean; name: string | null; avatar_url: string | null; other_user_id: string | null
   is_favorite: boolean; notify_all: boolean; notify_mentions: boolean; notify_pins: boolean
   last_message_at: string; last_content: string | null; last_author: string | null; unread: number
+  last_ciphertext?: string | null; last_epoch?: number | null; last_author_id?: string | null; last_client_id?: string | null
 }
 
 export type Conversation = {
@@ -28,7 +29,9 @@ export type Member = {
 }
 
 export type Message = {
-  id: number; conversation_id: string; author_id: string | null; content: string
+  id: number; conversation_id: string; author_id: string | null
+  /** En clair seulement pour les anciens messages et les cartes de sondage ; sinon `ciphertext` (voir lib/e2ee) */
+  content: string | null; ciphertext?: string | null; epoch?: number | null
   mentions: string[]; mention_all: boolean
   pinned_at: string | null; pinned_until: string | null; pinned_by: string | null; created_at: string
   client_id?: string | null; poll_id?: string | null

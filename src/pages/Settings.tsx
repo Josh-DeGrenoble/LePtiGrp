@@ -12,6 +12,8 @@ import { Toggle } from '../components/Sheet'
 import { pushState, enablePush, disablePush, isIos, type PushState } from '../lib/push'
 import { useOnResume } from '../lib/network'
 import { errMsg } from '../lib/supabase'
+import { identity, phraseOf, safetyCode } from '../lib/e2ee'
+import { b64 } from '../lib/crypto/core'
 
 export default function Settings() {
   const { session, profile } = useAuth()
@@ -64,6 +66,9 @@ export default function Settings() {
         <button className="settings-row" onClick={() => setAccount('password')}>Changer de mot de passe</button>
       </div>
 
+      <div className="section-title">Chiffrement de bout en bout</div>
+      <Encryption />
+
       <div className="section-title">Notifications</div>
       <div className="card">
         {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (voir plus bas), puis ouvre-la depuis l'icône pour activer les notifications.</p>
@@ -86,7 +91,7 @@ export default function Settings() {
         </p>
       </div>
 
-      <button className="settings-row danger" onClick={async () => (await ask('Se déconnecter ?')) && supabase.auth.signOut()}>
+      <button className="settings-row danger" onClick={async () => (await ask('Se déconnecter ? Il faudra ressaisir ta phrase de 12 mots pour relire tes messages sur ce téléphone.')) && supabase.auth.signOut()}>
         Se déconnecter
       </button>
 
@@ -109,6 +114,26 @@ function DeniedGuide({ onCheck }: { onCheck: () => void }) {
       <ol>{steps.map((s) => <li key={s}>{s}</li>)}</ol>
       <p className="muted small">Reviens ensuite dans l'appli : elles s'activeront toutes seules.</p>
       <button className="btn" onClick={onCheck}>Vérifier</button>
+    </div>
+  )
+}
+
+/** Code de sécurité de ce compte + phrase de récupération (affichée à la demande) */
+function Encryption() {
+  const id = identity()
+  const [show, setShow] = useState(false)
+  if (!id) return null
+  return (
+    <div className="card">
+      <p className="small">Mon code de sécurité, à comparer avec celui que voient tes amis (réglages d'une conversation) :</p>
+      <code className="safety-code">{safetyCode(b64(id.signPk), b64(id.boxPk))}</code>
+      {show
+        ? <><ol className="phrase-grid">{phraseOf(id.entropy).map((w, i) => <li key={i}><span>{i + 1}</span>{w}</li>)}</ol>
+            <button className="btn" onClick={() => setShow(false)}>Masquer</button></>
+        : <button className="btn" onClick={async () => (await ask('Afficher ta phrase de récupération ? Vérifie que personne ne regarde ton écran.')) && setShow(true)}>Afficher ma phrase de récupération</button>}
+      <p className="muted small help">Tes messages sont chiffrés sur ton téléphone : ni le serveur ni personne d'autre que les membres d'une conversation ne peut les lire.
+        Ta phrase de 12 mots est demandée sur un nouveau téléphone ou après une déconnexion. <b>Si tu la perds, ton historique chiffré est perdu</b> : personne ne peut la récupérer.
+        Restent visibles par le serveur : qui parle à qui, quand, les mentions, et les outils (pense-bêtes, comptes, sondages), pas encore chiffrés.</p>
     </div>
   )
 }

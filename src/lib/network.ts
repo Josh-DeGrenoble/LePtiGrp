@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { supabase, type Message } from './supabase'
+import { encryptMessage, forgetDevice, KeyChangedError } from './e2ee'
 
 // ---------- État de la connexion ----------
 
@@ -30,8 +31,8 @@ export function writeCache(key: string, value: unknown) {
 
 // ---------- File d'attente des messages (envoi hors-ligne) ----------
 
-export type Pending = Pick<Message, 'conversation_id' | 'author_id' | 'content' | 'mentions' | 'mention_all' | 'created_at'>
-  & { client_id: string; failed?: string }
+export type Pending = Pick<Message, 'conversation_id' | 'author_id' | 'mentions' | 'mention_all' | 'created_at'>
+  & { content: string; client_id: string; failed?: string }
 
 const KEY = 'outbox'
 const listeners = new Set<() => void>()
@@ -63,7 +64,14 @@ export async function flushOutbox() {
   try {
     for (const p of outbox.filter((x) => !x.failed)) {
       const { failed: _f, created_at: _c, ...row } = p
-      const { error } = await supabase.from('messages').upsert(row, { onConflict: 'client_id', ignoreDuplicates: true })
+      // Chiffré juste avant l'envoi, avec la clé à jour de la conversation
+      let error: { message: string } | null
+      try {
+        const enc = await encryptMessage(p)
+        ;({ error } = await supabase.from('messages').upsert({ ...row, ...enc, content: null }, { onConflict: 'client_id', ignoreDuplicates: true }))
+      } catch (e) {
+        error = { message: e instanceof KeyChangedError ? e.message : (e as Error)?.message ?? String(e) }
+      }
       if (!error) { set(outbox.filter((x) => x.client_id !== p.client_id)); continue }
       // Erreur réseau : on réessaiera ; erreur refusée par le serveur (droits…) : on la signale
       if (!navigator.onLine || /fetch|network|Failed/i.test(error.message)) break
@@ -86,4 +94,5 @@ export function startOutbox() {
 export function clearCache() {
   try { Object.keys(localStorage).filter((k) => k.startsWith('cache:')).forEach((k) => localStorage.removeItem(k)) } catch { /* rien */ }
   outbox = []
+  forgetDevice()
 }

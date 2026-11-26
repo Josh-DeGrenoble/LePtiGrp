@@ -61,11 +61,16 @@ Deno.serve(async (req) => {
 
   const { data: subs } = await db.from('push_subscriptions').select('*').in('user_id', recipients)
 
+  // Chiffrement de bout en bout : le serveur ne connaît pas le texte. Il envoie un texte neutre,
+  // plus le message chiffré s'il est assez court : le téléphone le déchiffre lui-même (service worker).
   const title = conv?.is_group ? conv.name : who
-  const body = event === 'pin'
-    ? `📌 ${who} a épinglé : ${short(msg.content)}`
-    : conv?.is_group ? `${who} : ${short(msg.content)}` : short(msg.content)
-  const payload = JSON.stringify({ title, body, url: `/c/${msg.conversation_id}`, tag: `${msg.conversation_id}-${event}` })
+  const prefix = event === 'pin' ? `📌 ${who} a épinglé : ` : conv?.is_group ? `${who} : ` : ''
+  const fallback = event === 'pin' ? `📌 ${who} a épinglé un message` : conv?.is_group ? `${who} : nouveau message` : 'Nouveau message'
+  const body = msg.ciphertext ? fallback : prefix + short(msg.content ?? '')
+  const e2ee = msg.ciphertext && msg.ciphertext.length <= 2800
+    ? { c: msg.conversation_id, e: msg.epoch, id: msg.client_id, ct: msg.ciphertext, a: msg.author_id, prefix }
+    : undefined
+  const payload = JSON.stringify({ title, body, url: `/c/${msg.conversation_id}`, tag: `${msg.conversation_id}-${event}`, e2ee })
 
   const results = await sendAll(subs ?? [], payload)
   return Response.json({ sent: results.filter((r) => r.status === 'fulfilled').length, total: results.length })

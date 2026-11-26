@@ -14,6 +14,7 @@ import { Avatar } from '../components/Avatar'
 import { IconPin, IconSend } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
+import { useDecrypted, usePins, keyChanged, type Plain } from '../lib/e2ee'
 
 const PIN_DURATIONS: { label: string; ms: number | null }[] = [
   { label: '1 heure', ms: 3600e3 },
@@ -33,6 +34,8 @@ export default function Chat() {
   const [pinDate, setPinDate] = useState('')
   const [, tick] = useState(0)
   const bottom = useRef<HTMLDivElement>(null)
+  const plainOf = useDecrypted(messages)
+  usePins()
 
   const markRead = useCallback(() => {
     supabase.from('members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', id).eq('user_id', me).then()
@@ -86,6 +89,8 @@ export default function Chat() {
   if (c.notFound) return <Screen header={<><BackButton to="/" /><h1>Introuvable</h1><span className="icon-btn" /></>}><p className="empty">Cette conversation n'existe plus ou tu n'en fais plus partie.</p></Screen>
 
   const names = new Map(c.members.map((m) => [m.user_id, m.profiles?.display_name ?? '?']))
+  const changed = c.members.filter((m) => keyChanged(m.user_id))
+  const selPlain = selected && plainOf(selected)
 
   const act = async (fn: () => PromiseLike<{ error: unknown }>) => {
     const { error } = await fn()
@@ -107,11 +112,14 @@ export default function Chat() {
     </>} footer={!pinnedOnly && c.mine && (c.can('write')
       ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
       : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
+      {changed.length > 0 && <Link to={`/c/${id}/settings#securite`} className="key-alert">
+        ⚠️ La clé de sécurité de {changed.map((m) => m.profiles?.display_name ?? '?').join(', ')} a changé. Vérifie-la avant d'écrire.
+      </Link>}
       <div className="messages">
         {pinnedOnly && pinnedCount === 0 && <p className="empty fade-in">Aucun message épinglé.</p>}
         {messages.map((m) => (
           <Fold key={m.id} hidden={pinnedOnly && !isPinned(m)}>
-            <Bubble m={m} mine={m.author_id === me} author={names.get(m.author_id ?? '') ?? 'Ancien membre'}
+            <Bubble m={m} plain={plainOf(m)} mine={m.author_id === me} author={names.get(m.author_id ?? '') ?? 'Ancien membre'}
               names={names} me={me} onMenu={() => setSelected(m)} />
           </Fold>
         ))}
@@ -138,7 +146,7 @@ export default function Chat() {
             </div>
             {isPinned(selected) && <SheetButton onClick={() => act(() => supabase.rpc('unpin_message', { msg: selected.id }))}>Désépingler</SheetButton>}
           </>}
-          <SheetButton onClick={() => { navigator.clipboard?.writeText(selected.content); setSelected(null) }}>Copier</SheetButton>
+          {selPlain?.text && <SheetButton onClick={() => { navigator.clipboard?.writeText(selPlain.text); setSelected(null) }}>Copier</SheetButton>}
           {(selected.author_id === me || c.can('delete_others')) && <>
             <div className="sheet-sep" />
             <SheetButton danger onClick={async () => (await ask('Supprimer ce message ?')) && act(() => supabase.rpc('delete_message', { msg: selected.id }))}>Supprimer</SheetButton>
@@ -154,17 +162,22 @@ function Fold({ hidden, children }: { hidden: boolean; children: React.ReactNode
   return <div className={`fold${hidden ? ' out' : ''}`} aria-hidden={hidden}><div className="fold-in">{children}</div></div>
 }
 
-function Bubble({ m, mine, author, names, me, onMenu }: { m: Message; mine: boolean; author: string; names: Map<string, string>; me: string; onMenu: () => void }) {
+function Bubble({ m, plain, mine, author, names, me, onMenu }: { m: Message; plain: Plain | undefined; mine: boolean; author: string; names: Map<string, string>; me: string; onMenu: () => void }) {
   const press = useLongPress(onMenu)
   const pinned = isPinned(m)
-  const mentionsMe = m.mention_all || m.mentions.includes(me)
+  const mentionsMe = !!plain && (plain.mention_all || plain.mentions.includes(me))
   return (
     <div className={`bubble${mine ? ' mine' : ''}${pinned ? ' pinned' : ''}${mentionsMe && !mine ? ' mentioned' : ''}${m.poll_id ? ' has-poll' : ''}`} {...press}>
       <div className="bubble-head">
         {!mine && <b>{author}</b>}{!mine && ' - '}{messageDate(m.created_at)}
+        {plain?.status === 'legacy' && !m.poll_id && <span className="e2ee-tag" title="Envoyé avant le chiffrement de bout en bout">non chiffré</span>}
+        {plain?.status === 'unverified' && <span className="e2ee-tag warn" title="Signature valide, mais la clé de l'auteur n'est pas confirmée">clé non confirmée</span>}
         {pinned && <span className="pin-info"><IconPin size={14} filled /> <i>{remaining(m.pinned_until)}</i></span>}
       </div>
-      <div className="bubble-text">{renderMentions(m.content, names)}</div>
+      <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
+        : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
+        : plain.status === 'invalid' ? <i className="muted">⚠️ Message altéré ou signature invalide</i>
+        : renderMentions(plain.text, names)}</div>
       {m.poll_id && <PollCard pollId={m.poll_id} compact />}
     </div>
   )

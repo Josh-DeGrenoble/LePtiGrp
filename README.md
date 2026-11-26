@@ -31,6 +31,17 @@ Les clés Supabase (publiques) sont dans `.env`.
 
 La clé VAPID publique est aussi dans `.env` (`VITE_VAPID_PUBLIC_KEY`).
 
+## Chiffrement de bout en bout
+
+1. SQL Editor : lancer [`supabase/e2ee.sql`](supabase/e2ee.sql) (relançable sans risque).
+2. Redéployer la fonction `push` (notifications sans texte en clair côté serveur).
+3. Dans l'appli, chacun crée sa phrase de récupération de 12 mots à la première ouverture.
+
+Fonctionnement : clés du compte dérivées de la phrase (libsodium : X25519 + Ed25519), une clé aléatoire par conversation
+(renouvelée à chaque arrivée ou départ d'un membre), scellée pour chaque membre ; messages chiffrés en XChaCha20-Poly1305 et signés.
+Le serveur ne stocke que des clés publiques. Phrase perdue = historique chiffré perdu. Les anciens messages restent en clair,
+marqués « non chiffré » (ligne facultative à la fin de `e2ee.sql` pour les supprimer). Les outils du menu ▽ ne sont pas encore chiffrés.
+
 ## Hors-ligne
 
 L'appli s'ouvre sans réseau (dernières convs et messages en cache). Un message écrit hors-ligne est mis en attente

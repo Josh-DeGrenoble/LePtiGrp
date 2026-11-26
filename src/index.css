@@ -439,3 +439,24 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .sheet input[type=range] { width: 100%; accent-color: var(--primary); padding: 0; margin: 8px 0; }
 .inline-form .btn.wide { margin-top: 0; flex: 1; }
 .hmenu-group + .hmenu-item { border-radius: 0 0 10px 10px; }
+
+/* ---------- Chiffrement de bout en bout ---------- */
+.login.e2ee { justify-content: flex-start; padding-top: max(24px, env(safe-area-inset-top)); }
+.login.e2ee h1 { margin: 8px 0 0; font-size: 22px; }
+.login.e2ee p { margin: 0; }
+.login.e2ee label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; }
+.e2ee-points { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; line-height: 1.4; }
+.phrase-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.phrase-grid li { background: var(--surface); border-radius: 10px; padding: 10px 12px; font-weight: 600; font-size: 16px; user-select: all; }
+.phrase-grid li span { color: var(--muted); font-weight: 400; font-size: 13px; margin-right: 8px; display: inline-block; min-width: 18px; }
+.card .phrase-grid { margin: 10px 0; }
+.safety-code { display: block; font-family: ui-monospace, monospace; font-size: 17px; letter-spacing: 1px; word-spacing: 6px; padding: 8px 0; color: var(--text); }
+.safety-row { padding: 10px 6px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.safety-row p { margin: 0; }
+.safety-row.changed { background: color-mix(in srgb, var(--danger) 8%, transparent); border-radius: 10px; padding: 10px; }
+.safety-head { display: flex; align-items: center; gap: 8px; }
+.e2ee-tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; background: var(--surface2); color: var(--muted); margin-left: 6px; }
+.e2ee-tag.ok { background: color-mix(in srgb, #16a34a 18%, transparent); color: #16a34a; }
+.e2ee-tag.warn { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+.bubble.mine .e2ee-tag { background: #fff3; color: inherit; }
+.key-alert { display: block; margin: 0 0 8px; padding: 10px 12px; border-radius: 12px; font-size: 14px; background: color-mix(in srgb, var(--danger) 12%, var(--bg)); color: var(--danger); }

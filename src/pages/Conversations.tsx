@@ -1,6 +1,6 @@
 import { HeaderMenu } from '../components/HeaderMenu'
 import { ask, notify } from '../components/Dialog'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase, errMsg, type ConvSummary } from '../lib/supabase'
 import { useMe } from '../lib/auth'
@@ -12,6 +12,7 @@ import { Sheet, SheetButton } from '../components/Sheet'
 import { NotifToggles } from '../components/NotifToggles'
 import { readCache, writeCache, useOnResume } from '../lib/network'
 import { useLongPress } from '../components/useLongPress'
+import { useDecrypted, type CipherRow } from '../lib/e2ee'
 
 export default function Conversations() {
   const me = useMe()
@@ -36,6 +37,19 @@ export default function Conversations() {
     return () => { supabase.removeChannel(ch) }
   }, [load, me])
 
+  // Dernier message : renvoyé chiffré par le serveur, déchiffré ici
+  const lastRows = useMemo(() => new Map<string, CipherRow>(convs.map((c) => [c.id, {
+    conversation_id: c.id, author_id: c.last_author_id ?? null, content: c.last_content,
+    ciphertext: c.last_ciphertext, epoch: c.last_epoch, client_id: c.last_client_id,
+  }])), [convs])
+  const rowList = useMemo(() => [...lastRows.values()], [lastRows])
+  const plainOf = useDecrypted(rowList)
+  const lastText = (c: ConvSummary) => {
+    const r = lastRows.get(c.id)
+    if (!r || (!r.content && !r.ciphertext)) return null
+    const p = plainOf(r)
+    return !p ? '🔒' : p.status === 'locked' ? '🔒 Message chiffré' : p.status === 'invalid' ? '⚠️ Message illisible' : p.text
+  }
   const favs = convs.filter((c) => c.is_favorite)
   const others = convs.filter((c) => !c.is_favorite)
 
@@ -68,9 +82,9 @@ export default function Conversations() {
         </div>
       )}
       <div className="conv-list">
-        {favs.map((c) => <ConvRow key={c.id} c={c} onMenu={() => setSelected(c)} />)}
+        {favs.map((c) => <ConvRow key={c.id} c={c} last={lastText(c)} onMenu={() => setSelected(c)} />)}
         {favs.length > 0 && others.length > 0 && <div className="conv-gap" />}
-        {others.map((c) => <ConvRow key={c.id} c={c} onMenu={() => setSelected(c)} />)}
+        {others.map((c) => <ConvRow key={c.id} c={c} last={lastText(c)} onMenu={() => setSelected(c)} />)}
       </div>
       <Link to="/new" className="fab" aria-label="Nouveau groupe"><IconPlus size={32} /></Link>
 
@@ -93,7 +107,7 @@ export default function Conversations() {
   )
 }
 
-function ConvRow({ c, onMenu }: { c: ConvSummary; onMenu: () => void }) {
+function ConvRow({ c, last, onMenu }: { c: ConvSummary; last: string | null; onMenu: () => void }) {
   const nav = useNavigate()
   const press = useLongPress(onMenu, () => nav(`/c/${c.id}`))
   const name = c.name ?? 'Discussion'
@@ -105,7 +119,7 @@ function ConvRow({ c, onMenu }: { c: ConvSummary; onMenu: () => void }) {
       </button>
       <div className="conv-main">
         <div className="conv-name">{name}</div>
-        <div className="conv-last">{c.last_content ? `${c.last_author ?? '?'} : ${c.last_content}` : <i>Aucun message</i>}</div>
+        <div className="conv-last">{last ? `${c.last_author ?? '?'} : ${last}` : <i>Aucun message</i>}</div>
       </div>
       <div className="conv-meta">
         <span className="conv-date">{shortDate(c.last_message_at)}</span>
