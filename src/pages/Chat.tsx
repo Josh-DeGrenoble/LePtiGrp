@@ -99,7 +99,9 @@ export default function Chat() {
   const groups: Item[][] = []
   items.forEach((it, i) => {
     const prev = items[i - 1]
-    if (prev && follows(prev, it) && !prev.m?.poll_id && !it.m?.poll_id) groups[groups.length - 1].push(it)
+    // un sondage ou un message épinglé a sa propre bulle (jaune pour l'épinglé)
+    const alone = (x: Item) => !!x.m && (!!x.m.poll_id || isPinned(x.m))
+    if (prev && follows(prev, it) && !alone(prev) && !alone(it)) groups[groups.length - 1].push(it)
     else groups.push([it])
   })
   const changed = c.members.filter((m) => keyChanged(m.user_id))
