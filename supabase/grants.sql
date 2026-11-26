@@ -29,7 +29,7 @@ begin
   end if;
   -- réglages de l'activité des outils (activity.sql)
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'members' and column_name = 'show_tools') then
-    grant update (show_tools, notify_activity) on public.members to authenticated;
-    grant update (show_tools_default, notify_activity_default) on public.profiles to authenticated;
+    grant update (show_tools, notify_tools) on public.members to authenticated;
+    grant update (show_tools_default, notify_tools_default) on public.profiles to authenticated;
   end if;
 end $$;

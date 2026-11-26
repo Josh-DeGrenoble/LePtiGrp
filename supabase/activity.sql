@@ -23,26 +23,19 @@ create trigger on_list_ledger before insert or update of ledger_id on public.lis
   for each row execute function public.check_list_ledger();
 
 -- ---------- Réglages : afficher / notifier l'activité ----------------
--- Afficher dans le chat : choix par outil ('list' pense-bêtes, 'poll' sondages, 'ledger' comptes).
--- Par conv (vide = réglage par défaut du profil). Par défaut : rien d'affiché, mais notifié.
+-- Par outil ('list' pense-bêtes, 'poll' sondages, 'ledger' comptes) : « Chat » (show_tools) et « Notif » (notify_tools).
+-- Par conv (vide = réglage par défaut du profil). Par défaut : rien dans le chat, tout en notif.
 drop function if exists public.my_conversations();
 alter table public.members drop column if exists show_activity;
 alter table public.profiles drop column if exists show_activity_default;
+alter table public.members drop column if exists notify_activity;
+alter table public.profiles drop column if exists notify_activity_default;
 alter table public.members add column if not exists show_tools text[];
-alter table public.members add column if not exists notify_activity boolean;
-do $$ begin
-  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'show_tools_default') then
-    alter table public.profiles add column show_tools_default text[] not null default '{}';
-    -- première version : la notif était coupée par défaut ; on passe tout le monde au nouveau défaut une seule fois
-    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'notify_activity_default') then
-      update public.profiles set notify_activity_default = true;
-    end if;
-  end if;
-end $$;
-alter table public.profiles add column if not exists notify_activity_default boolean not null default true;
-alter table public.profiles alter column notify_activity_default set default true;
-grant update (show_tools, notify_activity) on public.members to authenticated;
-grant update (show_tools_default, notify_activity_default) on public.profiles to authenticated;
+alter table public.members add column if not exists notify_tools text[];
+alter table public.profiles add column if not exists show_tools_default text[] not null default '{}';
+alter table public.profiles add column if not exists notify_tools_default text[] not null default '{list,poll,ledger}';
+grant update (show_tools, notify_tools) on public.members to authenticated;
+grant update (show_tools_default, notify_tools_default) on public.profiles to authenticated;
 
 -- ---------- Messages d'activité ---------------------------------------
 alter table public.messages add column if not exists kind text not null default 'msg';
@@ -175,7 +168,7 @@ returns table (
   is_favorite boolean, notify_all boolean, notify_mentions boolean, notify_pins boolean,
   last_message_at timestamptz, last_content text, last_author text, unread int,
   last_ciphertext text, last_epoch int, last_author_id uuid, last_client_id uuid,
-  show_tools text[], notify_activity boolean, last_kind text)
+  show_tools text[], notify_tools text[], last_kind text)
 language sql stable security definer set search_path = public as $$
   select c.id, c.is_group,
          case when c.is_group then c.name else op.display_name end,
@@ -187,7 +180,7 @@ language sql stable security definer set search_path = public as $$
              and x.created_at > m.last_read_at and x.author_id <> auth.uid()
              and (x.kind = 'msg' or x.tool = any(sa.v))),
          lm.ciphertext, lm.epoch, lm.author_id, lm.client_id,
-         m.show_tools, m.notify_activity, lm.kind
+         m.show_tools, m.notify_tools, lm.kind
     from members m
     join conversations c on c.id = m.conversation_id
     join profiles me on me.id = m.user_id

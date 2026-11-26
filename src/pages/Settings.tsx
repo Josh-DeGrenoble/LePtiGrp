@@ -14,8 +14,7 @@ import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Sheet } from '../components/Sheet'
 import { QrSheet } from '../components/Qr'
-import { ToolIcon } from '../components/ToolIcon'
-import { TOOL_LABELS } from '../components/NotifToggles'
+import { ToolPrefsGrid, ALL_TOOLS } from '../components/NotifToggles'
 import type { ToolKey } from '../lib/supabase'
 import { pushState, enablePush, disablePush, isIos, testPush, type PushState } from '../lib/push'
 import { useOnResume } from '../lib/network'
@@ -26,27 +25,17 @@ import { identity } from '../lib/e2ee'
 function ActivityDefaults() {
   const { profile, refreshProfile } = useAuth()
   const [show, setShow] = useState<ToolKey[]>(profile?.show_tools_default ?? [])
-  const [notif, setNotif] = useState(profile?.notify_activity_default ?? true)
-  useEffect(() => { setShow(profile?.show_tools_default ?? []); setNotif(profile?.notify_activity_default ?? true) }, [profile])
-  const save = async (patch: { show_tools_default?: ToolKey[]; notify_activity_default?: boolean }) => {
-    if (patch.show_tools_default) setShow(patch.show_tools_default)
-    if (patch.notify_activity_default !== undefined) setNotif(patch.notify_activity_default)
-    const { error } = await supabase.from('profiles').update(patch).eq('id', profile!.id)
+  const [notif, setNotif] = useState<ToolKey[]>(profile?.notify_tools_default ?? ALL_TOOLS)
+  useEffect(() => { setShow(profile?.show_tools_default ?? []); setNotif(profile?.notify_tools_default ?? ALL_TOOLS) }, [profile])
+  const save = async (p: { show?: ToolKey[]; notify?: ToolKey[] }) => {
+    if (p.show) setShow(p.show)
+    if (p.notify) setNotif(p.notify)
+    const { error } = await supabase.from('profiles').update({ ...(p.show && { show_tools_default: p.show }), ...(p.notify && { notify_tools_default: p.notify }) }).eq('id', profile!.id)
     if (error) notify(errMsg(error))
     refreshProfile()
   }
-  const row = (key: string, icon: React.ReactNode, label: string, checked: boolean, onChange: (v: boolean) => void) => (
-    <label key={key} className="srow toggle-row">
-      <span className="srow-icon">{icon}</span>
-      <span className="srow-text">{label}</span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className="toggle" />
-    </label>
-  )
-  return <SGroup title="Modifs des outils" note="Pour les outils rattachés à une conversation. Réglage par défaut : chaque conversation peut avoir le sien (paramètres de la conv).">
-    {TOOL_LABELS.map(([k, label]) => row(k, <ToolIcon kind={k === 'list' ? 'notes' : k === 'poll' ? 'polls' : 'accounts'} size={18} />, `${label} dans le chat`,
-      show.includes(k), (v) => save({ show_tools_default: v ? [...show, k] : show.filter((x) => x !== k) })))}
-    {row('notify', <IconBell size={18} />, 'Me notifier', notif, (v) => save({ notify_activity_default: v }))}
+  return <SGroup title="Modifs des outils" note="Pour les outils rattachés à une conversation : afficher leurs modifs dans le chat, et/ou en être notifié. Réglage par défaut, chaque conversation peut avoir le sien.">
+    <ToolPrefsGrid show={show} notify={notif} onChange={save} />
   </SGroup>
 }
 

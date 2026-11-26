@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
   const [{ data: conv }, { data: members }, { data: actor }] = await Promise.all([
     db.from('conversations').select('id, name, is_group').eq('id', msg.conversation_id).single(),
-    db.from('members').select('user_id, notify_all, notify_mentions, notify_pins, notify_activity, profiles(notify_activity_default)').eq('conversation_id', msg.conversation_id),
+    db.from('members').select('user_id, notify_all, notify_mentions, notify_pins, notify_tools, profiles(notify_tools_default)').eq('conversation_id', msg.conversation_id),
     db.from('profiles').select('display_name').eq('id', actorId).single(),
   ])
   const who = actor?.display_name ?? "Quelqu'un"
@@ -85,8 +85,8 @@ Deno.serve(async (req) => {
   const recipients = (members ?? []).filter((m) => {
     if (m.user_id === actorId) return false
     if (event === 'pin') return m.notify_pins
-    // activité des outils (pense-bête, compte, sondage) : réglage de la conv, sinon celui par défaut du profil
-    if (msg.kind === 'activity') return m.notify_activity ?? (m.profiles as unknown as { notify_activity_default?: boolean } | null)?.notify_activity_default ?? true
+    // activité des outils : « Notif » cochée pour cet outil (réglage de la conv, sinon celui par défaut du profil)
+    if (msg.kind === 'activity') return (m.notify_tools ?? (m.profiles as unknown as { notify_tools_default?: string[] } | null)?.notify_tools_default ?? ['list', 'poll', 'ledger']).includes(msg.tool)
     const mentioned = msg.mention_all || (msg.mentions ?? []).includes(m.user_id)
     return m.notify_all || (m.notify_mentions && mentioned)
   }).map((m) => m.user_id)
