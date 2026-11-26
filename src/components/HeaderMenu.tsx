@@ -13,7 +13,7 @@ const KINDS: ToolKind[] = ['notes', 'accounts', 'polls']
  */
 export function HeaderMenu({ convId }: { convId?: string }) {
   const nav = useNavigate()
-  const { pathname } = useLocation()
+  const { pathname, state } = useLocation()
   const btn = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState<CSSProperties | null>(null)
   const [linked, setLinked] = useState<Partial<Record<ToolKind, ToolItem[]>>>({})
@@ -30,8 +30,11 @@ export function HeaderMenu({ convId }: { convId?: string }) {
     }
   }
   const close = () => setPos(null)
-  // Le retour depuis la page ouverte ramène ici
-  const go = (to: string) => { close(); nav(to, { state: { from: pathname } }) }
+  // Les outils sont des pages sœurs : passer de l'un à l'autre remplace la page (pas d'empilement)
+  // et le retour ramène toujours à la page d'origine (la conv, ou la liste des convs)
+  const inTool = /^\/(notes|accounts|polls)(\/|$)/.test(pathname)
+  const root = inTool ? (state as { root?: string } | null)?.root ?? '/' : pathname
+  const go = (to: string) => { close(); nav(to, { replace: inTool, state: { from: root, root } }) }
 
   return <>
     <button ref={btn} className={`icon-btn hmenu-btn${pos ? ' on' : ''}`} onClick={() => (pos ? close() : open())}

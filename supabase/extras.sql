@@ -60,3 +60,16 @@ grant usage, select on all sequences in schema public to authenticated;
 -- L'admin voit le nom de l'auteur d'un retour
 drop policy if exists "profiles admin read" on public.profiles;
 create policy "profiles admin read" on public.profiles for select to authenticated using (public.is_app_admin());
+
+-- ---------- Suppression d'un groupe par son super admin ----------------
+-- Efface la conv et, par cascade, ses messages, ses membres, ses clés (epochs), ses pense-bêtes,
+-- comptes, sondages et rappels liés.
+create or replace function public.delete_group(conv uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from conversations where id = conv and is_group) then raise exception 'Groupe introuvable'; end if;
+  if public.my_role(conv) is distinct from 'super_admin' then raise exception 'Réservé au super admin'; end if;
+  delete from conversations where id = conv;
+end $$;
+revoke all on function public.delete_group(uuid) from public, anon;
+grant execute on function public.delete_group(uuid) to authenticated;

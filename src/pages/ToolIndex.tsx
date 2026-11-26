@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Screen } from '../components/Layout'
 import { BackButton } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
@@ -12,6 +12,8 @@ import { TOOLS, cachedTools, loadTools, type ToolItem, type ToolKind } from '../
 /** Page d'un outil (pense-bêtes, comptes, sondages) : tous mes éléments, rangés par partage */
 export default function ToolIndex({ kind }: { kind: ToolKind }) {
   const nav = useNavigate()
+  const st = useLocation().state as { from?: string; root?: string } | null
+  const backTo = st?.from ?? '/'
   const [items, setItems] = useState<ToolItem[]>(() => cachedTools(kind))
   const [convs, setConvs] = useState<ConvSummary[]>(() => readCache<ConvSummary[]>('convs', []))
 
@@ -30,14 +32,14 @@ export default function ToolIndex({ kind }: { kind: ToolKind }) {
   const sorted = [...sections.entries()].sort(([a], [b]) => order(a) - order(b) || a.localeCompare(b, 'fr'))
 
   return (
-    <Screen header={<><BackButton to="/" /><h1>{TOOLS[kind].label}</h1><HeaderMenu /></>}>
+    <Screen header={<><BackButton to={backTo} /><h1>{TOOLS[kind].label}</h1><HeaderMenu /></>}>
       {items.length === 0 && <p className="empty">Rien pour l'instant. Touche + pour commencer.</p>}
       {sorted.map(([title, list]) => (
         <div key={title} className="fade-in">
           <div className="section-title">{title}</div>
           <div className="list-card">
             {list.map((i) => (
-              <button key={i.id} className="settings-row note-row" onClick={() => nav(`/${kind}/${i.id}`, { state: { from: `/${kind}` } })}>
+              <button key={i.id} className="settings-row note-row" onClick={() => nav(`/${kind}/${i.id}`, { state: { from: `/${kind}`, root: st?.root } })}>
                 <ToolIcon kind={kind} /><span className="note-name">{i.title}</span>
                 <small>{i.summary}</small>
                 <span className="chevron"><IconBack size={18} /></span>
@@ -46,7 +48,7 @@ export default function ToolIndex({ kind }: { kind: ToolKind }) {
           </div>
         </div>
       ))}
-      <Link to={`/${kind}/new`} className="fab" aria-label={TOOLS[kind].newTitle}><IconPlus size={32} /></Link>
+      <Link to={`/${kind}/new`} state={{ root: st?.root }} className="fab" aria-label={TOOLS[kind].newTitle}><IconPlus size={32} /></Link>
     </Screen>
   )
 }

@@ -9,7 +9,7 @@ import { useConversation } from '../lib/conversation'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { FriendPicker } from '../components/FriendPicker'
-import { IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconUserMinus } from '../components/Icons'
+import { IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconTrash, IconUserMinus } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
@@ -26,6 +26,8 @@ export default function GroupSettings() {
   const nav = useNavigate()
   const c = useConversation(id, me)
   const [roleFor, setRoleFor] = useState<Member | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [word, setWord] = useState('')
   const [adding, setAdding] = useState(false)
   const [toAdd, setToAdd] = useState<string[]>([])
   const [renaming, setRenaming] = useState(false)
@@ -177,6 +179,21 @@ export default function GroupSettings() {
       <button className="settings-row danger" onClick={leave}>
         <IconLeave /><span>{conv.is_group ? 'Quitter la conversation' : 'Supprimer la conversation'}</span>
       </button>
+      {conv.is_group && isSuper && <button className="settings-row danger" onClick={() => { setWord(''); setDeleting(true) }}>
+        <IconTrash /><span>Supprimer le groupe pour tout le monde</span>
+      </button>}
+
+      <Sheet open={deleting} onClose={() => setDeleting(false)} title="Supprimer le groupe">
+        <p className="small">C'est <b>définitif</b> : le groupe « {conv.name} » disparaît pour tous ses membres, avec tous ses messages,
+          ses pense-bêtes, comptes et sondages.</p>
+        <p className="small">Tape <b>SUPPRIMER</b> pour confirmer :</p>
+        <input value={word} onChange={(e) => setWord(e.target.value)} placeholder="SUPPRIMER" autoCapitalize="characters" autoComplete="off" />
+        <div className="inline-form">
+          <button className="btn" onClick={() => setDeleting(false)}>Annuler</button>
+          <button className="btn danger-btn wide" disabled={word.trim().toUpperCase() !== 'SUPPRIMER'}
+            onClick={async () => { if (await call('delete_group', { conv: id })) nav('/', { replace: true }) }}>Supprimer</button>
+        </div>
+      </Sheet>
 
       <Sheet open={!!roleFor} onClose={() => setRoleFor(null)} title={`Rôle de ${roleFor?.profiles?.display_name ?? ''}`}>
         {roleFor && (['super_admin', 'admin', 'member'] as Role[]).filter((r) => isSuper || r !== 'super_admin').map((r) => (
