@@ -22,15 +22,20 @@ import NewTool from './pages/NewTool'
 import LedgerPage from './pages/LedgerPage'
 import PollPage from './pages/PollPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { initE2EE, useE2EE } from './lib/e2ee'
+import E2EESetup from './pages/E2EESetup'
 
 function Routed() {
   const { session, loading } = useAuth()
   useTrackHistory()
   const { pathname } = useLocation()
   const uid = session?.user.id
-  useEffect(() => { if (uid) { startOutbox(); syncPush() } }, [uid])
+  const { state: e2ee } = useE2EE()
+  useEffect(() => { if (uid) initE2EE(uid) }, [uid])
+  useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush() } }, [uid, e2ee])
   if (loading) return <div className="splash">LePtiGrp</div>
   if (!session) return <Login />
+  if (e2ee !== 'ready') return <E2EESetup state={e2ee} uid={session.user.id} />
   return (<>
     <div key={pathname} className={`page page-${navDirection}`}>
     <ErrorBoundary>
