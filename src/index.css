@@ -133,8 +133,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .fade-in { animation: fade .3s ease; }
 .bubble { max-width: 82%; padding: 8px 12px; border-radius: 14px 14px 14px 4px; background: var(--surface); align-self: flex-start; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: default; white-space: pre-wrap; word-break: break-word; }
 .bubble.mine { align-self: flex-end; background: var(--mine); color: var(--mine-text); border-radius: 14px 14px 4px 14px; }
-.bubble.pinned { background: var(--pinned); color: var(--pinned-text); box-shadow: 0 0 0 2px var(--pinned); }
-.bubble.mentioned { box-shadow: inset 3px 0 0 var(--primary); }
 .bubble-head { font-size: 13px; opacity: .85; display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .pin-info { margin-left: auto; padding-left: 10px; display: inline-flex; align-items: center; gap: 3px; }
 .mention { font-weight: 700; background: var(--mention); border-radius: 4px; padding: 0 2px; }
@@ -216,8 +214,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .shake-0 { animation: shake-a .25s; } .shake-1 { animation: shake-b .25s; }
 @keyframes shake-a { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 @keyframes shake-b { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-.bubble.pending { box-shadow: inset 4px 0 0 var(--danger); opacity: .85; }
-.bubble.failed { opacity: 1; background: var(--danger); }
 .pending-actions { display: flex; gap: 14px; margin-top: 6px; font-weight: 700; font-size: 13px; }
 .pending-actions button { text-decoration: underline; }
 .denied-guide p { margin: 0 0 8px; font-size: 14px; }
@@ -514,12 +510,19 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .sgroup-card > .muted.help { padding: 12px 14px; margin: 0; }
 .srow-icon.small { width: 28px; height: 28px; border-radius: 8px; margin-top: 2px; }
 
-/* Messages groupés : même auteur à la suite */
-.fold.cont { margin-top: -4px; }
-.bubble.cont { border-top-left-radius: 4px; }
-.bubble.mine.cont { border-top-left-radius: 14px; border-top-right-radius: 4px; }
-.bubble.sending { opacity: .9; }
-.sending-clock { font-size: 10px; margin-left: 6px; opacity: .7; vertical-align: 1px; }
+/* Bulles : un groupe de messages (même auteur, < 5 min), une ligne par message */
+.fold.line { margin: 0 -8px; }
+.fold.line > .fold-in { padding: 0 8px; }
+.fold.line + .fold.line > .fold-in > .line { margin-top: 4px; }
+.line { border-radius: 8px; }
+.line.pinned { background: var(--pinned); color: var(--pinned-text); margin: 2px -6px; padding: 4px 6px; }
+.line.mentioned { box-shadow: inset 3px 0 0 var(--primary); margin-left: -6px; padding-left: 6px; }
+.line.new { animation: lineIn .22s ease-out; }
+@keyframes lineIn { from { opacity: 0; transform: translateY(6px); } }
+.line.slow { opacity: .75; }
+.line.failed { background: var(--danger); color: #fff; margin: 2px -6px; padding: 4px 6px; }
+.line-status { font-size: 12px; opacity: .85; margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+.tick { font-size: 11px; margin-left: 6px; opacity: .7; animation: fade .3s; }
 .pw-rule { margin: -4px 4px 0; font-size: 13px; color: var(--muted); }
 .pw-rule.ok { color: #10b981; font-weight: 600; }
 .confirm-banner { width: 100%; max-width: 360px; margin: 0 auto 14px; padding: 14px 16px; border-radius: 16px; background: var(--mention); border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent); }
