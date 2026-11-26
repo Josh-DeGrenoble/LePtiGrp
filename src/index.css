@@ -3,6 +3,7 @@
   --primary: #2563eb; --primary-text: #fff; --mine: #2563eb; --mine-text: #fff;
   --pinned: #ffd76a; --pinned-text: #3b2f00; --danger: #e11d48; --border: #e5e7eb;
   --mention: #2563eb1f; --shadow: 0 4px 24px #0002;
+  --chat-bg: #eef1f6; --bubble: #ffffff;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -11,6 +12,7 @@
     --primary: #2563eb; --primary-text: #fff; --mine: #2563eb; --mine-text: #fff;
     --pinned: #c99a1c; --pinned-text: #1c1400; --danger: #fb7185; --border: #2a2e37;
     --mention: #2563eb40; --shadow: 0 4px 24px #0008;
+    --chat-bg: #0b0d12; --bubble: #1f232b;
     color-scheme: dark;
   }
 }
@@ -514,7 +516,7 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .line.slow { opacity: .75; }
 .line.failed { background: var(--danger); color: #fff; margin: 2px -6px; padding: 4px 6px; }
 .line-status { font-size: 12px; opacity: .85; margin-top: 2px; display: flex; align-items: center; gap: 5px; }
-.tick { font-size: 11px; margin-left: 6px; opacity: .7; animation: fade .3s; }
+.tick { margin-left: 3px; animation: fade .3s; }
 .pw-rule { margin: -4px 4px 0; font-size: 13px; color: var(--muted); }
 .pw-rule.ok { color: #10b981; font-weight: 600; }
 .confirm-banner { width: 100%; max-width: 360px; margin: 0 auto 14px; padding: 14px 16px; border-radius: 16px; background: var(--mention); border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent); }
@@ -531,7 +533,7 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 /* Liste des discussions */
 .conv-search { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 0 12px; background: var(--surface); border-radius: 12px; color: var(--muted); }
 .conv-search input { border: 0; background: none; padding: 10px 0; }
-.conv-section + .conv-section { margin-top: 20px; }
+.conv-section + .conv-section { margin-top: 14px; }
 .conv-list { display: flex; flex-direction: column; background: var(--surface); border-radius: 18px; overflow: hidden; }
 .conv-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; position: relative; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .conv-row + .conv-row::before { content: ''; position: absolute; top: 0; left: 78px; right: 0; border-top: 1px solid var(--border); }
@@ -552,3 +554,29 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .filter-chip { gap: 6px; }
 .filter-chip .avatar { font-size: 9px !important; }
 .conv-section:last-of-type { padding-bottom: 84px; }
+
+/* Écran de discussion */
+.chat-screen .content { background: var(--chat-bg); padding: 8px 10px 12px; }
+.chat-screen .topbar { background: var(--bg); }
+.chat-title { justify-content: flex-start; gap: 10px; font-size: 17px; }
+.chat-title-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.chat-title-text > span { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-title-text small { font-size: 12px; font-weight: 500; color: var(--muted); }
+.day-sep { display: flex; justify-content: center; margin: 12px 0 8px; position: sticky; top: 0; z-index: 1; pointer-events: none; }
+.day-sep span { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--bubble); padding: 4px 12px; border-radius: 99px; box-shadow: 0 1px 2px #0001; }
+.msg-row { display: flex; align-items: flex-end; gap: 6px; }
+.msg-row.mine { justify-content: flex-end; }
+.msg-avatar { flex: none; margin-bottom: 2px; }
+.chat-screen .bubble { background: var(--bubble); border-radius: 18px 18px 18px 6px; padding: 7px 12px 6px; box-shadow: 0 1px 1.5px #0000001a; max-width: min(82%, 480px); }
+.chat-screen .bubble.mine { background: var(--mine); border-radius: 18px 18px 6px 18px; }
+.chat-screen .bubble.pinned { background: var(--pinned); }
+.chat-screen .bubble.has-poll { width: min(82%, 480px); }
+.bubble-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.bubble-text { line-height: 1.35; }
+.msg-meta { float: right; font-size: 11px; opacity: .6; margin: 7px 0 -4px 10px; white-space: nowrap; display: inline-flex; align-items: center; }
+.composer-wrap { background: var(--bg); }
+.composer { padding: 8px 10px; align-items: flex-end; }
+.composer textarea { background: var(--surface); border: 0; border-radius: 22px; padding: 11px 16px; min-height: 44px; }
+.composer .send { width: 44px; height: 44px; box-shadow: 0 2px 6px #2563eb55; }
+.composer .send:disabled { box-shadow: none; }
+.bubble.pinned .bubble-name { color: var(--pinned-text) !important; }

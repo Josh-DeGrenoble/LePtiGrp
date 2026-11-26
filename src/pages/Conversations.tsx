@@ -89,11 +89,9 @@ export default function Conversations() {
       {convs.length > 4 && <label className="conv-search"><IconSearch />
         <input placeholder="Rechercher" value={q} onChange={(e) => setQ(e.target.value)} type="search" /></label>}
       {favs.length > 0 && <section className="conv-section">
-        <h2 className="sgroup-title">Favoris</h2>
         <div className="conv-list">{favs.map(row)}</div>
       </section>}
       {others.length > 0 && <section className="conv-section">
-        {favs.length > 0 && <h2 className="sgroup-title">Discussions</h2>}
         <div className="conv-list">{others.map(row)}</div>
       </section>}
       {q && shown.length === 0 && <p className="empty">Aucune discussion trouvée.</p>}

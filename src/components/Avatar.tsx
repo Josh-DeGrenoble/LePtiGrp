@@ -23,3 +23,6 @@ export function Avatar({ name, url, size = 44, group }: { name: string; url?: st
     </div>
   )
 }
+
+/** Couleur attribuée à un nom (avatar sans photo, nom dans les bulles de groupe) */
+export const colorOf = (name: string) => COLORS[hash(name) % COLORS.length]

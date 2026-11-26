@@ -8,9 +8,9 @@ import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/su
 import { useMe } from '../lib/auth'
 import { queueMessage, readCache, writeCache, useOnResume, usePending, dropPending, retryPending, type Pending } from '../lib/network'
 import { useConversation } from '../lib/conversation'
-import { messageDate, remaining } from '../lib/format'
+import { hhmm, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
-import { Avatar } from '../components/Avatar'
+import { Avatar, colorOf } from '../components/Avatar'
 import { IconCheck, IconClose, IconFilter, IconList, IconPin, IconPoll, IconSend } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { C } from '../lib/palette'
@@ -122,11 +122,12 @@ export default function Chat() {
   const pin = (until: Date | null) => selected && act(() => supabase.rpc('pin_message', { msg: selected.id, until: until?.toISOString() ?? null }))
 
   return (
-    <Screen header={<>
+    <Screen className="chat-screen" header={<>
       <BackButton to={backTo} />
       <Link to={`/c/${id}/settings`} className="chat-title">
-        <Avatar name={c.title} url={c.conv?.is_group ? c.conv.avatar_url : c.other?.avatar_url} size={34} group={c.members.length > 2} />
-        <span>{c.title}</span>
+        <Avatar name={c.title} url={c.conv?.is_group ? c.conv.avatar_url : c.other?.avatar_url} size={38} group={c.members.length > 2} />
+        <span className="chat-title-text"><span>{c.title}</span>
+          <small>{c.conv?.is_group ? `${c.members.length} membres` : 'Infos de la discussion'}</small></span>
       </Link>
       <HeaderMenu convId={id} />
       <button className={`icon-btn chat-filter${filter ? ' on' : ''}`} onClick={() => setFilterOpen(true)}
@@ -144,20 +145,30 @@ export default function Chat() {
           <button onClick={() => setFilter(null)} aria-label="Retirer le filtre"><IconClose size={14} /></button>
         </div>}
         {filter && !items.some(keep) && <p className="empty fade-in">Aucun message.</p>}
-        {groups.map((g) => {
+        {groups.map((g, gi) => {
           const first = g[0]
           const mine = first.author === me
           const pinnedLine = (it: Item) => !!it.m && isPinned(it.m)
-          return <Fold key={first.key} hidden={!g.some(keep)}>
-            <div className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}${g.every(pinnedLine) ? ' pinned' : ''}${!mine && g.some((it) => { const pl = it.m && plainOf(it.m); return !!pl && (pl.mention_all || pl.mentions.includes(me)) }) ? ' mentioned' : ''}`}>
-              <div className="bubble-head">{!mine && <><b>{names.get(first.author ?? '') ?? 'Ancien membre'}</b> - </>}{messageDate(first.created_at)}</div>
-              {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)}>
-                {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} first={j === 0} last={j === g.length - 1}
-                    onMenu={() => setSelected(it.m!)} />
-                  : <PendingLine p={it.p!} />}
-              </Fold>)}
-            </div>
-          </Fold>
+          const name = names.get(first.author ?? '') ?? 'Ancien membre'
+          const showWho = !mine && !!c.conv?.is_group
+          const day = dayLabel(first.created_at)
+          const newDay = !filter && (gi === 0 || dayLabel(groups[gi - 1][0].created_at) !== day)
+          return <div key={first.key} className="msg-block">
+            {newDay && <div className="day-sep"><span>{day}</span></div>}
+            <Fold hidden={!g.some(keep)}>
+              <div className={`msg-row${mine ? ' mine' : ''}`}>
+                {showWho && <span className="msg-avatar"><Avatar name={name} url={c.members.find((m) => m.user_id === first.author)?.profiles?.avatar_url} size={30} /></span>}
+                <div className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}${g.every(pinnedLine) ? ' pinned' : ''}${!mine && g.some((it) => { const pl = it.m && plainOf(it.m); return !!pl && (pl.mention_all || pl.mentions.includes(me)) }) ? ' mentioned' : ''}`}>
+                  {showWho && <div className="bubble-name" style={{ color: colorOf(name) }}>{name}</div>}
+                  {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)}>
+                    {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} last={j === g.length - 1}
+                        onMenu={() => setSelected(it.m!)} />
+                      : <PendingLine p={it.p!} />}
+                  </Fold>)}
+                </div>
+              </div>
+            </Fold>
+          </div>
         })}
         <div ref={bottom} />
       </div>
@@ -220,27 +231,35 @@ function Fold({ hidden, line, children }: { hidden: boolean; line?: boolean; chi
   return <div className={`fold${hidden ? ' out' : ''}${line ? ' line' : ''}`} aria-hidden={hidden}><div className="fold-in">{children}</div></div>
 }
 
+/** Séparateur de jour : « Aujourd'hui », « Hier », « lundi 24 novembre » */
+function dayLabel(iso: string) {
+  const d = new Date(iso), t = new Date()
+  const days = Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime() - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86400e3)
+  if (days === 0) return "Aujourd'hui"
+  if (days === 1) return 'Hier'
+  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', ...(d.getFullYear() !== t.getFullYear() ? { year: 'numeric' } : {}) })
+}
+
 type Item = { key: string; m?: Message; p?: Pending; author: string | null; created_at: string }
 /** Même auteur, à moins de 5 minutes d'écart : même bulle */
 const follows = (prev: Item, it: Item) =>
   !!it.author && prev.author === it.author && Date.parse(it.created_at) - Date.parse(prev.created_at) < 5 * 60_000
 
 /** Une ligne d'une bulle = un message (appui long : épingler, supprimer…) ; petite coche quand il est arrivé */
-function Line({ m, plain, mine, names, onMenu, first, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; first: boolean; last: boolean }) {
+function Line({ m, plain, mine, names, onMenu, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; last: boolean }) {
   const press = useLongPress(onMenu)
   const pinned = isPinned(m)
-  const legacy = plain?.status === 'legacy' && !m.poll_id && first
   return (
     <div className={`line${pinned ? ' pinned' : ''}`} {...press}>
-      {(legacy || plain?.status === 'unverified') && <div className="bubble-head">
-        {legacy && <span className="e2ee-tag" title="Envoyé avant le chiffrement de bout en bout">non chiffré</span>}
-        {plain?.status === 'unverified' && <span className="e2ee-tag warn" title="Signature valide, mais la clé de l'auteur n'est pas confirmée">clé non confirmée</span>}
+      {plain?.status === 'unverified' && <div className="bubble-head">
+        <span className="e2ee-tag warn" title="Signature valide, mais la clé de l'auteur n'est pas confirmée">clé non confirmée</span>
       </div>}
       <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
         : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
         : plain.status === 'invalid' ? <i className="muted">⚠️ Message altéré ou signature invalide</i>
         : renderMentions(plain.text, names)}
-        {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</div>
+        <span className="msg-meta">{hhmm(new Date(m.created_at))}
+          {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span></div>
       {m.poll_id && <PollCard pollId={m.poll_id} compact />}
     </div>
   )
