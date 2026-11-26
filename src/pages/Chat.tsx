@@ -16,7 +16,7 @@ import { SGroup, SRow } from '../components/SettingsRow'
 import { C } from '../lib/palette'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
-import { useDecrypted, usePins, keyChanged, type Plain } from '../lib/e2ee'
+import { useDecrypted, type Plain } from '../lib/e2ee'
 
 const PIN_DURATIONS: { label: string; ms: number | null }[] = [
   { label: '1 heure', ms: 3600e3 },
@@ -43,7 +43,6 @@ export default function Chat() {
   const [, tick] = useState(0)
   const bottom = useRef<HTMLDivElement>(null)
   const plainOf = useDecrypted(messages)
-  usePins()
 
   const markRead = useCallback(() => {
     supabase.from('members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', id).eq('user_id', me).then()
@@ -111,7 +110,6 @@ export default function Chat() {
     if (prev && follows(prev, it) && !alone(prev) && !alone(it)) groups[groups.length - 1].push(it)
     else groups.push([it])
   })
-  const changed = c.members.filter((m) => keyChanged(m.user_id))
   const selPlain = selected && plainOf(selected)
 
   const act = async (fn: () => PromiseLike<{ error: unknown }>) => {
@@ -135,9 +133,6 @@ export default function Chat() {
     </>} footer={!filter && c.mine && (c.can('write')
       ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
       : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
-      {changed.length > 0 && <Link to={`/c/${id}/settings#securite`} className="key-alert">
-        ⚠️ La clé de sécurité de {changed.map((m) => m.profiles?.display_name ?? '?').join(', ')} a changé. Vérifie-la avant d'écrire.
-      </Link>}
       <div className="messages">
         {filter && <div className="filter-chip fade-in">
           {filter === 'pinned' ? <><IconPin size={14} filled /> Épinglés</> : filter === 'polls' ? <><IconPoll size={14} /> Sondages</>
@@ -251,9 +246,6 @@ function Line({ m, plain, mine, names, onMenu, last }: { m: Message; plain: Plai
   const pinned = isPinned(m)
   return (
     <div className={`line${pinned ? ' pinned' : ''}`} {...press}>
-      {plain?.status === 'unverified' && <div className="bubble-head">
-        <span className="e2ee-tag warn" title="Signature valide, mais la clé de l'auteur n'est pas confirmée">clé non confirmée</span>
-      </div>}
       <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
         : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
         : plain.status === 'invalid' ? <i className="muted">⚠️ Message altéré ou signature invalide</i>

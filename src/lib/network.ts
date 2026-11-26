@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { supabase, type Message } from './supabase'
-import { encryptMessage, forgetDevice, KeyChangedError } from './e2ee'
+import { encryptMessage, forgetDevice } from './e2ee'
 
 // ---------- État de la connexion ----------
 
@@ -70,7 +70,7 @@ export async function flushOutbox() {
         const enc = await encryptMessage(p)
         ;({ error } = await supabase.from('messages').upsert({ ...row, ...enc, content: null }, { onConflict: 'client_id', ignoreDuplicates: true }))
       } catch (e) {
-        error = { message: e instanceof KeyChangedError ? e.message : (e as Error)?.message ?? String(e) }
+        error = { message: (e as Error)?.message ?? String(e) }
       }
       if (!error) { set(outbox.filter((x) => x.client_id !== p.client_id)); continue }
       // Erreur réseau : on réessaiera ; erreur refusée par le serveur (droits…) : on la signale
