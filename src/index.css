@@ -483,3 +483,4 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .confirmed img { border-radius: 18px; }
 .confirmed h1 { margin: 8px 0 0; color: var(--primary); }
 .confirmed p { max-width: 320px; color: var(--muted); margin: 0; }
+.settings-row.delete-account { margin-top: 28px; font-weight: 500; opacity: .85; }

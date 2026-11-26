@@ -26,35 +26,17 @@ const TEXT: Record<Kind, { title: string; intro: string; placeholder: string }> 
   idea: { title: 'Proposer une évolution', intro: 'Une idée pour l\'appli ? Je t\'écoute 👂', placeholder: 'Ton idée…' },
 }
 
-/** Réglages : café, bugs, idées ; et pour l'admin, la liste des retours */
-export function FeedbackSection() {
-  const me = useMe()
+/** Réglages, « Le dev » : café, bugs, idées */
+export function DevSection() {
   const [coffee, setCoffee] = useState(false)
   const [kind, setKind] = useState<Kind | null>(null)
   const [text, setText] = useState('')
-  const [admin, setAdmin] = useState(false)
-  const [items, setItems] = useState<Item[]>([])
-
-  const loadItems = () => supabase.from('feedback').select('id, kind, message, created_at, profiles(display_name)').order('created_at', { ascending: false })
-    .then(({ data }) => setItems((data as unknown as Item[]) ?? []))
-  useEffect(() => {
-    supabase.from('app_admins').select('user_id').eq('user_id', me).maybeSingle().then(({ data }) => {
-      if (data) { setAdmin(true); loadItems() }
-    })
-  }, [me])
 
   const send = async () => {
     const { error } = await supabase.from('feedback').insert({ kind, message: text.trim() })
     if (error) return notify(errMsg(error))
     setKind(null); setText('')
     notify(kind === 'bug' ? 'Merci ! Je vais faire semblant de chercher 🕵️' : 'Merci pour l\'idée ! 🙌')
-    if (admin) loadItems()
-  }
-  const remove = async (it: Item) => {
-    if (!(await ask('Supprimer ce retour ?'))) return
-    setItems((xs) => xs.filter((x) => x.id !== it.id))
-    const { error } = await supabase.from('feedback').delete().eq('id', it.id)
-    if (error) { notify(errMsg(error)); loadItems() }
   }
 
   return <>
@@ -64,23 +46,6 @@ export function FeedbackSection() {
       <button className="settings-row" onClick={() => setKind('bug')}><IconBug /><span>Remonter un bug</span></button>
       <button className="settings-row" onClick={() => setKind('idea')}><IconBulb /><span>Proposer une évolution</span></button>
     </div>
-
-    {admin && <>
-      <div className="section-title">Retours reçus ({items.length})</div>
-      <div className="card list-card">
-        {items.length === 0 && <p className="muted small help">Aucun retour pour l'instant.</p>}
-        {items.map((it) => (
-          <div key={it.id} className="settings-row feedback-row">
-            {it.kind === 'bug' ? <IconBug /> : <IconBulb />}
-            <div>
-              <small className="muted">{it.profiles?.display_name ?? 'Ancien compte'} · {new Date(it.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</small>
-              <div className="feedback-msg">{it.message}</div>
-            </div>
-            <button className="icon-btn" onClick={() => remove(it)} aria-label="Supprimer"><IconClose /></button>
-          </div>
-        ))}
-      </div>
-    </>}
 
     {coffee && <Popup onClose={() => setCoffee(false)}>
       <div className="popup-emoji">🤢☕️➡️🍺😄</div>
@@ -96,5 +61,42 @@ export function FeedbackSection() {
         <button className="btn primary wide" disabled={!text.trim()} onClick={send}>Envoyer</button>
       </div>
     </Popup>}
+  </>
+}
+
+/** Réglages, admin seulement : la liste des retours reçus (rien pour les autres) */
+export function AdminFeedback() {
+  const me = useMe()
+  const [items, setItems] = useState<Item[] | null>(null)
+
+  const load = () => supabase.from('feedback').select('id, kind, message, created_at, profiles(display_name)').order('created_at', { ascending: false })
+    .then(({ data }) => setItems((data as unknown as Item[]) ?? []))
+  useEffect(() => {
+    supabase.from('app_admins').select('user_id').eq('user_id', me).maybeSingle().then(({ data }) => { if (data) load() })
+  }, [me]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const remove = async (it: Item) => {
+    if (!(await ask('Supprimer ce retour ?'))) return
+    setItems((xs) => xs && xs.filter((x) => x.id !== it.id))
+    const { error } = await supabase.from('feedback').delete().eq('id', it.id)
+    if (error) { notify(errMsg(error)); load() }
+  }
+
+  if (!items) return null
+  return <>
+    <div className="section-title">Retours reçus ({items.length})</div>
+    <div className="card list-card">
+      {items.length === 0 && <p className="muted small help">Aucun retour pour l'instant.</p>}
+      {items.map((it) => (
+        <div key={it.id} className="settings-row feedback-row">
+          {it.kind === 'bug' ? <IconBug /> : <IconBulb />}
+          <div>
+            <small className="muted">{it.profiles?.display_name ?? 'Ancien compte'} · {new Date(it.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</small>
+            <div className="feedback-msg">{it.message}</div>
+          </div>
+          <button className="icon-btn" onClick={() => remove(it)} aria-label="Supprimer"><IconClose /></button>
+        </div>
+      ))}
+    </div>
   </>
 }
