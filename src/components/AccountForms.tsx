@@ -38,14 +38,22 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
   return (
     <Sheet open={!!kind} onClose={close} title={kind === 'email' ? "Changer d'email" : 'Changer de mot de passe'}>
       <form className="form" onSubmit={submit}>
-        {kind === 'email' && <p className="muted small">Email actuel : {email}</p>}
-        <input type="password" placeholder="Mot de passe actuel" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />
-        {kind === 'email'
-          ? <input type="email" placeholder="Nouvel email" value={value} onChange={(e) => setValue(e.target.value)} required autoComplete="email" />
-          : <>
-            <input type="password" placeholder="Nouveau mot de passe (6 caractères min.)" value={value} minLength={6} onChange={(e) => setValue(e.target.value)} required autoComplete="new-password" />
-            <input type="password" placeholder="Confirme le nouveau mot de passe" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
-          </>}
+        {kind === 'email' ? <>
+          <p className="muted small">Email actuel : {email}</p>
+          <label className="field-label">Nouvel email
+            <input type="email" placeholder="nouvel@email.fr" value={value} onChange={(e) => setValue(e.target.value)} required autoComplete="email" autoFocus />
+          </label>
+        </> : <>
+          <label className="field-label">Nouveau mot de passe
+            <input type="password" placeholder="6 caractères minimum" value={value} minLength={6} onChange={(e) => setValue(e.target.value)} required autoComplete="new-password" autoFocus />
+          </label>
+          <label className="field-label">Confirme le nouveau mot de passe
+            <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
+          </label>
+        </>}
+        <label className="field-label">Ton mot de passe actuel, pour confirmer
+          <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />
+        </label>
         {error && <p className="error">{error}</p>}
         <button className="btn primary" disabled={busy}>Valider</button>
       </form>

@@ -249,3 +249,5 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .tag-lists .tag-friend[data-i="11"] { animation-delay: 275ms; }
 .tag-lists .tag-friend[data-i="12"] { animation-delay: 300ms; }
 @media (prefers-reduced-motion: reduce) { .slide-right, .slide-left, .tag-lists .tag-friend { animation: none; } }
+.field-label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.field-label input { font-weight: 400; }
