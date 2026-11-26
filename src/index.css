@@ -515,8 +515,9 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .fold.line > .fold-in { padding: 0 8px; }
 .fold.line + .fold.line > .fold-in > .line { margin-top: 4px; }
 .line { border-radius: 8px; }
-.line.pinned { background: var(--pinned); color: var(--pinned-text); margin: 2px -6px; padding: 4px 6px; }
-.line.mentioned { box-shadow: inset 3px 0 0 var(--primary); margin-left: -6px; padding-left: 6px; }
+.bubble.pinned { background: var(--pinned); color: var(--pinned-text); }
+.line.pinned .bubble-head { opacity: .7; }
+.bubble.mentioned { box-shadow: inset 3px 0 0 var(--primary); }
 .line.new { animation: lineIn .22s ease-out; }
 @keyframes lineIn { from { opacity: 0; transform: translateY(6px); } }
 .line.slow { opacity: .75; }

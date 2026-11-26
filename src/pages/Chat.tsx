@@ -135,10 +135,10 @@ export default function Chat() {
           const mine = first.author === me
           const pinnedLine = (it: Item) => !!it.m && isPinned(it.m)
           return <Fold key={first.key} hidden={pinnedOnly && !g.some(pinnedLine)}>
-            <div className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}`}>
+            <div className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}${g.every(pinnedLine) ? ' pinned' : ''}${!mine && g.some((it) => { const pl = it.m && plainOf(it.m); return !!pl && (pl.mention_all || pl.mentions.includes(me)) }) ? ' mentioned' : ''}`}>
               <div className="bubble-head">{!mine && <><b>{names.get(first.author ?? '') ?? 'Ancien membre'}</b> - </>}{messageDate(first.created_at)}</div>
               {g.map((it, j) => <Fold key={it.key} line hidden={pinnedOnly && !pinnedLine(it)}>
-                {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} me={me} first={j === 0} last={j === g.length - 1}
+                {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} first={j === 0} last={j === g.length - 1}
                     onMenu={() => setSelected(it.m!)} />
                   : <PendingLine p={it.p!} />}
               </Fold>)}
@@ -189,13 +189,12 @@ const follows = (prev: Item, it: Item) =>
   !!it.author && prev.author === it.author && Date.parse(it.created_at) - Date.parse(prev.created_at) < 5 * 60_000
 
 /** Une ligne d'une bulle = un message (appui long : épingler, supprimer…) ; petite coche quand il est arrivé */
-function Line({ m, plain, mine, names, me, onMenu, first, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; me: string; onMenu: () => void; first: boolean; last: boolean }) {
+function Line({ m, plain, mine, names, onMenu, first, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; first: boolean; last: boolean }) {
   const press = useLongPress(onMenu)
   const pinned = isPinned(m)
-  const mentionsMe = !!plain && (plain.mention_all || plain.mentions.includes(me))
   const legacy = plain?.status === 'legacy' && !m.poll_id && first
   return (
-    <div className={`line${pinned ? ' pinned' : ''}${mentionsMe && !mine ? ' mentioned' : ''}`} {...press}>
+    <div className={`line${pinned ? ' pinned' : ''}`} {...press}>
       {(pinned || legacy || plain?.status === 'unverified') && <div className="bubble-head">
         {legacy && <span className="e2ee-tag" title="Envoyé avant le chiffrement de bout en bout">non chiffré</span>}
         {plain?.status === 'unverified' && <span className="e2ee-tag warn" title="Signature valide, mais la clé de l'auteur n'est pas confirmée">clé non confirmée</span>}
