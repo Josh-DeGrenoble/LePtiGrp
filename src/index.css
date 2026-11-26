@@ -483,4 +483,32 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .confirmed img { border-radius: 18px; }
 .confirmed h1 { margin: 8px 0 0; color: var(--primary); }
 .confirmed p { max-width: 320px; color: var(--muted); margin: 0; }
-.settings-row.delete-account { margin-top: 28px; font-weight: 500; opacity: .85; }
+
+/* Paramètres : groupes de lignes à pastilles colorées */
+.settings-page { display: flex; flex-direction: column; gap: 22px; padding-bottom: 24px; }
+.sgroup-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 14px 8px; }
+.sgroup-card { background: var(--surface); border-radius: 18px; overflow: hidden; }
+.sgroup-note { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 8px 14px 0; }
+.sgroup-note summary { cursor: pointer; color: var(--primary); font-weight: 600; list-style: none; }
+.sgroup-note summary::-webkit-details-marker { display: none; }
+.sgroup-note p { margin: 6px 0 0; }
+.srow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 10px 14px; text-align: left; position: relative; }
+.srow + .srow::before, .sgroup-card > * + .srow::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; border-top: 1px solid var(--border); }
+button.srow:active, label.srow:active { background: var(--surface2); }
+.srow-icon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: #fff; flex: none; }
+.srow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.srow-text small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow-chev { color: var(--muted); opacity: .6; display: flex; flex: none; }
+.srow .toggle-row { padding: 0; }
+.srow-btn { font-size: 14px; font-weight: 700; color: var(--primary); padding: 6px 4px; flex: none; }
+.profile-card { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; background: var(--surface); border-radius: 18px; text-align: left; }
+.profile-card:active { background: var(--surface2); }
+.profile-card .me-name { font-size: 19px; font-weight: 700; }
+.srow .safety-code { padding: 2px 0 0; font-size: 15px; white-space: normal; }
+.srow.stack { align-items: flex-start; }
+.delete-link { align-self: center; color: var(--danger); font-size: 14px; font-weight: 600; padding: 10px 16px; opacity: .85; }
+.settings-page .denied-guide { padding: 12px 14px; }
+.settings-page .feedback-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; position: relative; }
+.settings-page .feedback-row + .feedback-row::before { content: ''; position: absolute; top: 0; left: 14px; right: 0; border-top: 1px solid var(--border); }
+.sgroup-card > .muted.help { padding: 12px 14px; margin: 0; }
+.srow-icon.small { width: 28px; height: 28px; border-radius: 8px; margin-top: 2px; }

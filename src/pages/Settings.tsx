@@ -4,12 +4,14 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconShare } from '../components/Icons'
+import { IconBell, IconLogout, IconLink, IconLock, IconMail, IconNext, IconShare, IconShield } from '../components/Icons'
+import { SGroup, SRow } from '../components/SettingsRow'
+import { C } from '../lib/palette'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { AdminFeedback, DevSection } from '../components/Feedback'
 import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
-import { Sheet, Toggle } from '../components/Sheet'
+import { Sheet } from '../components/Sheet'
 import { pushState, enablePush, disablePush, isIos, type PushState } from '../lib/push'
 import { useOnResume } from '../lib/network'
 import { errMsg } from '../lib/supabase'
@@ -51,57 +53,58 @@ export default function Settings() {
       <BackButton to="/" />
       <h1>Paramètres</h1><span className="icon-btn" />
     </>}>
-      {profile && (
-        <button className="card me-card wide-btn" onClick={() => setEditProfile(true)}>
-          <Avatar name={profile.display_name} url={profile.avatar_url} size={52} />
-          <div className="me-info">
-            <div className="me-name">{profile.display_name}</div>
-            <div className="muted small">{session?.user.email}</div>
-          </div>
-          <span className="link">Modifier</span>
-        </button>
-      )}
+      <div className="settings-page">
+        {profile && (
+          <button className="profile-card" onClick={() => setEditProfile(true)}>
+            <Avatar name={profile.display_name} url={profile.avatar_url} size={56} />
+            <div className="me-info">
+              <div className="me-name">{profile.display_name}</div>
+              <div className="muted small">Modifier mon nom et ma photo</div>
+            </div>
+            <span className="srow-chev"><IconNext /></span>
+          </button>
+        )}
 
-      <div className="section-title">Notifications</div>
-      <div className="card">
-        {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (voir plus bas), puis ouvre-la depuis l'icône pour activer les notifications.</p>
-          : push === 'unsupported' ? <p className="muted small help">Ce navigateur ne gère pas les notifications.</p>
-          : push === 'denied' ? <DeniedGuide onCheck={recheck} />
-          : push && <Toggle label="Activer sur cet appareil" checked={push === 'on'} onChange={togglePush} />}
-        <p className="muted small help">Le détail (tous les messages, mentions, épinglés) se règle dans chaque conversation.</p>
+        <SGroup title="Notifications" note={push === 'on' || push === 'off' ? 'Le détail (tous les messages, mentions, épinglés) se règle dans chaque conversation.' : undefined}>
+          {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (voir « Partager l'appli »), puis ouvre-la depuis l'icône.</p>
+            : push === 'unsupported' ? <p className="muted small help">Ce navigateur ne gère pas les notifications.</p>
+            : push === 'denied' ? <DeniedGuide onCheck={recheck} />
+            : <label className="srow toggle-row">
+                <span className="srow-icon" style={{ background: C.red }}><IconBell size={18} /></span>
+                <span className="srow-text">Sur cet appareil</span>
+                <input type="checkbox" checked={push === 'on'} disabled={!push} onChange={(e) => togglePush(e.target.checked)} />
+                <span className="toggle" />
+              </label>}
+        </SGroup>
+
+        <SGroup title="Partager l'appli" note={<details>
+          <summary>Installer sur le téléphone</summary>
+          <p><b>Android</b> : ouvrir le lien dans Chrome, menu ⋮, « Installer l'application ».<br />
+            <b>iPhone</b> : ouvrir le lien dans Safari, Partager, « Sur l'écran d'accueil ».</p>
+        </details>}>
+          {'share' in navigator && <SRow icon={<IconShare size={18} />} color={C.green} label="Inviter des amis" onClick={share} />}
+          <SRow icon={<IconLink />} color={C.teal} label="Lien de l'appli" sub={appUrl.replace(/^https?:\/\//, '')}
+            right={<button className="srow-btn" onClick={copy}>{copied ? 'Copié ✓' : 'Copier'}</button>} />
+        </SGroup>
+
+        <SGroup title="Compte">
+          <SRow icon={<IconMail size={18} />} color={C.blue} label="Email" sub={session?.user.email} onClick={() => setAccount('email')} />
+          <SRow icon={<IconLock />} color={C.slate} label="Mot de passe" onClick={() => setAccount('password')} />
+        </SGroup>
+
+        <DevSection />
+
+        <Encryption />
+
+        <AdminFeedback />
+
+        <SGroup>
+          <SRow icon={<IconLogout />} color={C.slate} label="Se déconnecter" chevron={false}
+            onClick={async () => { if (await ask('Se déconnecter ?')) supabase.auth.signOut() }} />
+        </SGroup>
+
+        <button className="delete-link" onClick={() => setDeleting(true)}>Supprimer mon compte</button>
       </div>
-
-      <div className="section-title">Partager l'appli</div>
-      <div className="card">
-        <div className="copy-row">
-          <input readOnly value={appUrl} onFocus={(e) => e.target.select()} />
-          <button className="btn primary" onClick={copy}>{copied ? 'Copié !' : 'Copier'}</button>
-          {'share' in navigator && <button className="icon-btn" onClick={share} aria-label="Partager"><IconShare /></button>}
-        </div>
-        <p className="muted small help">
-          <b>iPhone</b> : ouvrir le lien dans Safari, Partager, « Sur l'écran d'accueil ».<br />
-          <b>Android</b> : ouvrir le lien dans Chrome, menu ⋮, « Installer l'application ».
-        </p>
-      </div>
-
-      <div className="section-title">Compte</div>
-      <div className="card list-card">
-        <button className="settings-row" onClick={() => setAccount('email')}>Changer d'email</button>
-        <button className="settings-row" onClick={() => setAccount('password')}>Changer de mot de passe</button>
-      </div>
-
-      <DevSection />
-
-      <div className="section-title">Chiffrement de bout en bout</div>
-      <Encryption />
-
-      <button className="settings-row danger" onClick={async () => (await ask('Se déconnecter ?')) && supabase.auth.signOut()}>
-        Se déconnecter
-      </button>
-
-      <AdminFeedback />
-
-      <button className="settings-row danger delete-account" onClick={() => setDeleting(true)}>Supprimer mon compte</button>
       <DeleteAccount open={deleting} onClose={() => setDeleting(false)} />
 
       <AccountForm kind={account} onClose={() => setAccount(null)} />
@@ -161,13 +164,20 @@ function Encryption() {
   const id = identity()
   if (!id) return null
   return (
-    <div className="card">
-      <p className="small">Mon code de sécurité, à comparer avec celui que voient tes amis (réglages d'une conversation) :</p>
-      <code className="safety-code">{safetyCode(b64(id.signPk), b64(id.boxPk))}</code>
-      <p className="muted small help">Tes messages sont chiffrés sur ton téléphone : ni le serveur ni personne d'autre que les membres d'une conversation ne peut les lire.
-        Tes clés sont protégées par ton mot de passe, qui ne quitte jamais ton téléphone : il suffit de te connecter pour tout retrouver.
-        <b> Si ton mot de passe est réinitialisé (oubli), tes anciens messages chiffrés seront perdus.</b> Choisis un mot de passe solide.
-        Restent visibles par le serveur : qui parle à qui, quand, les mentions, et les outils (pense-bêtes, comptes, sondages), pas encore chiffrés.</p>
-    </div>
+    <SGroup title="Chiffrement" note={<details>
+      <summary>Comment ça marche ?</summary>
+      <p>Tes messages sont chiffrés sur ton téléphone : ni le serveur ni personne d'autre que les membres d'une conversation ne peut les lire.
+        Tes clés sont protégées par ton mot de passe, qui ne quitte jamais ton téléphone.</p>
+      <p><b>Si ton mot de passe est réinitialisé (oubli), tes anciens messages chiffrés seront perdus.</b></p>
+      <p>Restent visibles par le serveur : qui parle à qui, quand, les mentions, et les outils (pense-bêtes, comptes, sondages).</p>
+    </details>}>
+      <div className="srow stack">
+        <span className="srow-icon" style={{ background: C.green }}><IconShield /></span>
+        <span className="srow-text">Mon code de sécurité
+          <small>À comparer avec celui que voient tes amis</small>
+          <code className="safety-code">{safetyCode(b64(id.signPk), b64(id.boxPk))}</code>
+        </span>
+      </div>
+    </SGroup>
   )
 }
