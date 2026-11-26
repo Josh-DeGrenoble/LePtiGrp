@@ -98,6 +98,9 @@ create table if not exists public.expenses (
   created_at timestamptz not null default now()
 );
 create index if not exists expenses_ledger_idx on public.expenses (ledger_id);
+-- date et heure de la dépense (par défaut : le moment de l'ajout, modifiable)
+alter table public.expenses add column if not exists spent_at timestamptz not null default now();
+update public.expenses set spent_at = created_at where spent_at > created_at + interval '1 minute';
 
 -- ---------- Sondages -------------------------------------------------
 create table if not exists public.polls (

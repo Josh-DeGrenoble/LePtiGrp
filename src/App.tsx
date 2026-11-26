@@ -21,6 +21,7 @@ import ToolIndex from './pages/ToolIndex'
 import NewTool from './pages/NewTool'
 import LedgerPage from './pages/LedgerPage'
 import PollPage from './pages/PollPage'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 function Routed() {
   const { session, loading } = useAuth()
@@ -32,6 +33,7 @@ function Routed() {
   if (!session) return <Login />
   return (<>
     <div key={pathname} className={`page page-${navDirection}`}>
+    <ErrorBoundary>
     <Routes>
       <Route path="/" element={<Conversations />} />
       <Route path="/friends" element={<Friends />} />
@@ -52,6 +54,7 @@ function Routed() {
       <Route path="/polls/:id" element={<PollPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ErrorBoundary>
     </div>
     <NotifPrompt />
   </>)

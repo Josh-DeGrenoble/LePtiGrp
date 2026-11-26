@@ -11,6 +11,9 @@ import { readCache, writeCache, useOnResume } from '../lib/network'
 import { cachedTools, itemStatus, usePeople } from '../lib/tools'
 import { useMe } from '../lib/auth'
 
+// Éléments en cache ou venant d'une ancienne version : toujours une liste de prises
+const normalize = (its: ListItem[] | null) => (its ?? []).map((i) => ({ ...i, list_claims: i.list_claims ?? [] }))
+
 /** Un pense-bête : ajouter des éléments (quantité facultative), chacun coche ce qu'il prend et combien */
 export default function NoteList() {
   const { id = '' } = useParams()
@@ -20,7 +23,7 @@ export default function NoteList() {
     const c = cachedTools('notes').find((l) => l.id === id)
     return c ? { ...c, name: c.title } : null
   })
-  const [items, setItems] = useState<ListItem[]>(() => readCache<ListItem[]>(`items:${id}`, []))
+  const [items, setItems] = useState<ListItem[]>(() => normalize(readCache<ListItem[]>(`items:${id}`, [])))
   const [missing, setMissing] = useState(false)
   const [text, setText] = useState('')
   const [renaming, setRenaming] = useState(false)
@@ -30,12 +33,14 @@ export default function NoteList() {
   const nameOf = new Map(people.map((p) => [p.id, p.id === me ? 'Moi' : p.display_name]))
 
   const load = async () => {
-    const [{ data: l }, { data: its }] = await Promise.all([
+    const [{ data: l }, { data: its, error }] = await Promise.all([
       supabase.from('lists').select('*').eq('id', id).maybeSingle(),
       supabase.from('list_items').select('*, list_claims(*)').eq('list_id', id).order('created_at'),
     ])
     if (!l) { if (navigator.onLine) setMissing(true); return }
-    setList(l); setItems(its ?? []); writeCache(`items:${id}`, its ?? [])
+    setList(l)
+    if (error) return notify(errMsg(error))
+    setItems(normalize(its)); writeCache(`items:${id}`, its ?? [])
   }
   useOnResume(load)
   useEffect(() => {

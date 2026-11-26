@@ -50,7 +50,7 @@ export type Claim = { item_id: number; user_id: string; qty: number | null }
 /** `quantity` = quantité demandée (texte libre, ex. « 3 » ou « 2 kg ») ; `list_claims` = qui en prend combien */
 export type ListItem = { id: number; list_id: string; content: string; quantity: string | null; created_at: string; list_claims: Claim[] }
 export type Ledger = Shared & { name: string }
-export type Expense = { id: number; ledger_id: string; label: string; amount: number; paid_by: string; split: string[]; created_at: string }
+export type Expense = { id: number; ledger_id: string; label: string; amount: number; paid_by: string; split: string[]; spent_at: string; created_at: string }
 export type Poll = Shared & { question: string; options: string[]; multiple: boolean }
 export type Vote = { poll_id: string; user_id: string; option: number }
 export type Reminder = { id: number; conversation_id: string | null; message: string; remind_at: string; sent_at: string | null }

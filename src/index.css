@@ -404,3 +404,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .dp-day.today { box-shadow: inset 0 0 0 2px var(--surface2); }
 .dp-day.on { background: var(--primary); color: var(--primary-text); }
 .hmenu-subitem.hmenu-new { color: var(--primary); font-weight: 600; }
+.crash { display: flex; flex-direction: column; gap: 8px; text-align: center; padding: 32px 8px; }
+.crash small { word-break: break-word; margin-bottom: 8px; }
+.expense-main { cursor: pointer; }
