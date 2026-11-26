@@ -26,7 +26,17 @@ export default defineConfig({
           { src: 'icon-v3-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png}'] },
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        // Le service worker est un script classique : `import.meta` (utilisé par libsodium) y est interdit
+        // et empêcherait toute mise à jour de l'appli. On le remplace par l'adresse du service worker.
+        buildPlugins: {
+          vite: [{
+            name: 'sw-no-import-meta',
+            transform: (code: string) => (code.includes('import.meta.url') ? code.replaceAll('import.meta.url', 'self.location.href') : null),
+          }],
+        },
+      },
     }),
   ],
 })
