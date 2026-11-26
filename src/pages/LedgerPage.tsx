@@ -152,10 +152,11 @@ const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 'nume
 const localInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60e3).toISOString().slice(0, 16)
 
 /** Ajout ou modification d'une dépense */
-function ExpenseSheet({ expense, onClose, ledgerId, people, me, onSaved }: {
+export function ExpenseSheet({ expense, onClose, ledgerId, people, me, onSaved, defaultLabel = '' }: {
   expense: Expense | null; onClose: () => void; ledgerId: string; people: { id: string; name: string }[]; me: string; onSaved: (e: Expense) => void
+  defaultLabel?: string
 }) {
-  const [label, setLabel] = useState(expense?.label ?? '')
+  const [label, setLabel] = useState(expense?.label ?? defaultLabel)
   const [amount, setAmount] = useState(expense ? String(expense.amount).replace('.', ',') : '')
   const [paidBy, setPaidBy] = useState(expense?.paid_by ?? me)
   const [split, setSplit] = useState<string[] | null>(expense?.split ?? null)  // null = tout le monde

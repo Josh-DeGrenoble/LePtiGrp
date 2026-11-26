@@ -629,3 +629,46 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .legal h2 { font-size: 18px; margin: 24px 0 6px; }
 .legal ul { padding-left: 20px; }
 .legal-link { align-self: center; font-size: 13px; color: var(--muted); text-decoration: underline; }
+
+/* ---------- QR code ---------- */
+.srow-btn.icon { display: grid; place-items: center; padding: 6px; }
+.qr-sheet { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 4px 0 8px; }
+.qr-code { border-radius: 14px; box-shadow: 0 1px 6px rgb(0 0 0 / .12); max-width: 70vw; height: auto; }
+.qr-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.qr-actions .btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.qr-scan { position: relative; aspect-ratio: 1; width: 100%; max-width: 360px; margin: 0 auto 10px; border-radius: 16px; overflow: hidden; background: #000; }
+.qr-scan video { width: 100%; height: 100%; object-fit: cover; }
+.qr-frame { position: absolute; inset: 18%; border: 3px solid rgb(255 255 255 / .9); border-radius: 18px; box-shadow: 0 0 0 999px rgb(0 0 0 / .35); }
+.qr-found { word-break: break-all; }
+
+/* ---------- Filtre du chat : pastilles + membres ---------- */
+.filter-sheet { gap: 10px; }
+.filter-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.fchip { display: flex; align-items: center; gap: 7px; padding: 10px 12px; border-radius: 14px; font-size: 14.5px; font-weight: 600;
+  background: var(--surface); border: 1px solid transparent; color: var(--text); }
+.fchip small { margin-left: auto; }
+.fchip svg { color: var(--primary); }
+.fchip small { color: var(--muted); font-weight: 600; font-size: 12px; }
+.fchip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.fchip.on svg, .fchip.on small { color: #fff; }
+.filter-sheet > .sgroup-title { margin-top: 4px; }
+
+/* ---------- Activité des outils dans le chat ---------- */
+.activity { display: flex; flex-direction: column; gap: 4px; margin: 6px auto; max-width: 86%; padding: 8px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 9%, var(--bubble)); border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  text-align: left; font-size: 13px; color: var(--text); }
+.activity-head { display: flex; align-items: center; gap: 6px; color: var(--primary); }
+.activity-head b { color: var(--text); }
+.activity-tool { color: var(--muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.activity-head .msg-meta { margin-left: 6px; float: none; }
+.activity-lines { display: flex; flex-direction: column; gap: 1px; color: var(--text); }
+
+/* ---------- Pense-bête lié à un compte ---------- */
+.ledger-link { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 8px 8px 8px 12px; border-radius: 14px;
+  background: var(--card, var(--bubble)); border: 1px solid var(--border); }
+.ledger-link-name { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; font-weight: 600; color: var(--text); }
+.ledger-link-name svg { color: var(--primary); flex: none; }
+.ledger-link-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ledger-link .btn.small { padding: 7px 14px; font-size: 14px; min-height: 0; width: auto; }
+.ledger-link.add { width: 100%; color: var(--primary); font-weight: 600; border-style: dashed; padding: 10px 12px; background: transparent; }
+.ledger-link.add small { color: var(--muted); font-weight: 500; }

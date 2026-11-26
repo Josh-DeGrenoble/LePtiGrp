@@ -7,8 +7,10 @@ import { LimitedInput } from '../components/LimitedInput'
 import { NoteEditor, type EditorActions } from '../components/NoteEditor'
 import { QtySheet } from '../components/QtySheet'
 import { ask, notify } from '../components/Dialog'
-import { IconBack, IconPencil, IconTrash } from '../components/Icons'
-import { supabase, errMsg, type List, type ListItem } from '../lib/supabase'
+import { IconBack, IconMoney, IconNext, IconPencil, IconTrash, IconCheck } from '../components/Icons'
+import { Sheet, SheetButton } from '../components/Sheet'
+import { ExpenseSheet } from './LedgerPage'
+import { supabase, errMsg, type Ledger, type List, type ListItem } from '../lib/supabase'
 import { readCache, writeCache, useOnResume } from '../lib/network'
 import { cachedTools, itemStatus, useGhosts, usePeople } from '../lib/tools'
 import { between, sections } from '../lib/notes'
@@ -38,6 +40,9 @@ export default function NoteList() {
   const [editing, setEditing] = useState(false)
   const [qtyFor, setQtyFor] = useState<ListItem | null>(null)
   const [collapsed, setCollapsed] = useState<string[]>(() => readCache<string[]>(`collapsed:${id}`, []))
+  const [ledger, setLedger] = useState<Ledger | null>(null)
+  const [linking, setLinking] = useState(false)
+  const [paying, setPaying] = useState(false)
   const people = usePeople(list)
   const ghosts = useGhosts(people, items.flatMap((i) => i.list_claims.map((c) => c.user_id)))
   const nameOf = new Map([...people, ...ghosts].map((p) => [p.id, p.id === me ? 'Moi' : p.display_name]))
@@ -144,6 +149,20 @@ export default function NoteList() {
     nav(backTo, { replace: true })
   }
 
+  // Compte lié : « J'ai payé » y ajoute une dépense (payée par moi, partagée entre les gens du compte)
+  const ledgerId = list?.ledger_id ?? null
+  useEffect(() => {
+    if (!ledgerId) return setLedger(null)
+    supabase.from('ledgers').select('*').eq('id', ledgerId).maybeSingle().then(({ data }) => setLedger(data as Ledger | null))
+  }, [ledgerId])
+  const ledgerPeople = usePeople(ledger)
+  const linkLedger = async (lid: string | null) => {
+    setLinking(false)
+    const { error } = await supabase.from('lists').update({ ledger_id: lid }).eq('id', id)
+    if (error) return notify(errMsg(error))
+    setList((l) => (l ? { ...l, ledger_id: lid } : l))
+  }
+
   if (missing) return <Screen header={<><BackButton to={backTo} /><h1>Introuvable</h1><span className="icon-btn" /></>}>
     <p className="empty">Ce pense-bête n'existe plus ou tu n'y as plus accès.</p>
   </Screen>
@@ -190,6 +209,22 @@ export default function NoteList() {
       </button>
       <HeaderMenu convId={list?.conversation_id ?? undefined} />
     </>}>
+      {list && (ledger
+        ? <div className="ledger-link fade-in">
+            <button className="ledger-link-name" onClick={() => nav(`/accounts/${ledger.id}`, { state: { from: `/notes/${id}` } })}>
+              <IconMoney size={18} /><span>{ledger.name}</span><IconNext size={14} />
+            </button>
+            {editing
+              ? <button className="btn small" onClick={() => setLinking(true)}>Changer</button>
+              : <button className="btn primary small" disabled={!ledgerPeople.length} onClick={() => setPaying(true)}>J'ai payé</button>}
+          </div>
+        : (editing || items.length > 0) && <button className="ledger-link add" onClick={() => setLinking(true)}>
+            <IconMoney size={18} /> Lier à un compte <small>pour noter ce que tu as payé</small>
+          </button>)}
+      {linking && <LedgerPicker current={ledgerId} conv={list?.conversation_id ?? null} onPick={linkLedger} onClose={() => setLinking(false)} />}
+      {paying && ledger && <ExpenseSheet expense={null} ledgerId={ledger.id} me={me} defaultLabel={list?.name ?? ''}
+        people={ledgerPeople.map((p) => ({ id: p.id, name: p.id === me ? 'Moi' : p.display_name }))}
+        onClose={() => setPaying(false)} onSaved={(e) => notify(`${e.label} ajouté au compte « ${ledger.name} »`)} />}
       {editing ? <>
         <NoteEditor list={list} items={items} act={act} />
         {list && <button className="settings-row danger note-delete" onClick={destroy}><IconTrash /><span>Supprimer le pense-bête</span></button>}
@@ -211,5 +246,29 @@ export default function NoteList() {
       </>}
       {qtyFor && <QtySheet item={qtyFor} onClose={() => setQtyFor(null)} onSave={(q) => { updateItem(qtyFor, q); setQtyFor(null) }} />}
     </Screen>
+  )
+}
+
+/** Choix du compte à lier : ceux de la même conv d'abord */
+function LedgerPicker({ current, conv, onPick, onClose }: { current: string | null; conv: string | null; onPick: (id: string | null) => void; onClose: () => void }) {
+  const nav = useNavigate()
+  const [ledgers, setLedgers] = useState<Ledger[] | null>(null)
+  useEffect(() => {
+    supabase.from('ledgers').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => setLedgers(((data ?? []) as Ledger[]).sort((a, b) => Number(b.conversation_id === conv) - Number(a.conversation_id === conv))))
+  }, [conv])
+  return (
+    <Sheet open onClose={onClose} title="Lier à un compte">
+      {ledgers?.length === 0 && <p className="muted small center">Aucun compte pour l'instant.</p>}
+      <div className="list-card">
+        {ledgers?.map((l) => (
+          <button key={l.id} className="settings-row" onClick={() => onPick(l.id)}>
+            <IconMoney size={20} /><span>{l.name}</span>{l.id === current && <IconCheck />}
+          </button>
+        ))}
+      </div>
+      <SheetButton onClick={() => nav('/accounts/new')}>Créer un compte</SheetButton>
+      {current && <SheetButton danger onClick={() => onPick(null)}>Délier le compte</SheetButton>}
+    </Sheet>
   )
 }

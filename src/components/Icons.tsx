@@ -54,3 +54,5 @@ export const IconFilter = ({ size = 22, filled }: P) => svg(size, <path d="M3 4h
 export const IconCheck = ({ size = 20 }: P) => svg(size, <path d="M5 12.5l4.5 4.5L19 7.5" />)
 export const IconCamera = ({ size = 22 }: P) => svg(size, <><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="4" /></>)
 export const IconImage = ({ size = 22 }: P) => svg(size, <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="M21 17l-5-5-9 8" /></>)
+export const IconQr = ({ size = 20 }: P) => svg(size, <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 14v.01M14 21h.01M17.5 21H21v-3.5" /></>)
+export const IconScan = ({ size = 20 }: P) => svg(size, <><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" /><path d="M7 12h10" /></>)

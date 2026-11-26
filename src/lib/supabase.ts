@@ -6,7 +6,11 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 export const isConfigured = Boolean(url && key)
 export const supabase = createClient(url ?? 'http://localhost', key ?? 'missing')
 
-export type Profile = { id: string; display_name: string; avatar_url: string | null; friend_code: string }
+export type Profile = {
+  id: string; display_name: string; avatar_url: string | null; friend_code: string
+  /** Activité des outils dans le chat : réglages par défaut (voir supabase/activity.sql) */
+  show_activity_default?: boolean; notify_activity_default?: boolean
+}
 export type Tag = { id: string; name: string; color: string }
 export type Role = 'super_admin' | 'admin' | 'member'
 
@@ -15,6 +19,7 @@ export type ConvSummary = {
   is_favorite: boolean; notify_all: boolean; notify_mentions: boolean; notify_pins: boolean
   last_message_at: string; last_content: string | null; last_author: string | null; unread: number
   last_ciphertext?: string | null; last_epoch?: number | null; last_author_id?: string | null; last_client_id?: string | null
+  show_activity?: boolean | null; notify_activity?: boolean | null; last_kind?: 'msg' | 'activity'
 }
 
 export type Conversation = {
@@ -25,6 +30,8 @@ export type Conversation = {
 export type Member = {
   conversation_id: string; user_id: string; role: Role; is_favorite: boolean
   notify_all: boolean; notify_mentions: boolean; notify_pins: boolean; joined_at: string
+  /** vide = réglage par défaut du profil */
+  show_activity?: boolean | null; notify_activity?: boolean | null
   profiles?: Profile
 }
 
@@ -35,6 +42,8 @@ export type Message = {
   mentions: string[]; mention_all: boolean
   pinned_at: string | null; pinned_until: string | null; pinned_by: string | null; created_at: string
   client_id?: string | null; poll_id?: string | null
+  /** 'activity' : modif d'un outil rattaché à la conv, écrite par le serveur, en clair */
+  kind?: 'msg' | 'activity'; tool?: 'list' | 'ledger' | 'poll' | null; tool_id?: string | null; tool_name?: string | null
 }
 
 export function isPinned(m: Message, now = Date.now()) {
@@ -57,7 +66,7 @@ export function errMsg(e: unknown) {
 
 /** Partage commun aux outils : pour moi seul, pour une conv, ou libre (participants choisis) */
 export type Shared = { id: string; owner_id: string; conversation_id: string | null; participants: string[]; created_at: string }
-export type List = Shared & { name: string; categories?: string[] }
+export type List = Shared & { name: string; categories?: string[]; ledger_id?: string | null }
 export type Claim = { item_id: number; user_id: string; qty: number | null }
 /** `quantity` = quantité demandée (texte libre, ex. « 3 » ou « 2 kg ») ; `list_claims` = qui en prend combien */
 export type QtyKind = 'take' | 'left'

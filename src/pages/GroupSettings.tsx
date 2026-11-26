@@ -13,7 +13,7 @@ import { IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconTra
 import { Sheet, SheetButton } from '../components/Sheet'
 import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
-import { NotifToggles, type NotifPrefs } from '../components/NotifToggles'
+import { NotifToggles, ActivityToggles, type NotifPrefs, type ActivityPrefs } from '../components/NotifToggles'
 import { cachedFriends, loadFriends } from '../lib/friends'
 import { PERMISSIONS, LEVEL_LABEL, levelOf, type Level } from '../lib/permissions'
 
@@ -53,7 +53,7 @@ export default function GroupSettings() {
   const updateSettings = (everyoneAdmin: boolean, permissions = conv.permissions) =>
     call('update_group_settings', { conv: id, p_everyone_admin: everyoneAdmin, p_permissions: permissions })
 
-  const setNotif = async (patch: Partial<NotifPrefs>) => {
+  const setNotif = async (patch: Partial<NotifPrefs> & ActivityPrefs) => {
     const { error } = await supabase.from('members').update(patch).eq('conversation_id', id).eq('user_id', me)
     if (error) notify(errMsg(error))
     c.reload()
@@ -144,6 +144,10 @@ export default function GroupSettings() {
       <div className="settings-block">
         <div className="section-title">Mes notifications</div>
         <NotifToggles prefs={c.mine} onChange={setNotif} />
+      </div>
+      <div className="settings-block">
+        <div className="section-title">Modifs des pense-bêtes, comptes et sondages</div>
+        <ActivityToggles prefs={c.mine} onChange={setNotif} />
       </div>
 
 

@@ -11,8 +11,9 @@ import { loadFriends, cachedFriends, friendLink, TAG_COLORS, type FriendWithTags
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { TagChip } from '../components/TagChip'
-import { IconShare, IconTag, IconSearch, IconUserPlus, IconClose } from '../components/Icons'
+import { IconShare, IconTag, IconSearch, IconUserPlus, IconClose, IconQr, IconScan } from '../components/Icons'
 import { Sheet } from '../components/Sheet'
+import { QrSheet, QrScanner } from '../components/Qr'
 import { ProfileEditor } from '../components/ProfileEditor'
 
 export default function Friends() {
@@ -28,6 +29,8 @@ export default function Friends() {
   const [newTag, setNewTag] = useState('')
   const [filter, setFilter] = useState<string | null>(null)
   const [editProfile, setEditProfile] = useState(false)
+  const [qr, setQr] = useState(false)
+  const [scan, setScan] = useState(false)
 
   const load = useCallback(async () => {
     let r
@@ -101,6 +104,7 @@ export default function Friends() {
             <div className="me-name">{profile.display_name}</div>
             <div className="me-code">Mon code : <b>{profile.friend_code}</b></div>
           </div>
+          <button className="icon-btn" onClick={() => setQr(true)} aria-label="Mon QR code"><IconQr size={22} /></button>
           <button className="icon-btn" onClick={share} aria-label="Partager mon lien"><IconShare /></button>
         </div>
       )}
@@ -113,6 +117,7 @@ export default function Friends() {
             ? <input key="code" inputMode="numeric" pattern="[0-9]{5}" maxLength={5} placeholder="Code ami (5 chiffres)" autoFocus
                 value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
             : <input key="search" type="search" placeholder="Rechercher un ami…" value={search} onChange={(e) => setSearch(e.target.value)} />}
+          {adding && <button type="button" className="icon-btn small-btn" onClick={() => setScan(true)} aria-label="Scanner un QR code"><IconScan /></button>}
           {adding && <button type="button" className="icon-btn small-btn" onClick={() => { setAdding(false); setCode(''); setMsg('') }} aria-label="Annuler"><IconClose /></button>}
         </div>
         {adding
@@ -120,6 +125,9 @@ export default function Friends() {
           : <button type="button" className="btn" onClick={() => { setAdding(true); setMsg('') }}>Nouvel ami</button>}
       </form>
       {msg && <p className="info center">{msg}</p>}
+      {profile && <QrSheet open={qr} onClose={() => setQr(false)} url={friendLink(profile.friend_code)} title="Mon QR code"
+        caption={`Fais-le scanner pour t'ajouter en ami. Code : ${profile.friend_code}`} />}
+      <QrScanner open={scan} onClose={() => setScan(false)} />
 
       {tags.length > 0 && (
         <div className="chip-filter truncate">
