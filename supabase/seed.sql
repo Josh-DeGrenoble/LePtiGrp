@@ -63,7 +63,7 @@ begin
   -- Tes tags
   insert into public.tags (owner_id, name, color) values (me, 'Famille', '#ec4899') on conflict (owner_id, name) do update set color = excluded.color returning id into t_famille;
   insert into public.tags (owner_id, name, color) values (me, 'Escalade', '#10b981') on conflict (owner_id, name) do update set color = excluded.color returning id into t_escalade;
-  insert into public.tags (owner_id, name, color) values (me, 'Boulot', '#2563eb') on conflict (owner_id, name) do update set color = excluded.color returning id into t_boulot;
+  insert into public.tags (owner_id, name, color) values (me, 'Boulot', '#3b5b8c') on conflict (owner_id, name) do update set color = excluded.color returning id into t_boulot;
   insert into public.tags (owner_id, name, color) values (me, 'Coloc', '#f59e0b') on conflict (owner_id, name) do update set color = excluded.color returning id into t_coloc;
   insert into public.friend_tags (tag_id, friend_id) values
     (t_famille, (u->>'lea')::uuid), (t_famille, (u->>'ines')::uuid),
