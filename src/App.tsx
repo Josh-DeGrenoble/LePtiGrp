@@ -16,8 +16,11 @@ import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
 import GroupSettings from './pages/GroupSettings'
-import Notes from './pages/Notes'
 import NoteList from './pages/NoteList'
+import ToolIndex from './pages/ToolIndex'
+import NewTool from './pages/NewTool'
+import LedgerPage from './pages/LedgerPage'
+import PollPage from './pages/PollPage'
 
 function Routed() {
   const { session, loading } = useAuth()
@@ -38,8 +41,15 @@ function Routed() {
       <Route path="/new" element={<NewGroup />} />
       <Route path="/c/:id" element={<Chat />} />
       <Route path="/c/:id/settings" element={<GroupSettings />} />
-      <Route path="/notes" element={<Notes />} />
+      <Route path="/notes" element={<ToolIndex key="notes" kind="notes" />} />
+      <Route path="/notes/new" element={<NewTool key="notes" kind="notes" />} />
       <Route path="/notes/:id" element={<NoteList />} />
+      <Route path="/accounts" element={<ToolIndex key="accounts" kind="accounts" />} />
+      <Route path="/accounts/new" element={<NewTool key="accounts" kind="accounts" />} />
+      <Route path="/accounts/:id" element={<LedgerPage />} />
+      <Route path="/polls" element={<ToolIndex key="polls" kind="polls" />} />
+      <Route path="/polls/new" element={<NewTool key="polls" kind="polls" />} />
+      <Route path="/polls/:id" element={<PollPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </div>

@@ -309,8 +309,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .hmenu-new .icon-btn:disabled { opacity: .35; }
 
 /* Pense-bêtes */
-.note-create { margin: 4px 0 8px; }
-.note-create select { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
 .note-row { gap: 12px; }
 .note-row svg { color: var(--primary); flex: none; }
 .note-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
@@ -321,7 +319,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .note-check { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 4px; cursor: pointer; }
 .note-check span { word-break: break-word; transition: color .2s; }
 .note-check input { width: 22px; height: 22px; border-radius: 50%; }
-.note-item.checked .note-check span { color: var(--muted); text-decoration: line-through; }
+.note-item.checked .note-text { color: var(--muted); text-decoration: line-through; }
 .note-qty { width: 70px; flex: none; padding: 6px 8px; font-size: 14px; text-align: center; }
 .note-item .icon-btn { color: var(--muted); }
 .note-delete { margin-top: 24px; border-bottom: 0; }
@@ -345,3 +343,49 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .reminder-row small { color: var(--muted); }
 .reminder-mode button, .reminder-in .segmented button { font-size: 14px; padding: 8px; }
 .note-row .chevron svg { color: var(--muted); }
+.note-check small.checked-by { display: block; font-size: 12px; color: var(--primary); margin-top: 2px; }
+
+/* Partage d'un outil */
+.share-modes { width: 100%; margin-bottom: 8px; }
+.share-modes button { flex: 1; font-size: 14px; padding: 8px; }
+.share-hint { margin: 6px 4px; }
+.conv-pick { gap: 12px; padding: 10px 4px; }
+.conv-pick span:not(.radio) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--surface2); flex: none; transition: .15s; }
+.conv-pick.on .radio { border: 6px solid var(--primary); }
+.poll-options-edit .inline-form { margin: 0 0 8px; align-items: center; }
+
+/* Comptes */
+.ledger-summary { display: flex; flex-direction: column; gap: 10px; }
+.ledger-total { display: flex; align-items: baseline; justify-content: space-between; }
+.ledger-total small { color: var(--muted); font-weight: 600; }
+.ledger-total b { font-size: 22px; }
+.ledger-person { display: flex; align-items: center; gap: 10px; }
+.ledger-person span { flex: 1; }
+.pos { color: #10b981; }
+.neg { color: var(--danger); }
+.transfer { padding: 12px 4px; }
+.transfer.mine { background: var(--mention); border-radius: 10px; }
+.expense { gap: 8px; padding: 10px 4px; }
+.expense-main { flex: 1; min-width: 0; }
+.expense-label { font-weight: 600; }
+.expense small { color: var(--muted); }
+.amount-input { width: 110px; flex: none; text-align: right; }
+
+/* Sondages */
+.poll { display: flex; flex-direction: column; gap: 6px; }
+.bubble.has-poll { width: 82%; }
+.poll.compact { margin-top: 8px; }
+.poll-question { font-weight: 700; font-size: 18px; }
+.poll-meta { font-size: 12px; opacity: .75; }
+.poll-option { position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; padding: 9px 12px; border-radius: 12px; text-align: left; color: inherit;
+  background: color-mix(in srgb, currentColor 8%, transparent); border: 2px solid transparent; transition: border-color .15s; }
+.poll-option.on { border-color: currentColor; }
+.poll-bar { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, currentColor 14%, transparent); transition: width .35s ease; }
+.poll-label, .poll-count, .poll-who { position: relative; }
+.poll-label { display: flex; align-items: center; gap: 8px; font-weight: 600; word-break: break-word; }
+.poll-check { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; opacity: .6; flex: none; }
+.poll-option.on .poll-check { background: currentColor; opacity: 1; box-shadow: inset 0 0 0 2px var(--bg); }
+.poll-count { font-weight: 700; }
+.poll-who { grid-column: 1 / -1; font-size: 12px; opacity: .75; }
+.card .poll-option.on { border-color: var(--primary); }

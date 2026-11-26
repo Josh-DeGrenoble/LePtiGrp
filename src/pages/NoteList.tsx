@@ -8,19 +8,27 @@ import { ask, notify } from '../components/Dialog'
 import { IconClose, IconPencil, IconPlus, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type List, type ListItem } from '../lib/supabase'
 import { readCache, writeCache, useOnResume } from '../lib/network'
-import { cachedLists } from '../lib/lists'
+import { cachedTools, usePeople } from '../lib/tools'
+import { useMe } from '../lib/auth'
 
 /** Un pense-bête : ajouter, cocher (avec quantité facultative), supprimer des éléments */
 export default function NoteList() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/notes'
-  const [list, setList] = useState<List | null>(() => cachedLists().find((l) => l.id === id) ?? null)
+  const [list, setList] = useState<List | null>(() => {
+    const c = cachedTools('notes').find((l) => l.id === id)
+    return c ? { ...c, name: c.title } : null
+  })
   const [items, setItems] = useState<ListItem[]>(() => readCache<ListItem[]>(`items:${id}`, []))
   const [missing, setMissing] = useState(false)
   const [text, setText] = useState('')
   const [renaming, setRenaming] = useState(false)
   const input = useRef<HTMLInputElement>(null)
+  const me = useMe()
+  // Plusieurs personnes sur la liste : on affiche qui a coché quoi
+  const people = usePeople(list)
+  const nameOf = new Map(people.map((p) => [p.id, p.id === me ? 'moi' : p.display_name]))
 
   const load = async () => {
     const [{ data: l }, { data: its }] = await Promise.all([
@@ -84,8 +92,8 @@ export default function NoteList() {
   const row = (i: ListItem) => (
     <div key={i.id} className={`note-item${i.checked ? ' checked' : ''}`}>
       <label className="note-check">
-        <input type="checkbox" checked={i.checked} onChange={(e) => patch(i, { checked: e.target.checked })} />
-        <span>{i.content}</span>
+        <input type="checkbox" checked={i.checked} onChange={(e) => patch(i, { checked: e.target.checked, checked_by: e.target.checked ? me : null })} />
+        <span><span className="note-text">{i.content}</span>{i.checked && i.checked_by && people.length > 1 && <small className="checked-by">✓ {nameOf.get(i.checked_by) ?? '?'}</small>}</span>
       </label>
       {i.checked && <input className="note-qty" placeholder="Qté" defaultValue={i.quantity ?? ''} maxLength={20} aria-label="Quantité"
         onBlur={(e) => { const q = e.target.value.trim() || null; if (q !== i.quantity) patch(i, { quantity: q }) }} />}

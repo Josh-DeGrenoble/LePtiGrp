@@ -31,7 +31,7 @@ export type Message = {
   id: number; conversation_id: string; author_id: string | null; content: string
   mentions: string[]; mention_all: boolean
   pinned_at: string | null; pinned_until: string | null; pinned_by: string | null; created_at: string
-  client_id?: string | null
+  client_id?: string | null; poll_id?: string | null
 }
 
 export function isPinned(m: Message, now = Date.now()) {
@@ -43,6 +43,12 @@ export function errMsg(e: unknown) {
   return String(e)
 }
 
-export type List = { id: string; owner_id: string; conversation_id: string | null; name: string; created_at: string }
-export type ListItem = { id: number; list_id: string; content: string; quantity: string | null; checked: boolean; created_at: string }
+/** Partage commun aux outils : pour moi seul, pour une conv, ou libre (participants choisis) */
+export type Shared = { id: string; owner_id: string; conversation_id: string | null; participants: string[]; created_at: string }
+export type List = Shared & { name: string }
+export type ListItem = { id: number; list_id: string; content: string; quantity: string | null; checked: boolean; checked_by: string | null; created_at: string }
+export type Ledger = Shared & { name: string }
+export type Expense = { id: number; ledger_id: string; label: string; amount: number; paid_by: string; split: string[]; created_at: string }
+export type Poll = Shared & { question: string; options: string[]; multiple: boolean }
+export type Vote = { poll_id: string; user_id: string; option: number }
 export type Reminder = { id: number; conversation_id: string | null; message: string; remind_at: string; sent_at: string | null }

@@ -1,42 +1,51 @@
 import { useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { IconBell, IconDown, IconList, IconMoney, IconPlus, IconPoll } from './Icons'
+import { IconBell, IconDown, IconPlus } from './Icons'
 import { LimitedInput } from './LimitedInput'
 import { ReminderSheet } from './ReminderSheet'
+import { ToolIcon } from './ToolIcon'
 import { notify } from './Dialog'
-import { cachedLists, createList, loadLists, type ListSummary } from '../lib/lists'
 import { errMsg } from '../lib/supabase'
+import { useMe } from '../lib/auth'
+import { TOOLS, cachedTools, createTool, loadTools, type ToolItem, type ToolKind } from '../lib/tools'
+
+const KINDS: ToolKind[] = ['notes', 'accounts', 'polls']
 
 /**
  * Flèche ▽ de l'en-tête : menu des outils (pense-bête, comptes, sondage, rappel).
- * Dans une conversation (`convId`), il liste aussi les pense-bêtes partagés avec elle.
+ * Dans une conversation (`convId`), chaque outil liste aussi ses éléments liés à la conv, avec un champ « Nouveau… ».
  */
 export function HeaderMenu({ convId }: { convId?: string }) {
+  const me = useMe()
   const nav = useNavigate()
   const { pathname } = useLocation()
   const btn = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState<CSSProperties | null>(null)
-  const [lists, setLists] = useState<ListSummary[]>([])
-  const [name, setName] = useState('')
+  const [linked, setLinked] = useState<Partial<Record<ToolKind, ToolItem[]>>>({})
+  const [names, setNames] = useState<Partial<Record<ToolKind, string>>>({})
   const [reminder, setReminder] = useState(false)
 
-  const linked = (all: ListSummary[]) => all.filter((l) => l.conversation_id === convId)
   const open = () => {
     const r = btn.current!.getBoundingClientRect()
     setPos({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right - 8) })
-    if (convId) {
-      setLists(linked(cachedLists()))
-      loadLists().then((all) => setLists(linked(all))).catch(() => {})
+    if (!convId) return
+    for (const k of KINDS) {
+      const set = (all: ToolItem[]) => setLinked((l) => ({ ...l, [k]: all.filter((i) => i.conversation_id === convId) }))
+      set(cachedTools(k))
+      loadTools(k).then(set).catch(() => {})
     }
   }
-  const close = () => { setPos(null); setName('') }
-  // Le retour depuis un pense-bête ramène ici
+  const close = () => { setPos(null); setNames({}) }
+  // Le retour depuis la page ouverte ramène ici
   const go = (to: string) => { close(); nav(to, { state: { from: pathname } }) }
 
-  const create = async (e: React.FormEvent) => {
+  const create = async (e: React.FormEvent, k: ToolKind) => {
     e.preventDefault()
-    if (!name.trim() || !convId) return
-    try { go(`/notes/${(await createList(name, convId)).id}`) } catch (err) { notify(errMsg(err)) }
+    const name = names[k]?.trim()
+    if (!name || !convId) return
+    // un sondage a besoin de ses réponses : on passe par la page de création, pré-remplie
+    if (k === 'polls') return go(`/polls/new?conv=${convId}&q=${encodeURIComponent(name)}`)
+    try { go(`/${k}/${(await createTool(k, { name }, { mode: 'conv', conv: convId, ids: [] }, me)).id}`) } catch (err) { notify(errMsg(err)) }
   }
 
   return <>
@@ -45,20 +54,18 @@ export function HeaderMenu({ convId }: { convId?: string }) {
     {pos && <>
       <div className="hmenu-backdrop" onClick={close} />
       <div className="hmenu" style={pos} role="menu">
-        <button className="hmenu-item" onClick={() => go('/notes')}><IconList /><span>Pense-bête</span></button>
-        {convId && <div className="hmenu-sub">
-          {lists.map((l) => (
-            <button key={l.id} className="hmenu-subitem" onClick={() => go(`/notes/${l.id}`)}>
-              <span>{l.name}</span>{l.left > 0 && <small>{l.left}</small>}
-            </button>
-          ))}
-          <form className="hmenu-new" onSubmit={create}>
-            <LimitedInput max={40} placeholder="Nouveau…" value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="icon-btn" disabled={!name.trim()} aria-label="Créer"><IconPlus size={20} /></button>
-          </form>
-        </div>}
-        <button className="hmenu-item" disabled><IconMoney size={22} /><span>Comptes</span><small>Bientôt</small></button>
-        <button className="hmenu-item" disabled><IconPoll /><span>Sondage</span><small>Bientôt</small></button>
+        {KINDS.map((k) => <div key={k}>
+          <button className="hmenu-item" onClick={() => go(`/${k}`)}><ToolIcon kind={k} /><span>{TOOLS[k].label}</span></button>
+          {convId && <div className="hmenu-sub">
+            {(linked[k] ?? []).map((i) => (
+              <button key={i.id} className="hmenu-subitem" onClick={() => go(`/${k}/${i.id}`)}><span>{i.title}</span></button>
+            ))}
+            <form className="hmenu-new" onSubmit={(e) => create(e, k)}>
+              <LimitedInput max={k === 'polls' ? 200 : 40} placeholder="Nouveau…" value={names[k] ?? ''} onChange={(e) => setNames((n) => ({ ...n, [k]: e.target.value }))} />
+              <button className="icon-btn" disabled={!names[k]?.trim()} aria-label="Créer"><IconPlus size={20} /></button>
+            </form>
+          </div>}
+        </div>)}
         <button className="hmenu-item" onClick={() => { close(); setReminder(true) }}><IconBell /><span>Notification</span></button>
       </div>
     </>}

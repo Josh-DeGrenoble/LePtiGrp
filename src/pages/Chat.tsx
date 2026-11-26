@@ -1,4 +1,5 @@
 import { HeaderMenu } from '../components/HeaderMenu'
+import { PollCard } from '../components/PollCard'
 import { BackButton } from '../components/BackButton'
 import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -158,12 +159,13 @@ function Bubble({ m, mine, author, names, me, onMenu }: { m: Message; mine: bool
   const pinned = isPinned(m)
   const mentionsMe = m.mention_all || m.mentions.includes(me)
   return (
-    <div className={`bubble${mine ? ' mine' : ''}${pinned ? ' pinned' : ''}${mentionsMe && !mine ? ' mentioned' : ''}`} {...press}>
+    <div className={`bubble${mine ? ' mine' : ''}${pinned ? ' pinned' : ''}${mentionsMe && !mine ? ' mentioned' : ''}${m.poll_id ? ' has-poll' : ''}`} {...press}>
       <div className="bubble-head">
         {!mine && <b>{author}</b>}{!mine && ' - '}{messageDate(m.created_at)}
         {pinned && <span className="pin-info"><IconPin size={14} filled /> <i>{remaining(m.pinned_until)}</i></span>}
       </div>
       <div className="bubble-text">{renderMentions(m.content, names)}</div>
+      {m.poll_id && <PollCard pollId={m.poll_id} compact />}
     </div>
   )
 }
