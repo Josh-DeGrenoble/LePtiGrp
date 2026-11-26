@@ -92,3 +92,31 @@ function Restore({ uid }: { uid: string }) {
     </div>
   )
 }
+
+const seenKey = (uid: string) => `e2ee-info:${uid}`
+/** L'écran d'info a-t-il déjà été vu pour ce compte ? (mémorisé dans le compte, et sur le téléphone en secours) */
+export function infoSeen(uid: string, meta: Record<string, unknown> | undefined) {
+  if (meta?.e2ee_info_seen) return true
+  try { return localStorage.getItem(seenKey(uid)) === '1' } catch { return false }
+}
+
+/** Affiché une seule fois, à la première connexion */
+export function E2EEInfo({ uid, onDone }: { uid: string; onDone: () => void }) {
+  const ok = () => {
+    try { localStorage.setItem(seenKey(uid), '1') } catch { /* rien */ }
+    supabase.auth.updateUser({ data: { e2ee_info_seen: true } }).then(() => {}, () => {})
+    onDone()
+  }
+  return (
+    <div className="login e2ee">
+      <h1>🔒 Tes messages sont chiffrés</h1>
+      <ul className="e2ee-points">
+        <li>🔐 Tes messages sont <b>chiffrés de bout en bout</b> : seuls les membres de la conversation peuvent les lire, pas même le serveur.</li>
+        <li>🔑 Tes clés sont protégées par <b>ton mot de passe</b>, qui ne quitte jamais ton téléphone. Connecte-toi sur un autre téléphone : tout est là.</li>
+        <li>⚠️ <b>Mot de passe oublié et réinitialisé = anciens messages perdus.</b> Personne ne pourra les récupérer. Choisis un mot de passe dont tu te souviens.</li>
+        <li>✅ <b>Changer ton mot de passe</b> dans Paramètres, en revanche, ne fait rien perdre.</li>
+      </ul>
+      <button className="btn primary" onClick={ok}>Compris</button>
+    </div>
+  )
+}
