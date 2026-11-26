@@ -47,6 +47,14 @@ create table if not exists public.list_items (
   created_at timestamptz not null default now()
 );
 alter table public.list_items add column if not exists checked_by uuid references public.profiles on delete set null;
+-- Tri manuel, catégorie, et type de quantité : « à prendre » (quantity, ex. « 3 kg ») ou « restant » (level, en %)
+alter table public.list_items add column if not exists position double precision;
+update public.list_items set position = id where position is null;
+alter table public.list_items add column if not exists category text check (char_length(category) <= 30);
+alter table public.list_items add column if not exists qty_kind text not null default 'take' check (qty_kind in ('take', 'left'));
+alter table public.list_items add column if not exists level smallint check (level between 0 and 100);
+-- catégories d'une liste, dans l'ordre d'affichage
+alter table public.lists add column if not exists categories text[] not null default '{}';
 create index if not exists list_items_list_idx on public.list_items (list_id);
 
 -- Qui a coché : rempli automatiquement

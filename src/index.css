@@ -312,7 +312,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .chevron { transform: rotate(180deg); color: var(--muted); display: flex; }
 .note-items { display: flex; flex-direction: column; }
 .note-item { border-bottom: 1px solid var(--border); animation: fade .25s ease; }
-.note-line { display: flex; align-items: center; gap: 6px; }
 .claims { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 4px 10px 38px; margin-top: -4px; }
 .claim { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: var(--surface); }
 .claim.mine { display: inline-flex; align-items: center; gap: 4px; background: var(--mention); color: var(--primary); padding: 2px 4px 2px 10px; }
@@ -323,7 +322,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .note-check span { word-break: break-word; transition: color .2s; }
 .note-check input { width: 22px; height: 22px; border-radius: 50%; }
 .note-item.checked .note-text { color: var(--muted); text-decoration: line-through; }
-.note-qty { width: 70px; flex: none; padding: 6px 8px; font-size: 14px; text-align: center; }
 .note-item .icon-btn { color: var(--muted); }
 .note-delete { margin-top: 24px; border-bottom: 0; }
 
@@ -407,3 +405,35 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .crash { display: flex; flex-direction: column; gap: 8px; text-align: center; padding: 32px 8px; }
 .crash small { word-break: break-word; margin-bottom: 8px; }
 .expense-main { cursor: pointer; }
+
+/* Pense-bête : mode normal */
+.edit-toggle { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 99px; font-size: 13px; font-weight: 700; color: var(--primary); background: var(--mention); flex: none; }
+.edit-toggle.on { background: var(--primary); color: var(--primary-text); padding: 6px 14px; }
+.note-check .note-text { flex: 1; min-width: 0; }
+.qty-tag { font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--surface); flex: none; }
+.level-tag { position: relative; overflow: hidden; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--surface); min-width: 54px; text-align: center; flex: none; }
+.level-tag span { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--primary) 25%, transparent); }
+.note-section { margin-bottom: 4px; }
+.note-cat { display: flex; align-items: center; gap: 6px; width: 100%; padding: 14px 4px 6px; font-size: 14px; font-weight: 700; color: var(--muted); text-align: left; }
+.note-cat svg { transform: rotate(180deg); transition: transform .2s; }
+.note-cat.open svg { transform: rotate(270deg); }
+.note-cat span { flex: 1; }
+.note-cat small { font-weight: 600; }
+
+/* Pense-bête : mode édition */
+.note-editor { padding-bottom: 8px; }
+.edit-cat { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-top: 14px; }
+.edit-cat > input { flex: 1; font-weight: 700; padding: 6px 10px; }
+.edit-cat.none > span { font-size: 14px; font-weight: 700; color: var(--muted); padding: 0 4px; }
+.edit-item { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-radius: 12px; background: var(--bg); transition: box-shadow .15s, transform .15s; }
+.edit-item > input { flex: 1; min-width: 0; padding: 8px 10px; }
+.edit-item.dragging { box-shadow: var(--shadow); transform: scale(1.02); position: relative; z-index: 2; }
+.drag-handle { width: 30px; height: 40px; display: grid; place-items: center; font-size: 20px; color: var(--muted); cursor: grab; touch-action: none; user-select: none; flex: none; }
+.qty-pill { font-size: 13px; font-weight: 700; padding: 6px 10px; border-radius: 99px; background: var(--surface); color: var(--muted); flex: none; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qty-pill.set { background: var(--mention); color: var(--primary); }
+.edit-add { display: flex; align-items: center; gap: 8px; padding: 4px 0 4px 8px; color: var(--muted); }
+.edit-add input { background: transparent; border-style: dashed; padding: 8px 10px; }
+.edit-newcat { display: flex; gap: 8px; margin-top: 20px; }
+.level-value { font-size: 32px; font-weight: 800; text-align: center; color: var(--primary); }
+.sheet input[type=range] { width: 100%; accent-color: var(--primary); padding: 0; margin: 8px 0; }
+.inline-form .btn.wide { margin-top: 0; flex: 1; }

@@ -14,8 +14,9 @@ export const wanted = (q: string | null) => { const n = parseFloat((q ?? '').rep
  * État d'un élément de pense-bête selon les prises : fait quand quelqu'un s'en occupe sans quantité,
  * ou quand la somme des prises atteint la quantité demandée.
  */
-export function itemStatus(quantity: string | null, claims: Claim[] = []) {
-  const want = wanted(quantity)
+export function itemStatus(quantity: string | null, claims: Claim[] = [], kind = 'take') {
+  // « restant » (ex. 25 % de shampoing) : pas de quantité à se partager, une coche suffit
+  const want = kind === 'take' ? wanted(quantity) : null
   const got = claims.reduce((s, c) => s + Number(c.qty ?? 0), 0)
   const done = claims.length > 0 && (want === null || got >= want || claims.some((c) => c.qty === null))
   return { want, got, done, left: want !== null ? Math.max(0, want - got) : null }
@@ -28,10 +29,10 @@ export const TOOLS: Record<ToolKind, {
 }> = {
   notes: {
     table: 'lists', label: 'Pense-bête', newTitle: 'Nouveau pense-bête', placeholder: 'Nom du pense-bête', field: 'name',
-    select: '*, list_items(quantity, list_claims(qty))',
+    select: '*, list_items(quantity, qty_kind, list_claims(qty))',
     summary: (r) => {
-      const items = r.list_items as { quantity: string | null; list_claims: Claim[] }[]
-      const left = items.filter((i) => !itemStatus(i.quantity, i.list_claims).done).length
+      const items = r.list_items as { quantity: string | null; qty_kind?: string; list_claims: Claim[] }[]
+      const left = items.filter((i) => !itemStatus(i.quantity, i.list_claims, i.qty_kind).done).length
       return !items.length ? 'Vide' : left ? `${left} à faire` : 'Tout est coché'
     },
   },

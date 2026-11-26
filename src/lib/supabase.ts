@@ -45,10 +45,15 @@ export function errMsg(e: unknown) {
 
 /** Partage commun aux outils : pour moi seul, pour une conv, ou libre (participants choisis) */
 export type Shared = { id: string; owner_id: string; conversation_id: string | null; participants: string[]; created_at: string }
-export type List = Shared & { name: string }
+export type List = Shared & { name: string; categories?: string[] }
 export type Claim = { item_id: number; user_id: string; qty: number | null }
 /** `quantity` = quantité demandée (texte libre, ex. « 3 » ou « 2 kg ») ; `list_claims` = qui en prend combien */
-export type ListItem = { id: number; list_id: string; content: string; quantity: string | null; created_at: string; list_claims: Claim[] }
+export type QtyKind = 'take' | 'left'
+export type ListItem = {
+  id: number; list_id: string; content: string; created_at: string; list_claims: Claim[]
+  position: number | null; category: string | null
+  qty_kind: QtyKind; quantity: string | null; level: number | null  // « à prendre » : quantity ; « restant » : level en %
+}
 export type Ledger = Shared & { name: string }
 export type Expense = { id: number; ledger_id: string; label: string; amount: number; paid_by: string; split: string[]; spent_at: string; created_at: string }
 export type Poll = Shared & { question: string; options: string[]; multiple: boolean }
