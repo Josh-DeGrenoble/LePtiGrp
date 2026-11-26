@@ -7,6 +7,7 @@ import { LimitedInput } from '../components/LimitedInput'
 import { Sheet } from '../components/Sheet'
 import { Avatar } from '../components/Avatar'
 import { DatePicker } from '../components/DatePicker'
+import { TimePicker } from '../components/TimePicker'
 import { ask, notify } from '../components/Dialog'
 import { IconCalendar, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type CalEvent, type EventReply } from '../lib/supabase'
@@ -126,7 +127,7 @@ export default function EventPage() {
       <Sheet open={editing} onClose={() => setEditing(false)} title="Modifier l'événement">
         <LimitedInput placeholder="Nom" value={form.title} max={100} onChange={(e) => setForm({ ...form, title: e.target.value })} />
         <DatePicker value={form.day} onChange={(d) => setForm({ ...form, day: d })} max={1} single />
-        <label className="event-time"><span>Heure (facultatif)</span><input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} /></label>
+        <TimePicker value={form.time} onChange={(time) => setForm({ ...form, time })} />
         <LimitedInput placeholder="Lieu (facultatif)" value={form.place} max={100} onChange={(e) => setForm({ ...form, place: e.target.value })} />
         <button className="btn primary wide" disabled={!form.title.trim() || form.day.length !== 1} onClick={save}>Enregistrer</button>
       </Sheet>

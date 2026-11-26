@@ -8,6 +8,7 @@ import { Toggle } from '../components/Sheet'
 import { notify } from '../components/Dialog'
 import { IconClose } from '../components/Icons'
 import { DatePicker, dateLabel } from '../components/DatePicker'
+import { TimePicker } from '../components/TimePicker'
 import { supabase, errMsg } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { TOOLS, createTool, type Share, type ToolKind } from '../lib/tools'
@@ -70,7 +71,7 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
         <div className="section-title">Date</div>
         <DatePicker value={day} onChange={setDay} max={1} single />
         <div className="card form event-extra">
-          <label className="event-time"><span>Heure (facultatif)</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
+          <TimePicker value={time} onChange={setTime} />
           <LimitedInput placeholder="Lieu (facultatif)" value={place} max={100} onChange={(e) => setPlace(e.target.value)} />
         </div>
       </>}
