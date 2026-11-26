@@ -16,8 +16,7 @@ import { Sheet } from '../components/Sheet'
 import { pushState, enablePush, disablePush, isIos, testPush, type PushState } from '../lib/push'
 import { useOnResume } from '../lib/network'
 import { errMsg } from '../lib/supabase'
-import { identity, safetyCode } from '../lib/e2ee'
-import { b64 } from '../lib/crypto/core'
+import { identity } from '../lib/e2ee'
 
 export default function Settings() {
   const { session, profile } = useAuth()
@@ -167,7 +166,7 @@ function DeleteAccount({ open, onClose }: { open: boolean; onClose: () => void }
   )
 }
 
-/** Code de sécurité de ce compte + explications */
+/** État du chiffrement + explications */
 function Encryption() {
   const id = identity()
   if (!id) return null
@@ -179,12 +178,9 @@ function Encryption() {
       <p><b>Si ton mot de passe est réinitialisé (oubli), tes anciens messages chiffrés seront perdus.</b></p>
       <p>Restent visibles par le serveur : qui parle à qui, quand, les mentions, et les outils (pense-bêtes, comptes, sondages).</p>
     </details>}>
-      <div className="srow stack">
+      <div className="srow">
         <span className="srow-icon" style={{ background: C.green }}><IconShield /></span>
-        <span className="srow-text">Mon code de sécurité
-          <small>À comparer avec celui que voient tes amis</small>
-          <code className="safety-code">{safetyCode(b64(id.signPk), b64(id.boxPk))}</code>
-        </span>
+        <span className="srow-text">Messages chiffrés de bout en bout<small>Actif sur ce téléphone</small></span>
       </div>
     </SGroup>
   )

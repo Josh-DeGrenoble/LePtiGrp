@@ -15,7 +15,6 @@ import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
 import { NotifToggles, type NotifPrefs } from '../components/NotifToggles'
 import { cachedFriends, loadFriends } from '../lib/friends'
-import { SecurityCodes } from '../components/SecurityCodes'
 import { PERMISSIONS, LEVEL_LABEL, levelOf, type Level } from '../lib/permissions'
 
 const ROLE_LABEL: Record<Role, string> = { super_admin: 'Super admin', admin: 'Admin', member: 'Membre' }
@@ -145,7 +144,6 @@ export default function GroupSettings() {
         <NotifToggles prefs={c.mine} onChange={setNotif} />
       </div>
 
-      <SecurityCodes members={c.members} me={me} />
 
       {conv.is_group && (
         <div className="settings-block">

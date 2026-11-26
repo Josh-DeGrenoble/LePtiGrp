@@ -219,10 +219,9 @@ function checkPins(uids: string[]) {
     if (!rows.length) continue
     const p = pins[u]
     if (!p) { pins[u] = { signs: rows.map((r) => r.sign_pk) }; dirty = true; continue }
+    // Nouvelle clé (nouveau compte Google, mot de passe réinitialisé…) : acceptée d'office, sans rien bloquer
     const fresh = rows.filter((r) => !p.signs.includes(r.sign_pk))
-    if (fresh.length && JSON.stringify(fresh.map((r) => r.sign_pk)) !== JSON.stringify(p.pending?.map((r) => r.sign_pk))) {
-      pins[u] = { ...p, pending: fresh.map(({ sign_pk, box_pk }) => ({ sign_pk, box_pk })), verified: false }; dirty = true
-    }
+    if (fresh.length) { pins[u] = { signs: [...p.signs, ...fresh.map((r) => r.sign_pk)] }; dirty = true }
   }
   if (dirty) { local.savePins(pins); emit() }
 }
@@ -275,8 +274,6 @@ async function sendEpoch(conv: string): Promise<{ epoch: number; key: Uint8Array
     if (error) throw error
     const uids = (mem as { user_id: string }[]).map((m) => m.user_id)
     await fetchKeys(uids, true)
-    const changed = uids.filter(keyChanged)
-    if (changed.length) throw new KeyChangedError(changed)
     const want: Record<string, string> = {}
     for (const u of uids) { const k = latestKey(u); if (k) want[u] = k.box_pk }
     if (!want[me.uid]) throw new Error('Ta clé n\'est pas publiée.')
