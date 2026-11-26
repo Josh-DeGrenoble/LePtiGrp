@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase, type Tag } from '../lib/supabase'
-import { loadFriends, type FriendWithTags } from '../lib/friends'
+import { loadFriends, cachedFriends, type FriendWithTags } from '../lib/friends'
 import { norm } from '../lib/format'
 import { Avatar } from './Avatar'
 import { TagChip } from './TagChip'
@@ -23,8 +23,8 @@ async function loadGroups(): Promise<Group[]> {
 
 /** Sélection d'amis : recherche, sélection rapide par tag ou par groupe existant, tags visibles sur chaque ami */
 export function FriendPicker({ selected, onChange, exclude = [] }: { selected: string[]; onChange: (ids: string[]) => void; exclude?: string[] }) {
-  const [friends, setFriends] = useState<FriendWithTags[]>([])
-  const [tags, setTags] = useState<Tag[]>([])
+  const [friends, setFriends] = useState<FriendWithTags[]>(() => cachedFriends().friends)
+  const [tags, setTags] = useState<Tag[]>(() => cachedFriends().tags)
   const [groups, setGroups] = useState<Group[]>([])
   const [search, setSearch] = useState('')
   const excludeKey = exclude.join()

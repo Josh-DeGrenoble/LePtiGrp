@@ -2,11 +2,13 @@ import { notify } from '../components/Dialog'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase, type Conversation, type Member, type Role } from './supabase'
 import { canDo, type Action } from './permissions'
+import { readCache, writeCache } from './network'
 
 /** Conversation + membres (avec profils), rechargés en temps réel */
 export function useConversation(id: string, me: string) {
-  const [conv, setConv] = useState<Conversation | null>(null)
-  const [members, setMembers] = useState<Member[]>([])
+  const cached = readCache<{ conv: Conversation | null; members: Member[] }>(`conv:${id}`, { conv: null, members: [] })
+  const [conv, setConv] = useState<Conversation | null>(cached.conv)
+  const [members, setMembers] = useState<Member[]>(cached.members)
   const [notFound, setNotFound] = useState(false)
 
   const load = useCallback(async () => {
@@ -18,6 +20,7 @@ export function useConversation(id: string, me: string) {
     if (!c.data) { setNotFound(true); return }
     setConv(c.data as Conversation)
     setMembers((m.data ?? []) as Member[])
+    writeCache(`conv:${id}`, { conv: c.data, members: m.data ?? [] })
   }, [id])
 
   useEffect(() => {

@@ -1,12 +1,12 @@
+import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, errMsg, type Tag } from '../lib/supabase'
 import { norm } from '../lib/format'
-import { loadFriends, TAG_COLORS, type FriendWithTags } from '../lib/friends'
+import { loadFriends, cachedFriends, TAG_COLORS, type FriendWithTags } from '../lib/friends'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBack, IconPencil, IconPlus, IconDown } from '../components/Icons'
+import { IconPencil, IconPlus, IconDown } from '../components/Icons'
 import { ask, notify } from '../components/Dialog'
 
 /**
@@ -14,9 +14,9 @@ import { ask, notify } from '../components/Dialog'
  * (nom, couleur) et la liste de mes amis avec recherche. Toucher un ami ajoute/retire le tag.
  */
 export default function Tags() {
-  const [tags, setTags] = useState<Tag[]>([])
-  const [friends, setFriends] = useState<FriendWithTags[]>([])
-  const [selId, setSelId] = useState<string | null>(null)
+  const [tags, setTags] = useState<Tag[]>(() => cachedFriends().tags)
+  const [friends, setFriends] = useState<FriendWithTags[]>(() => cachedFriends().friends)
+  const [selId, setSelId] = useState<string | null>(() => cachedFriends().tags[0]?.id ?? null)
   const [renaming, setRenaming] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -30,6 +30,16 @@ export default function Tags() {
   useEffect(() => { load() }, [load])
 
   const tag = tags.find((t) => t.id === selId) ?? null
+
+  // Sens de l'animation : le nouveau tag arrive du côté où il se trouve dans la barre
+  const prevIdx = useRef(0)
+  const idx = tags.findIndex((t) => t.id === selId)
+  const dir = idx >= prevIdx.current ? 'right' : 'left'
+  useEffect(() => { prevIdx.current = idx }, [idx])
+  const select = (id: string, el: HTMLElement) => {
+    setSelId(id); setRenaming(false)
+    el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }
 
   const run = async (q: PromiseLike<{ error: unknown }>) => {
     const { error } = await q
@@ -73,10 +83,11 @@ export default function Tags() {
   const withTag = shown.filter(has)
   const others = shown.filter((f) => !has(f))
 
-  const row = (f: FriendWithTags) => {
+  const row = (f: FriendWithTags, i: number) => {
     const on = has(f)
     return (
       <button key={f.id} className={`tag-friend${on ? ' on' : ''}`} onClick={() => toggle(f)} aria-pressed={on}
+        data-i={Math.min(i, 12)}
         style={on ? { background: tag!.color + '22' } : undefined}>
         <Avatar name={f.display_name} url={f.avatar_url} size={36} />
         <span>{f.display_name}</span>
@@ -87,13 +98,13 @@ export default function Tags() {
 
   return (
     <Screen header={<>
-      <Link to="/friends" className="icon-btn" aria-label="Retour"><IconBack /></Link>
+      <BackButton to="/friends" />
       <h1>Tags</h1>
       <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
     </>}>
       <div className="tag-bar">
         {tags.map((t) => (
-          <button key={t.id} className={`tag-tab${t.id === selId ? ' on' : ''}`} onClick={() => { setSelId(t.id); setRenaming(false) }}
+          <button key={t.id} className={`tag-tab${t.id === selId ? ' on' : ''}`} onClick={(e) => select(t.id, e.currentTarget)}
             style={t.id === selId ? { background: t.color, borderColor: t.color } : { color: t.color, borderColor: t.color }}>
             <span className="tag-tab-name">{t.name}</span><small>{friends.filter((f) => f.tags.some((x) => x.id === t.id)).length}</small>
           </button>
@@ -102,7 +113,7 @@ export default function Tags() {
       </div>
 
       {!tag ? <p className="empty">Crée ton premier tag avec le bouton +. Les tags ne sont visibles que par toi.</p> : <>
-        <div className="tag-settings">
+        <div className={`tag-settings slide-${dir}`} key={`s-${tag.id}`} style={{ boxShadow: `inset 4px 0 0 ${tag.color}` }}>
           {renaming ? (
             <LimitedInput className="title-input" defaultValue={tag.name} max={30} autoFocus onFocus={(e) => e.target.select()}
               onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(false) }}
@@ -122,10 +133,12 @@ export default function Tags() {
 
         <input className="search" type="search" placeholder="Rechercher un ami…" value={search} onChange={(e) => setSearch(e.target.value)} />
 
-        {withTag.length > 0 && <div className="section-title">Ont le tag ({withTag.length})</div>}
-        <div className="list">{withTag.map(row)}</div>
-        {others.length > 0 && <div className="section-title">Autres amis</div>}
-        <div className="list">{others.map(row)}</div>
+        <div key={`l-${tag.id}`} className="tag-lists">
+          {withTag.length > 0 && <div className="section-title">Ont le tag ({withTag.length})</div>}
+          <div className="list">{withTag.map(row)}</div>
+          {others.length > 0 && <div className="section-title">Autres amis</div>}
+          <div className="list">{others.map(row)}</div>
+        </div>
         {shown.length === 0 && <p className="empty">Aucun ami trouvé.</p>}
       </>}
     </Screen>

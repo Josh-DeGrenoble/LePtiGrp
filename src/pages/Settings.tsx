@@ -1,11 +1,12 @@
+import { BackButton } from '../components/BackButton'
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBack, IconShare } from '../components/Icons'
+import { IconShare } from '../components/Icons'
 import { ProfileEditor } from '../components/ProfileEditor'
+import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Toggle } from '../components/Sheet'
 import { pushState, enablePush, disablePush, isIos, type PushState } from '../lib/push'
@@ -16,6 +17,7 @@ export default function Settings() {
   const { session, profile } = useAuth()
   const [editProfile, setEditProfile] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [account, setAccount] = useState<'email' | 'password' | null>(null)
   const appUrl = window.location.origin
   const [push, setPush] = useState<PushState | null>(null)
   useEffect(() => { pushState().then(setPush) }, [])
@@ -42,7 +44,7 @@ export default function Settings() {
 
   return (
     <Screen header={<>
-      <Link to="/" className="icon-btn" aria-label="Retour"><IconBack /></Link>
+      <BackButton to="/" />
       <h1>Paramètres</h1><span className="icon-btn" />
     </>}>
       {profile && (
@@ -55,6 +57,12 @@ export default function Settings() {
           <span className="link">Modifier</span>
         </button>
       )}
+
+      <div className="section-title">Compte</div>
+      <div className="card list-card">
+        <button className="settings-row" onClick={() => setAccount('email')}>Changer d'email</button>
+        <button className="settings-row" onClick={() => setAccount('password')}>Changer de mot de passe</button>
+      </div>
 
       <div className="section-title">Notifications</div>
       <div className="card">
@@ -82,6 +90,7 @@ export default function Settings() {
         Se déconnecter
       </button>
 
+      <AccountForm kind={account} onClose={() => setAccount(null)} />
       <ProfileEditor open={editProfile} onClose={() => setEditProfile(false)} />
     </Screen>
   )

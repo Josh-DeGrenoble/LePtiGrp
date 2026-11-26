@@ -1,3 +1,4 @@
+import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -7,7 +8,7 @@ import { useConversation } from '../lib/conversation'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { FriendPicker } from '../components/FriendPicker'
-import { IconBack, IconDown, IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconUserMinus } from '../components/Icons'
+import { IconDown, IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconUserMinus } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
@@ -72,7 +73,7 @@ export default function GroupSettings() {
 
   return (
     <Screen header={<>
-      <button className="icon-btn" onClick={() => nav(`/c/${id}`)} aria-label="Retour"><IconBack /></button>
+      <BackButton to={`/c/${id}`} />
       <div className="chat-title">
         <button className="avatar-btn" disabled={!conv.is_group || !c.can('edit_info')} onClick={() => setEditPhoto(true)} aria-label="Changer la photo">
           <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={conv.is_group} />

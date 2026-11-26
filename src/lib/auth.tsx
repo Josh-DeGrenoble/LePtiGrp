@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, type Profile } from './supabase'
+import { clearCache } from './network'
 
 type AuthCtx = { session: Session | null; profile: Profile | null; loading: boolean; refreshProfile: () => Promise<void> }
 const Ctx = createContext<AuthCtx>({ session: null, profile: null, loading: true, refreshProfile: async () => {} })
@@ -22,7 +23,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await loadProfile(data.session?.user.id)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'SIGNED_OUT') clearCache()
       setSession(s)
       setTimeout(() => loadProfile(s?.user.id), 0)
     })

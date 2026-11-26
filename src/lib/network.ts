@@ -81,3 +81,9 @@ export function startOutbox() {
   setInterval(() => { if (outbox.some((p) => !p.failed)) flushOutbox() }, 20000)
   flushOutbox()
 }
+
+/** À la déconnexion : on efface les données en cache (un autre compte peut se connecter sur ce téléphone) */
+export function clearCache() {
+  try { Object.keys(localStorage).filter((k) => k.startsWith('cache:')).forEach((k) => localStorage.removeItem(k)) } catch { /* rien */ }
+  outbox = []
+}

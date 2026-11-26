@@ -1,6 +1,7 @@
+import { BackButton } from '../components/BackButton'
 import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { queueMessage, readCache, writeCache, useOnResume, usePending, dropPending, retryPending, type Pending } from '../lib/network'
@@ -8,7 +9,7 @@ import { useConversation } from '../lib/conversation'
 import { messageDate, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBack, IconDown, IconPin, IconSend } from '../components/Icons'
+import { IconDown, IconPin, IconSend } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
 
@@ -22,7 +23,6 @@ const PIN_DURATIONS: { label: string; ms: number | null }[] = [
 export default function Chat() {
   const { id = '' } = useParams()
   const me = useMe()
-  const nav = useNavigate()
   const c = useConversation(id, me)
   const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(`msgs:${id}`, []))
   const pending = usePending(id)
@@ -67,7 +67,7 @@ export default function Chat() {
   const waiting = pinnedOnly ? [] : pending.filter((p) => !sentIds.has(p.client_id))
   useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [shown.length, waiting.length])
 
-  if (c.notFound) return <Screen header={<><Link to="/" className="icon-btn"><IconBack /></Link><h1>Introuvable</h1><span className="icon-btn" /></>}><p className="empty">Cette conversation n'existe plus ou tu n'en fais plus partie.</p></Screen>
+  if (c.notFound) return <Screen header={<><BackButton to="/" /><h1>Introuvable</h1><span className="icon-btn" /></>}><p className="empty">Cette conversation n'existe plus ou tu n'en fais plus partie.</p></Screen>
 
   const names = new Map(c.members.map((m) => [m.user_id, m.profiles?.display_name ?? '?']))
 
@@ -80,7 +80,7 @@ export default function Chat() {
 
   return (
     <Screen header={<>
-      <button className="icon-btn" onClick={() => nav('/')} aria-label="Retour"><IconBack /></button>
+      <BackButton to="/" />
       <Link to={`/c/${id}/settings`} className="chat-title">
         <Avatar name={c.title} url={c.conv?.is_group ? c.conv.avatar_url : c.other?.avatar_url} size={34} group={c.conv?.is_group} />
         <span>{c.title}</span>

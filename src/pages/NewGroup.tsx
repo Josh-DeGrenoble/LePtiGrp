@@ -1,11 +1,11 @@
+import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { notify } from '../components/Dialog'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase, errMsg } from '../lib/supabase'
 import { Screen } from '../components/Layout'
 import { FriendPicker } from '../components/FriendPicker'
-import { IconBack } from '../components/Icons'
 
 export default function NewGroup() {
   const nav = useNavigate()
@@ -23,7 +23,7 @@ export default function NewGroup() {
 
   return (
     <Screen header={<>
-      <Link to="/" className="icon-btn" aria-label="Retour"><IconBack /></Link>
+      <BackButton to="/" />
       <h1>Nouveau groupe</h1><span className="icon-btn" />
     </>} footer={
       <div className="footer-bar"><button className="btn primary wide" disabled={!name.trim() || busy} onClick={create}>

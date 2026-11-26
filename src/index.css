@@ -215,3 +215,37 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .offline-banner { background: #1e2a3a; color: #fff; font-size: 13px; text-align: center; padding: 6px 12px; padding-top: max(6px, env(safe-area-inset-top)); }
 .denied-guide p { margin: 0 0 8px; font-size: 14px; }
 .denied-guide ol { margin: 0 0 8px; padding-left: 22px; font-size: 14px; line-height: 1.7; }
+.list-card { padding: 0 12px; }
+.list-card .settings-row:last-child { border-bottom: 0; }
+.search-bar { display: flex; gap: 8px; margin: 12px 0 4px; }
+.search-field { flex: 1; display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding-left: 12px; color: var(--muted); transition: border-color .2s; }
+.search-field:focus-within { border-color: var(--primary); }
+.search-bar.adding .search-field { border-color: var(--primary); color: var(--primary); }
+.search-field input { border: 0; background: none; padding-left: 0; min-width: 0; }
+.search-bar.adding input { letter-spacing: 2px; font-weight: 600; }
+.search-bar.adding input::placeholder { letter-spacing: 0; font-weight: 400; }
+.small-btn { width: 32px; height: 32px; }
+.search-bar .btn { min-width: 108px; }
+
+/* Animation au changement de tag */
+.tag-tab { transition: background .25s, color .25s, transform .2s; }
+.tag-tab.on { transform: scale(1.06); }
+.slide-right { animation: slide-r .28s cubic-bezier(.2,.8,.3,1); }
+.slide-left { animation: slide-l .28s cubic-bezier(.2,.8,.3,1); }
+@keyframes slide-r { from { opacity: 0; transform: translateX(40px); } }
+@keyframes slide-l { from { opacity: 0; transform: translateX(-40px); } }
+.tag-lists .tag-friend { animation: rise .3s ease-out both; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+.tag-lists .tag-friend[data-i="1"] { animation-delay: 25ms; }
+.tag-lists .tag-friend[data-i="2"] { animation-delay: 50ms; }
+.tag-lists .tag-friend[data-i="3"] { animation-delay: 75ms; }
+.tag-lists .tag-friend[data-i="4"] { animation-delay: 100ms; }
+.tag-lists .tag-friend[data-i="5"] { animation-delay: 125ms; }
+.tag-lists .tag-friend[data-i="6"] { animation-delay: 150ms; }
+.tag-lists .tag-friend[data-i="7"] { animation-delay: 175ms; }
+.tag-lists .tag-friend[data-i="8"] { animation-delay: 200ms; }
+.tag-lists .tag-friend[data-i="9"] { animation-delay: 225ms; }
+.tag-lists .tag-friend[data-i="10"] { animation-delay: 250ms; }
+.tag-lists .tag-friend[data-i="11"] { animation-delay: 275ms; }
+.tag-lists .tag-friend[data-i="12"] { animation-delay: 300ms; }
+@media (prefers-reduced-motion: reduce) { .slide-right, .slide-left, .tag-lists .tag-friend { animation: none; } }

@@ -7,6 +7,7 @@ import Friends from './pages/Friends'
 import AddFriend from './pages/AddFriend'
 import Tags from './pages/Tags'
 import { DialogHost } from './components/Dialog'
+import { useTrackHistory } from './components/BackButton'
 import { useEffect } from 'react'
 import { startOutbox, useOnline } from './lib/network'
 import { syncPush } from './lib/push'
@@ -18,6 +19,7 @@ import GroupSettings from './pages/GroupSettings'
 function Routed() {
   const { session, loading } = useAuth()
   const online = useOnline()
+  useTrackHistory()
   const uid = session?.user.id
   useEffect(() => { if (uid) { startOutbox(); syncPush() } }, [uid])
   if (loading) return <div className="splash">LePtiGrp</div>

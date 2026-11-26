@@ -1,4 +1,5 @@
 import { supabase, type Profile, type Tag } from './supabase'
+import { readCache, writeCache } from './network'
 
 export type FriendWithTags = Profile & { tags: Tag[] }
 
@@ -20,8 +21,12 @@ export async function loadFriends(): Promise<{ friends: FriendWithTags[]; tags: 
       tags: links.filter((l) => l.friend_id === friend.id).map((l) => byId.get(l.tag_id)!).filter(Boolean),
     }))
     .sort((a, b) => a.display_name.localeCompare(b.display_name, 'fr'))
+  writeCache('friends', { friends, tags })
   return { friends, tags }
 }
+
+/** Dernière liste connue (affichage instantané avant le rechargement) */
+export const cachedFriends = () => readCache<{ friends: FriendWithTags[]; tags: Tag[] }>('friends', { friends: [], tags: [] })
 
 export const TAG_COLORS = ['#7c8cf8', '#f59e0b', '#10b981', '#ec4899', '#ef4444', '#14b8a6', '#8b5cf6', '#64748b']
 
