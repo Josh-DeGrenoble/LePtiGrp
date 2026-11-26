@@ -40,3 +40,6 @@ export const IconList = ({ size = 22 }: P) => svg(size, <><path d="M9 6h12M9 12h
 export const IconPoll = ({ size = 22 }: P) => svg(size, <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>)
 export const IconBell = ({ size = 22 }: P) => svg(size, <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>)
 export const IconTrash = ({ size = 20 }: P) => svg(size, <><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></>)
+export const IconCoffee = ({ size = 22 }: P) => svg(size, <><path d="M17 8h1a4 4 0 0 1 0 8h-1" /><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z" /><path d="M6 2v3M10 2v3M14 2v3" /></>)
+export const IconBug = ({ size = 22 }: P) => svg(size, <><rect x="8" y="6" width="8" height="14" rx="4" /><path d="M19 7l-3 2M5 7l3 2M19 19l-3-2M5 19l3-2M20 13h-4M4 13h4M10 4l1 2M14 4l-1 2" /></>)
+export const IconBulb = ({ size = 22 }: P) => svg(size, <><path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" /></>)

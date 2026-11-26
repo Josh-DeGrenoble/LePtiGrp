@@ -6,17 +6,19 @@ function hash(s: string) {
   return Math.abs(h)
 }
 
+/** `group` : conversation à plus de 2 personnes, avatar en carré arrondi (rond sinon) */
 export function Avatar({ name, url, size = 44, group }: { name: string; url?: string | null; size?: number; group?: boolean }) {
+  const borderRadius = group ? size * 0.3 : '50%'
   // Avatar prédéfini : "emoji:🦊:#f59e0b"
   if (url?.startsWith('emoji:')) {
     const [, emoji, bg] = url.split(':')
-    return <div className="avatar" style={{ width: size, height: size, background: bg, fontSize: size * 0.55 }}>{emoji}</div>
+    return <div className="avatar" style={{ width: size, height: size, background: bg, fontSize: size * 0.55, borderRadius }}>{emoji}</div>
   }
-  if (url) return <img src={url} alt="" className="avatar" style={{ width: size, height: size }} />
+  if (url) return <img src={url} alt="" className="avatar" style={{ width: size, height: size, borderRadius }} />
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?'
   return (
     <div className="avatar" style={{ width: size, height: size, background: COLORS[hash(name) % COLORS.length],
-      fontSize: size * 0.4, borderRadius: group ? size * 0.3 : '50%' }}>
+      fontSize: size * 0.4, borderRadius }}>
       {initials}
     </div>
   )

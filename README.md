@@ -23,6 +23,11 @@ Les clés Supabase (publiques) sont dans `.env`.
 4. Edge Functions > *Secrets* : `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUSH_SECRET` (même valeur que l'étape 2).
 5. Dans l'appli : Paramètres > Notifications > Activer (sur iPhone, depuis l'appli installée sur l'écran d'accueil).
 
+## Avatars de groupe et retours
+
+SQL Editor : lancer [`supabase/extras.sql`](supabase/extras.sql). Pour voir les retours (bugs, idées) dans ses réglages, s'ajouter comme admin :
+`insert into public.app_admins select id from auth.users where email = '<ton email>';`
+
 ## Outils du menu ▽ (pense-bêtes, comptes, sondages, rappels)
 
 1. Database > *Extensions* : activer `pg_cron`.

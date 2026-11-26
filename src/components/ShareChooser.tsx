@@ -1,3 +1,4 @@
+import { useConvSizes, isCrowd } from '../lib/convSizes'
 import { useEffect, useState } from 'react'
 import { Avatar } from './Avatar'
 import { FriendPicker } from './FriendPicker'
@@ -10,6 +11,7 @@ const MODES: { mode: Share['mode']; label: string }[] = [{ mode: 'me', label: 'M
 /** Avec qui partager un outil : moi seul, les membres d'une conv, ou des amis choisis (filtre par tags) */
 export function ShareChooser({ value, onChange }: { value: Share; onChange: (s: Share) => void }) {
   const [convs, setConvs] = useState<ConvSummary[]>(() => readCache<ConvSummary[]>('convs', []))
+  const sizes = useConvSizes()
   useEffect(() => {
     supabase.rpc('my_conversations').then(({ data }) => { if (data) { setConvs(data); writeCache('convs', data) } })
   }, [])
@@ -22,7 +24,7 @@ export function ShareChooser({ value, onChange }: { value: Share; onChange: (s: 
     {value.mode === 'conv' && <div className="list-card fade-in">
       {convs.map((c) => (
         <button key={c.id} className={`settings-row conv-pick${value.conv === c.id ? ' on' : ''}`} onClick={() => onChange({ ...value, conv: c.id })}>
-          <Avatar name={c.name ?? '?'} url={c.avatar_url} size={34} group={c.is_group} /><span>{c.name ?? 'Discussion'}</span>
+          <Avatar name={c.name ?? '?'} url={c.avatar_url} size={34} group={isCrowd(sizes, c)} /><span>{c.name ?? 'Discussion'}</span>
           <span className="radio" />
         </button>
       ))}

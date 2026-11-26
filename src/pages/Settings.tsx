@@ -6,6 +6,7 @@ import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { IconShare } from '../components/Icons'
 import { ProfileEditor } from '../components/ProfileEditor'
+import { FeedbackSection } from '../components/Feedback'
 import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Toggle } from '../components/Sheet'
@@ -90,6 +91,8 @@ export default function Settings() {
           <b>Android</b> : ouvrir le lien dans Chrome, menu ⋮, « Installer l'application ».
         </p>
       </div>
+
+      <FeedbackSection />
 
       <button className="settings-row danger" onClick={async () => (await ask('Se déconnecter ?')) && supabase.auth.signOut()}>
         Se déconnecter

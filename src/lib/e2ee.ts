@@ -50,7 +50,7 @@ export async function signUp(email: string, password: string, displayName: strin
   await ready()
   const k = passwordKeys(password)
   kekRoot = k.kekRoot
-  const { data, error } = await supabase.auth.signUp({ email, password: k.authPassword, options: { data: { display_name: displayName } } })
+  const { data, error } = await supabase.auth.signUp({ email, password: k.authPassword, options: { data: { display_name: displayName }, emailRedirectTo: `${window.location.origin}/confirmed` } })
   if (error) { kekRoot = null; throw error }
   return !!data.session
 }

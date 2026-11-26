@@ -98,7 +98,7 @@ export default function GroupSettings() {
       <BackButton to={backTo} />
       <div className="chat-title">
         <button className="avatar-btn" disabled={!conv.is_group || !c.can('edit_info')} onClick={() => setEditPhoto(true)} aria-label="Changer la photo">
-          <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={conv.is_group} />
+          <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={c.members.length > 2} />
         </button>
         {renaming ? (
           <LimitedInput className="title-input" defaultValue={conv.name ?? ''} max={40} autoFocus

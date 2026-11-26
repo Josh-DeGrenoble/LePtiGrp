@@ -1,0 +1,100 @@
+import { useEffect, useState, type ReactNode } from 'react'
+import { IconBug, IconBulb, IconClose, IconCoffee } from './Icons'
+import { ask, notify } from './Dialog'
+import { supabase, errMsg } from '../lib/supabase'
+import { useMe } from '../lib/auth'
+
+type Kind = 'bug' | 'idea'
+type Item = { id: number; kind: Kind; message: string; created_at: string; profiles: { display_name: string } | null }
+
+/** Pop-up centrée ; `angry` la fait trembler (et vibrer le téléphone) quelques secondes */
+function Popup({ children, onClose, angry }: { children: ReactNode; onClose: () => void; angry?: boolean }) {
+  useEffect(() => { if (angry) navigator.vibrate?.([120, 60, 120, 60, 120, 60, 300]) }, [angry])
+  return (
+    <div className="popup-backdrop" onClick={onClose}>
+      <div className={`popup${angry ? ' angry' : ''}`} onClick={(e) => e.stopPropagation()}>{children}</div>
+    </div>
+  )
+}
+
+const TEXT: Record<Kind, { title: string; intro: string; placeholder: string }> = {
+  bug: {
+    title: 'Remonter un bug',
+    intro: "T'as trouvé un bug ? Impossible. C'est pas bien de mentir !!!!!! 😤 Bon allez, dis-moi comment ce n'est pas arrivé.",
+    placeholder: "Ce que tu faisais, ce qui s'est passé…",
+  },
+  idea: { title: 'Proposer une évolution', intro: 'Une idée pour l\'appli ? Je t\'écoute 👂', placeholder: 'Ton idée…' },
+}
+
+/** Réglages : café, bugs, idées ; et pour l'admin, la liste des retours */
+export function FeedbackSection() {
+  const me = useMe()
+  const [coffee, setCoffee] = useState(false)
+  const [kind, setKind] = useState<Kind | null>(null)
+  const [text, setText] = useState('')
+  const [admin, setAdmin] = useState(false)
+  const [items, setItems] = useState<Item[]>([])
+
+  const loadItems = () => supabase.from('feedback').select('id, kind, message, created_at, profiles(display_name)').order('created_at', { ascending: false })
+    .then(({ data }) => setItems((data as unknown as Item[]) ?? []))
+  useEffect(() => {
+    supabase.from('app_admins').select('user_id').eq('user_id', me).maybeSingle().then(({ data }) => {
+      if (data) { setAdmin(true); loadItems() }
+    })
+  }, [me])
+
+  const send = async () => {
+    const { error } = await supabase.from('feedback').insert({ kind, message: text.trim() })
+    if (error) return notify(errMsg(error))
+    setKind(null); setText('')
+    notify(kind === 'bug' ? 'Merci ! Je vais faire semblant de chercher 🕵️' : 'Merci pour l\'idée ! 🙌')
+    if (admin) loadItems()
+  }
+  const remove = async (it: Item) => {
+    if (!(await ask('Supprimer ce retour ?'))) return
+    setItems((xs) => xs.filter((x) => x.id !== it.id))
+    const { error } = await supabase.from('feedback').delete().eq('id', it.id)
+    if (error) { notify(errMsg(error)); loadItems() }
+  }
+
+  return <>
+    <div className="section-title">Le dev</div>
+    <div className="card list-card">
+      <button className="settings-row" onClick={() => setCoffee(true)}><IconCoffee /><span>Payer un café au dev</span></button>
+      <button className="settings-row" onClick={() => setKind('bug')}><IconBug /><span>Remonter un bug</span></button>
+      <button className="settings-row" onClick={() => setKind('idea')}><IconBulb /><span>Proposer une évolution</span></button>
+    </div>
+
+    {admin && <>
+      <div className="section-title">Retours reçus ({items.length})</div>
+      <div className="card list-card">
+        {items.length === 0 && <p className="muted small help">Aucun retour pour l'instant.</p>}
+        {items.map((it) => (
+          <div key={it.id} className="settings-row feedback-row">
+            {it.kind === 'bug' ? <IconBug /> : <IconBulb />}
+            <div>
+              <small className="muted">{it.profiles?.display_name ?? 'Ancien compte'} · {new Date(it.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</small>
+              <div className="feedback-msg">{it.message}</div>
+            </div>
+            <button className="icon-btn" onClick={() => remove(it)} aria-label="Supprimer"><IconClose /></button>
+          </div>
+        ))}
+      </div>
+    </>}
+
+    {coffee && <Popup onClose={() => setCoffee(false)}>
+      <div className="popup-emoji">🤢☕️➡️🍺😄</div>
+      <p>Bweerk, c'est dégueu le café ! Tu me paieras une bière à l'occas 🍻😉</p>
+      <button className="btn primary wide" onClick={() => setCoffee(false)}>Ça marche 🍺</button>
+    </Popup>}
+    {kind && <Popup angry={kind === 'bug'} onClose={() => setKind(null)}>
+      <h3>{kind === 'bug' ? '😤 ' : '💡 '}{TEXT[kind].title}</h3>
+      <p>{TEXT[kind].intro}</p>
+      <textarea rows={5} maxLength={2000} placeholder={TEXT[kind].placeholder} value={text} onChange={(e) => setText(e.target.value)} />
+      <div className="inline-form">
+        <button className="btn" onClick={() => setKind(null)}>Annuler</button>
+        <button className="btn primary wide" disabled={!text.trim()} onClick={send}>Envoyer</button>
+      </div>
+    </Popup>}
+  </>
+}

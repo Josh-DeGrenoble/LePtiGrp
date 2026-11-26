@@ -1,3 +1,4 @@
+import { useConvSizes, isCrowd } from '../lib/convSizes'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -17,6 +18,7 @@ import { useDecrypted, type CipherRow } from '../lib/e2ee'
 export default function Conversations() {
   const me = useMe()
   const [convs, setConvs] = useState<ConvSummary[]>(() => readCache<ConvSummary[]>('convs', []))
+  const sizes = useConvSizes()
   const [loaded, setLoaded] = useState(false)
   const [selected, setSelected] = useState<ConvSummary | null>(null)
 
@@ -82,9 +84,9 @@ export default function Conversations() {
         </div>
       )}
       <div className="conv-list">
-        {favs.map((c) => <ConvRow key={c.id} c={c} last={lastText(c)} onMenu={() => setSelected(c)} />)}
+        {favs.map((c) => <ConvRow key={c.id} c={c} last={lastText(c)} onMenu={() => setSelected(c)} crowd={isCrowd(sizes, c)} />)}
         {favs.length > 0 && others.length > 0 && <div className="conv-gap" />}
-        {others.map((c) => <ConvRow key={c.id} c={c} last={lastText(c)} onMenu={() => setSelected(c)} />)}
+        {others.map((c) => <ConvRow key={c.id} c={c} last={lastText(c)} onMenu={() => setSelected(c)} crowd={isCrowd(sizes, c)} />)}
       </div>
       <Link to="/new" className="fab" aria-label="Nouveau groupe"><IconPlus size={32} /></Link>
 
@@ -107,7 +109,7 @@ export default function Conversations() {
   )
 }
 
-function ConvRow({ c, last, onMenu }: { c: ConvSummary; last: string | null; onMenu: () => void }) {
+function ConvRow({ c, last, onMenu, crowd }: { c: ConvSummary; last: string | null; onMenu: () => void; crowd: boolean }) {
   const nav = useNavigate()
   const press = useLongPress(onMenu, () => nav(`/c/${c.id}`))
   const name = c.name ?? 'Discussion'
@@ -115,7 +117,7 @@ function ConvRow({ c, last, onMenu }: { c: ConvSummary; last: string | null; onM
     <div className="conv-row" {...press} role="button" tabIndex={0}>
       <button className="avatar-btn" aria-label="Paramètres" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
         onClick={() => nav(`/c/${c.id}/settings`)}>
-        <Avatar name={name} url={c.avatar_url} group={c.is_group} />
+        <Avatar name={name} url={c.avatar_url} group={crowd} />
       </button>
       <div className="conv-main">
         <div className="conv-name">{name}</div>

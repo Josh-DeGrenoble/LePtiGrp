@@ -103,7 +103,7 @@ export default function Chat() {
     <Screen header={<>
       <BackButton to="/" />
       <Link to={`/c/${id}/settings`} className="chat-title">
-        <Avatar name={c.title} url={c.conv?.is_group ? c.conv.avatar_url : c.other?.avatar_url} size={34} group={c.conv?.is_group} />
+        <Avatar name={c.title} url={c.conv?.is_group ? c.conv.avatar_url : c.other?.avatar_url} size={34} group={c.members.length > 2} />
         <span>{c.title}</span>
       </Link>
       <HeaderMenu convId={id} />
