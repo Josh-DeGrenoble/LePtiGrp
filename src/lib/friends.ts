@@ -49,3 +49,24 @@ export async function addPendingFriend() {
   const friend = data as { id: string | null; display_name: string } | null
   if (!error && friend?.id) notify(`${friend.display_name} est maintenant ton ami(e) !`)
 }
+
+/** Lien « cercle d'amis » (créé par un admin) : chacun qui l'ouvre devient ami avec tous les autres */
+export const circleLink = (token: string) => `${window.location.origin}/cercle/${token}`
+const PENDING_CIRCLE = 'pending-circle'
+export function rememberCircle(token: string) {
+  try { localStorage.setItem(PENDING_CIRCLE, token) } catch { /* stockage indisponible */ }
+}
+export async function joinCircle(token: string) {
+  const { data, error } = await supabase.rpc('join_circle', { circle_token: token })
+  if (error) throw error
+  return (data as { name: string; new_friends: number }[])[0]
+}
+export const circleMessage = (r: { name: string; new_friends: number }) =>
+  `Tu as rejoint « ${r.name} »${r.new_friends ? ` : ${r.new_friends} nouvel${r.new_friends > 1 ? 's' : ''} ami${r.new_friends > 1 ? 's' : ''} !` : '. Les prochains à ouvrir le lien seront tes amis.'}`
+export async function joinPendingCircle() {
+  let token: string | null = null
+  try { token = localStorage.getItem(PENDING_CIRCLE) } catch { return }
+  if (!token) return
+  try { localStorage.removeItem(PENDING_CIRCLE) } catch { /* rien */ }
+  try { notify(circleMessage(await joinCircle(token))) } catch { /* lien désactivé ou inconnu */ }
+}

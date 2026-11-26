@@ -10,6 +10,7 @@ import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { AdminFeedback, DevSection } from '../components/Feedback'
 import { AdminUsage } from '../components/AdminUsage'
+import { AdminCircles } from '../components/AdminCircles'
 import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Sheet } from '../components/Sheet'
@@ -133,6 +134,7 @@ export default function Settings() {
 
         <AdminUsage />
 
+        <AdminCircles />
         <AdminFeedback />
 
         <SGroup>

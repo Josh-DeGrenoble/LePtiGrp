@@ -26,7 +26,8 @@ import PollPage from './pages/PollPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Confirmed from './pages/Confirmed'
 import Privacy from './pages/Privacy'
-import { rememberFriendCode, addPendingFriend } from './lib/friends'
+import { rememberFriendCode, addPendingFriend, rememberCircle, joinPendingCircle } from './lib/friends'
+import JoinCircle from './pages/JoinCircle'
 import { initE2EE, useE2EE } from './lib/e2ee'
 import E2EESetup, { hasPassword, E2EEInfo, infoSeen } from './pages/E2EESetup'
 
@@ -38,9 +39,10 @@ function Routed() {
   const { state: e2ee } = useE2EE()
   const [infoDone, setInfoDone] = useState(false)
   useEffect(() => { if (uid) initE2EE(uid) }, [uid])
-  useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush(); startReminders(); addPendingFriend() } }, [uid, e2ee])
+  useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush(); startReminders(); addPendingFriend(); joinPendingCircle() } }, [uid, e2ee])
   // lien d'ami ouvert sans être connecté : on garde le code, l'ami est ajouté à la 1re connexion (après l'inscription)
   if (!session && /^\/add\/\d{5}$/.test(pathname)) rememberFriendCode(pathname.slice(5))
+  if (!session && /^\/cercle\/[0-9a-f]{18}$/.test(pathname)) rememberCircle(pathname.slice(8))
   // lien de confirmation du mail : page simple, sans l'appli
   if (pathname === '/confirmed') return <Confirmed />
   if (pathname === '/confidentialite') return <Privacy />
@@ -55,6 +57,7 @@ function Routed() {
       <Route path="/" element={<Conversations />} />
       <Route path="/friends" element={<Friends />} />
       <Route path="/add/:code" element={<AddFriend />} />
+      <Route path="/cercle/:token" element={<JoinCircle />} />
       <Route path="/tags" element={<Tags />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/new" element={<NewGroup />} />

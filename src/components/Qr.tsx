@@ -66,6 +66,8 @@ export function QrScanner({ open, onClose }: { open: boolean; onClose: () => voi
       const m = text.match(/\/add\/(\d{5})\b/)
       if (m && text.startsWith(window.location.origin)) { close.current(); nav(`/add/${m[1]}`); return }
       if (/^\d{5}$/.test(text)) { close.current(); nav(`/add/${text}`); return }
+      const circle = text.match(/\/cercle\/([0-9a-f]{18})\b/)
+      if (circle && text.startsWith(window.location.origin)) { close.current(); nav(`/cercle/${circle[1]}`); return }
       setFound(text)
     }
     ;(async () => {
