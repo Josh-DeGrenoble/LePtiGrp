@@ -28,7 +28,7 @@ export default function MediaGallery() {
       <div className="media-grid">
         {photos.map((p) => <Photo key={p.path} photo={p} square onOpen={() => setView(p)} />)}
       </div>
-      <Lightbox photo={view} onClose={() => setView(null)} />
+      <Lightbox photo={view} photos={[...photos].reverse()} onClose={() => setView(null)} />
     </Screen>
   )
 }

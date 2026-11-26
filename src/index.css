@@ -687,3 +687,13 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 /* Police des titres : Sora (embarquée, marche hors ligne) */
 :root { --font-title: 'Sora', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, .logo, .title-edit span, .section-title { font-family: var(--font-title); letter-spacing: -.01em; }
+
+/* Visionneuse : photo précédente / suivante */
+.lightbox img { transition: transform .2s ease-out; }
+.lb-nav { position: absolute; top: 50%; transform: translateY(-50%); }
+.lb-nav.prev { left: 10px; }
+.lb-nav.next { right: 10px; }
+.lb-nav.next svg { transform: rotate(180deg); }
+.lb-count { position: absolute; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); color: #fff; font-size: 13px; font-weight: 600;
+  background: #0008; padding: 4px 10px; border-radius: 99px; }
+@media (hover: none) { .lb-nav { display: none; } }

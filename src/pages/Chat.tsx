@@ -17,7 +17,7 @@ import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
 import { Photo, Lightbox } from '../components/Photo'
 import { PhotoEditor } from '../components/PhotoEditor'
-import { uploadPhoto } from '../lib/media'
+import { uploadPhoto, type PhotoRef } from '../lib/media'
 import { useDecrypted, type Plain } from '../lib/e2ee'
 
 const PIN_DURATIONS: { label: string; ms: number | null }[] = [
@@ -46,6 +46,7 @@ export default function Chat() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Message | null>(null)
   const [pinDate, setPinDate] = useState('')
+  const [viewPhoto, setViewPhoto] = useState<PhotoRef | null>(null)
   const [, tick] = useState(0)
   const bottom = useRef<HTMLDivElement>(null)
   const plainOf = useDecrypted(messages)
@@ -176,7 +177,7 @@ export default function Chat() {
                 <div className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}${g.every(pinnedLine) ? ' pinned' : ''}${!mine && g.some((it) => { const pl = it.m && plainOf(it.m); return !!pl && (pl.mention_all || pl.mentions.includes(me)) }) ? ' mentioned' : ''}`}>
                   {showWho && <div className="bubble-name" style={{ color: colorOf(name) }}>{name}</div>}
                   {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)}>
-                    {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} last={j === g.length - 1}
+                    {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} last={j === g.length - 1} onPhoto={setViewPhoto}
                         onMenu={() => setSelected(it.m!)} />
                       : <PendingLine p={it.p!} />}
                   </Fold>)}
@@ -188,6 +189,9 @@ export default function Chat() {
         <div ref={bottom} />
       </div>
 
+      {/* Visionneuse : toutes les photos de la conv, de la plus ancienne à la plus récente (balayer pour passer de l'une à l'autre) */}
+      <Lightbox photo={viewPhoto} photos={viewPhoto ? messages.map((m) => plainOf(m)?.photo).filter((p): p is PhotoRef => !!p) : undefined}
+        onClose={() => setViewPhoto(null)} />
       <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filtrer les messages">
         <div className="filter-sheet">
           <div className="filter-chips">
@@ -270,14 +274,13 @@ const follows = (prev: Item, it: Item) =>
   !!it.author && prev.author === it.author && Date.parse(it.created_at) - Date.parse(prev.created_at) < 5 * 60_000
 
 /** Une ligne d'une bulle = un message (appui long : épingler, supprimer…) ; petite coche quand il est arrivé */
-function Line({ m, plain, mine, names, onMenu, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; last: boolean }) {
+function Line({ m, plain, mine, names, onMenu, onPhoto, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; onPhoto: (p: PhotoRef) => void; last: boolean }) {
   const press = useLongPress(onMenu)
   const pinned = isPinned(m)
-  const [view, setView] = useState(false)
   const photo = plain?.photo
   return (
     <div className={`line${pinned ? ' pinned' : ''}${photo ? ' has-photo' : ''}`} {...press}>
-      {photo && <><Photo photo={photo} onOpen={() => setView(true)} /><Lightbox photo={view ? photo : null} onClose={() => setView(false)} /></>}
+      {photo && <Photo photo={photo} onOpen={() => onPhoto(photo)} />}
       {!(photo && !plain.text) && <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
         : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
         : plain.status === 'invalid' ? <i className="muted">⚠️ Message altéré ou signature invalide</i>
