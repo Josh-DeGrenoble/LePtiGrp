@@ -41,9 +41,18 @@ export function isPinned(m: Message, now = Date.now()) {
   return !!m.pinned_at && (!m.pinned_until || new Date(m.pinned_until).getTime() > now)
 }
 
+// Erreurs fréquentes du serveur (surtout connexion / inscription) en français clair
+const FR: [RegExp, string][] = [
+  [/already registered|already been registered|user_already_exists/i, 'Un compte existe déjà avec cet email : connecte-toi.'],
+  [/invalid format|email address .* is invalid|validate email|email_address_invalid/i, "Cette adresse email n'est pas valide."],
+  [/email not confirmed/i, "Valide d'abord le lien reçu par mail (pense aux spams)."],
+  [/rate limit|too many|security purposes|only request this after/i, 'Trop de tentatives : réessaie dans quelques minutes.'],
+  [/password should be|weak password|weak_password/i, 'Mot de passe trop faible : 8 caractères minimum.'],
+  [/failed to fetch|networkerror|load failed/i, 'Pas de connexion au serveur : vérifie ton réseau.'],
+]
 export function errMsg(e: unknown) {
-  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: string }).message)
-  return String(e)
+  const m = e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : String(e)
+  return FR.find(([re]) => re.test(m))?.[1] ?? m
 }
 
 /** Partage commun aux outils : pour moi seul, pour une conv, ou libre (participants choisis) */

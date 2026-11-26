@@ -37,11 +37,14 @@ export default function Login() {
           <LimitedInput name="nickname" autoComplete="nickname" placeholder="Ton prénom ou pseudo (30 caractères max)" value={name} onChange={(e) => setName(e.target.value)} required max={30} />
           {name.includes('@') && <p className="error">Ici c'est ton prénom ou pseudo, pas ton email 🙂</p>}
         </>}
-        <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'signup' ? 8 : 6}
+        <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required
           autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+        {mode === 'signup' && <p className={`pw-rule${password.length >= 8 ? ' ok' : ''}`}>
+          {password.length >= 8 ? '✓' : '○'} 8 caractères minimum{password.length > 0 && password.length < 8 && ` (encore ${8 - password.length})`}
+        </p>}
         {error && <p className="error">{error}</p>}
         {info && <p className="info">{info}</p>}
-        <button className="btn primary" disabled={busy}>{busy ? 'Connexion sécurisée…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</button>
+        <button className="btn primary" disabled={busy || (mode === 'signup' && password.length < 8)}>{busy ? 'Connexion sécurisée…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</button>
       </form>
       <button className="link" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}>
         {mode === 'login' ? "Pas encore de compte ? S'inscrire" : 'Déjà un compte ? Se connecter'}
