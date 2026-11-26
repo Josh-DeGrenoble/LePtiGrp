@@ -46,5 +46,6 @@ export async function addPendingFriend() {
   if (!code) return
   const { data, error } = await supabase.rpc('add_friend_by_code', { code })
   try { localStorage.removeItem(PENDING) } catch { /* rien */ }
-  if (!error) notify(`${(data as { display_name: string }).display_name} est maintenant ton ami(e) !`)
+  const friend = data as { id: string | null; display_name: string } | null
+  if (!error && friend?.id) notify(`${friend.display_name} est maintenant ton ami(e) !`)
 }

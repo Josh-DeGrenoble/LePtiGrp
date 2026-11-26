@@ -1,7 +1,7 @@
 -- =====================================================================
 -- LePtiGrp - correctifs de sécurité (audit du 26/11). Relançable sans risque.
 -- À lancer EN DERNIER, après tous les autres fichiers (et à relancer si l'un d'eux est relancé).
--- Prérequis : schema.sql, permissions.sql, tools.sql, account.sql.
+-- Prérequis : schema.sql, permissions.sql, tools.sql, account.sql (et activity.sql, cleanup.sql s'ils sont installés).
 -- =====================================================================
 
 -- ---------- 1. Rôles : un non-membre ne peut plus changer les rôles d'un groupe ----------
@@ -102,4 +102,21 @@ do $$ begin
   if to_regprocedure('public.log_activity(uuid, text, uuid, text, text)') is not null then
     revoke execute on function public.log_activity(uuid, text, uuid, text, text) from public, anon, authenticated;
   end if;
+  -- cleanup.sql : sinon n'importe qui pouvait effacer les photos d'une conv dont il connaît l'id
+  if to_regprocedure('public.purge_media(uuid)') is not null then
+    revoke execute on function public.purge_media(uuid) from public, anon, authenticated;
+  end if;
 end $$;
+
+-- ---------- 7. « Supprimer la conversation » : heure du serveur, pas celle du téléphone ----------
+-- Avec l'heure du téléphone (en retard, ou mise dans le futur exprès), la conv à deux pouvait rester
+-- ou être supprimée pour de bon (cleanup.sql) alors que l'autre écrivait encore.
+create or replace function public.hidden_at_now()
+returns trigger language plpgsql as $$
+begin
+  if new.hidden_at is not null and new.hidden_at is distinct from old.hidden_at then new.hidden_at := now(); end if;
+  return new;
+end $$;
+drop trigger if exists on_member_hidden_at on public.members;
+create trigger on_member_hidden_at before update of hidden_at on public.members
+  for each row execute function public.hidden_at_now();
