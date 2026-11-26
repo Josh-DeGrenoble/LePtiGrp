@@ -26,7 +26,13 @@ export function useConversation(id: string, me: string) {
   useEffect(() => {
     load()
     const ch = supabase.channel(`conv-meta-${id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'members', filter: `conversation_id=eq.${id}` }, load)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'members', filter: `conversation_id=eq.${id}` }, load)
+      // DELETE ne se filtre pas côté serveur : on ne garde que ceux de cette conv
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'members' },
+        (p) => { if ((p.old as Partial<Member>).conversation_id === id) load() })
+      // UPDATE (lecture, favoris, notifs, rôle) : fusion sur place, sans requête
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'members', filter: `conversation_id=eq.${id}` },
+        (p) => setMembers((ms) => ms.map((m) => (m.user_id === (p.new as Member).user_id ? { ...m, ...(p.new as Member), profiles: m.profiles } : m))))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `id=eq.${id}` }, load)
       .subscribe()
     return () => { supabase.removeChannel(ch) }

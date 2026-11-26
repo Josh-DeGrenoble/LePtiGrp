@@ -9,3 +9,22 @@ grant execute on all functions in schema public to authenticated;
 revoke update on public.profiles, public.members from authenticated;
 grant update (display_name, avatar_url) on public.profiles to authenticated;
 grant update (is_favorite, notify_all, notify_mentions, notify_pins, hidden_at, last_read_at) on public.members to authenticated;
+
+-- Fonctions internes (cron) et colonnes figées des outils : à refermer après le « grant » ci-dessus (voir security.sql)
+do $$
+declare f text;
+begin
+  foreach f in array array['public.send_due_reminders()', 'public.check_usage()', 'public.usage_now()',
+                         'public.log_activity(uuid, text, uuid, text, text)'] loop
+    if to_regprocedure(f) is not null then execute format('revoke execute on function %s from public, anon, authenticated', f); end if;
+  end loop;
+  if to_regclass('public.lists') is not null then
+    revoke update on public.lists, public.ledgers, public.polls from authenticated;
+    grant update (name, categories) on public.lists to authenticated;
+    grant update (name) on public.ledgers to authenticated;
+    grant update (question) on public.polls to authenticated;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'lists' and column_name = 'ledger_id') then
+    grant update (ledger_id) on public.lists to authenticated;  -- liste liée à un compte (activity.sql)
+  end if;
+end $$;

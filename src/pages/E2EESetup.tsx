@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { restore, newKeys, unlock, createKeys, forgotKeys, parsePhrase, initE2EE, type E2EEState } from '../lib/e2ee'
 import { supabase, errMsg } from '../lib/supabase'
+import { signOut } from '../lib/auth'
 import { ask } from '../components/Dialog'
 
 /** Écran affiché tant que les clés de chiffrement ne sont pas prêtes sur cet appareil (cas rares) */
@@ -19,7 +20,7 @@ export default function E2EESetup({ state, uid, email, hasPassword }: { state: E
   return <Restore uid={uid} />
 }
 
-const SignOut = () => <button className="link" onClick={() => supabase.auth.signOut()}>Se déconnecter</button>
+const SignOut = () => <button className="link" onClick={() => signOut()}>Se déconnecter</button>
 const pwName = (hasPassword: boolean) => hasPassword ? 'ton mot de passe' : 'ton mot de passe de chiffrement'
 
 /** Session ouverte mais clés pas sur ce téléphone : on demande le mot de passe une fois */

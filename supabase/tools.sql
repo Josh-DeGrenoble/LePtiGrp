@@ -208,8 +208,18 @@ drop policy if exists "profiles read" on public.profiles;
 create policy "profiles read" on public.profiles for select to authenticated
   using (id = auth.uid() or public.is_friend(id) or public.shares_conversation(id) or public.shares_tool(id));
 
-grant select, insert, update, delete on public.lists, public.list_items, public.list_claims, public.ledgers, public.expenses,
-  public.polls, public.poll_votes to authenticated;
+grant select, insert, update, delete on public.list_items, public.list_claims, public.expenses, public.poll_votes to authenticated;
+-- Outils : seuls le nom (et les catégories) sont modifiables ; propriétaire, conv et participants sont figés
+grant select, insert, delete on public.lists, public.ledgers, public.polls to authenticated;
+revoke update on public.lists, public.ledgers, public.polls from authenticated;
+grant update (name, categories) on public.lists to authenticated;
+grant update (name) on public.ledgers to authenticated;
+grant update (question) on public.polls to authenticated;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'lists' and column_name = 'ledger_id') then
+    grant update (ledger_id) on public.lists to authenticated;  -- liste liée à un compte (activity.sql)
+  end if;
+end $$;
 grant usage, select on all sequences in schema public to authenticated;
 
 -- Mises à jour en direct

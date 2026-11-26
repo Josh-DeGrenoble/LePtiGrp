@@ -61,6 +61,12 @@ export async function cancelReminder(r: Local) {
   if (r.id) await supabase.from('reminders').delete().eq('id', r.id)
 }
 
+/** À la déconnexion : plus de rappels locaux de ce compte */
+export function stopReminders() {
+  for (const t of timers.values()) clearTimeout(t)
+  timers.clear()
+}
+
 let started = false
 export function startReminders() {
   if (!started) { started = true; window.addEventListener('online', () => { syncReminders().catch(() => {}) }) }

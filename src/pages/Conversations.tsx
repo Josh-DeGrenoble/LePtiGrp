@@ -11,20 +11,21 @@ import { Avatar } from '../components/Avatar'
 import { IconGear, IconPlus, IconUser, IconStar, IconSearch } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { NotifToggles, ActivityToggles } from '../components/NotifToggles'
-import { readCache, writeCache, useOnResume } from '../lib/network'
+import { useOnResume } from '../lib/network'
+import { cachedConversations, fetchConversations } from '../lib/myConversations'
 import { useLongPress } from '../components/useLongPress'
 import { useDecrypted, type CipherRow } from '../lib/e2ee'
 
 export default function Conversations() {
   const me = useMe()
-  const [convs, setConvs] = useState<ConvSummary[]>(() => readCache<ConvSummary[]>('convs', []))
+  const [convs, setConvs] = useState<ConvSummary[]>(cachedConversations)
   const sizes = useConvSizes()
   const [loaded, setLoaded] = useState(false)
   const [selected, setSelected] = useState<ConvSummary | null>(null)
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.rpc('my_conversations')
-    if (!error) { setConvs(data as ConvSummary[]); writeCache('convs', data) }
+    const data = await fetchConversations()
+    if (data) setConvs(data)
     setLoaded(true)
   }, [])
 
@@ -32,11 +33,14 @@ export default function Conversations() {
 
   useEffect(() => {
     load()
+    // une rafale d'événements (plusieurs messages, lecture…) = un seul rechargement
+    let t = 0
+    const soon = () => { clearTimeout(t); t = window.setTimeout(load, 400) }
     const ch = supabase.channel('convs-list')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'members', filter: `user_id=eq.${me}` }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members', filter: `user_id=eq.${me}` }, soon)
       .subscribe()
-    return () => { supabase.removeChannel(ch) }
+    return () => { clearTimeout(t); supabase.removeChannel(ch) }
   }, [load, me])
 
   // Dernier message : renvoyé chiffré par le serveur, déchiffré ici

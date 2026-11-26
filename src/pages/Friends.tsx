@@ -45,7 +45,9 @@ export default function Friends() {
     setMsg('')
     const { data, error } = await supabase.rpc('add_friend_by_code', { code })
     if (error) return setMsg(errMsg(error))
-    setMsg(`${(data as { display_name: string }).display_name} ajouté(e) !`)
+    const friend = data as { id: string | null; display_name: string } | null
+    if (!friend?.id) return setMsg('Code inconnu')
+    setMsg(`${friend.display_name} ajouté(e) !`)
     setCode(''); setAdding(false); load()
   }
 

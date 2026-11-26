@@ -2,6 +2,14 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js'
 import { supabase, type Profile } from './supabase'
 import { clearCache } from './network'
+import { forgetPushDevice } from './push'
+import { stopReminders } from './reminders'
+
+/** Déconnexion : on détache d'abord ce téléphone des notifications (3 s max, hors réseau on n'attend pas) */
+export async function signOut() {
+  await Promise.race([forgetPushDevice().catch(() => {}), new Promise((r) => setTimeout(r, 3000))])
+  await supabase.auth.signOut()
+}
 
 type AuthCtx = { session: Session | null; profile: Profile | null; loading: boolean; refreshProfile: () => Promise<void> }
 const Ctx = createContext<AuthCtx>({ session: null, profile: null, loading: true, refreshProfile: async () => {} })
@@ -24,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === 'SIGNED_OUT') clearCache()
+      if (event === 'SIGNED_OUT') { clearCache(); stopReminders() }
       setSession(s)
       setTimeout(() => loadProfile(s?.user.id), 0)
     })
