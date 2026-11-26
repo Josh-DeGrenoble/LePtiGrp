@@ -10,7 +10,7 @@ import { DialogHost } from './components/Dialog'
 import { NotifPrompt } from './components/NotifPrompt'
 import { useTrackHistory, navDirection } from './components/BackButton'
 import { useEffect } from 'react'
-import { startOutbox, useOnline } from './lib/network'
+import { startOutbox } from './lib/network'
 import { syncPush } from './lib/push'
 import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
@@ -19,7 +19,6 @@ import GroupSettings from './pages/GroupSettings'
 
 function Routed() {
   const { session, loading } = useAuth()
-  const online = useOnline()
   useTrackHistory()
   const { pathname } = useLocation()
   const uid = session?.user.id
@@ -27,7 +26,6 @@ function Routed() {
   if (loading) return <div className="splash">LePtiGrp</div>
   if (!session) return <Login />
   return (<>
-    {!online && <div className="offline-banner">Hors connexion · tes messages partiront dès le retour du réseau</div>}
     <div key={pathname} className={`page page-${navDirection}`}>
     <Routes>
       <Route path="/" element={<Conversations />} />
