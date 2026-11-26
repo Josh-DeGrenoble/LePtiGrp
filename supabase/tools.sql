@@ -62,6 +62,20 @@ drop trigger if exists on_item_check on public.list_items;
 create trigger on_item_check before update of checked on public.list_items
   for each row execute function public.set_checked_by();
 
+-- Qui prend quoi : chacun coche un élément et peut dire combien il en prend
+-- (ex. « 3 saucissons » : Jo en prend 2, Léa 1). La quantité demandée reste sur l'élément.
+create table if not exists public.list_claims (
+  item_id    bigint not null references public.list_items on delete cascade,
+  user_id    uuid not null default auth.uid() references public.profiles on delete cascade,
+  qty        numeric(8, 2) check (qty > 0),  -- vide = « je m'en occupe »
+  created_at timestamptz not null default now(),
+  primary key (item_id, user_id)
+);
+-- anciennes coches -> prises
+insert into public.list_claims (item_id, user_id)
+  select id, checked_by from public.list_items where checked and checked_by is not null
+  on conflict do nothing;
+
 -- ---------- Comptes --------------------------------------------------
 create table if not exists public.ledgers (
   id              uuid primary key default gen_random_uuid(),
@@ -147,6 +161,17 @@ drop policy if exists "items all" on public.list_items;
 create policy "items all" on public.list_items for all to authenticated
   using (public.can_access_list(list_id)) with check (public.can_access_list(list_id));
 
+create or replace function public.can_access_item(i bigint)
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce((select can_access_list(list_id) from list_items where id = i), false)
+$$;
+alter table public.list_claims enable row level security;
+drop policy if exists "claims read" on public.list_claims;
+create policy "claims read" on public.list_claims for select to authenticated using (public.can_access_item(item_id));
+drop policy if exists "claims own" on public.list_claims;
+create policy "claims own" on public.list_claims for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid() and public.can_access_item(item_id));
+
 alter table public.expenses enable row level security;
 drop policy if exists "expenses all" on public.expenses;
 create policy "expenses all" on public.expenses for all to authenticated
@@ -172,7 +197,7 @@ drop policy if exists "profiles read" on public.profiles;
 create policy "profiles read" on public.profiles for select to authenticated
   using (id = auth.uid() or public.is_friend(id) or public.shares_conversation(id) or public.shares_tool(id));
 
-grant select, insert, update, delete on public.lists, public.list_items, public.ledgers, public.expenses,
+grant select, insert, update, delete on public.lists, public.list_items, public.list_claims, public.ledgers, public.expenses,
   public.polls, public.poll_votes to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 
@@ -180,7 +205,7 @@ grant usage, select on all sequences in schema public to authenticated;
 do $$
 declare t text;
 begin
-  foreach t in array array['lists', 'list_items', 'ledgers', 'expenses', 'polls', 'poll_votes'] loop
+  foreach t in array array['lists', 'list_items', 'list_claims', 'ledgers', 'expenses', 'polls', 'poll_votes'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when duplicate_object then null;

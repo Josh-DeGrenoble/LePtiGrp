@@ -8,10 +8,10 @@ import { ask, notify } from '../components/Dialog'
 import { IconClose, IconPencil, IconPlus, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type List, type ListItem } from '../lib/supabase'
 import { readCache, writeCache, useOnResume } from '../lib/network'
-import { cachedTools, usePeople } from '../lib/tools'
+import { cachedTools, itemStatus, usePeople } from '../lib/tools'
 import { useMe } from '../lib/auth'
 
-/** Un pense-bête : ajouter, cocher (avec quantité facultative), supprimer des éléments */
+/** Un pense-bête : ajouter des éléments (quantité facultative), chacun coche ce qu'il prend et combien */
 export default function NoteList() {
   const { id = '' } = useParams()
   const nav = useNavigate()
@@ -26,14 +26,13 @@ export default function NoteList() {
   const [renaming, setRenaming] = useState(false)
   const input = useRef<HTMLInputElement>(null)
   const me = useMe()
-  // Plusieurs personnes sur la liste : on affiche qui a coché quoi
   const people = usePeople(list)
-  const nameOf = new Map(people.map((p) => [p.id, p.id === me ? 'moi' : p.display_name]))
+  const nameOf = new Map(people.map((p) => [p.id, p.id === me ? 'Moi' : p.display_name]))
 
   const load = async () => {
     const [{ data: l }, { data: its }] = await Promise.all([
       supabase.from('lists').select('*').eq('id', id).maybeSingle(),
-      supabase.from('list_items').select('*').eq('list_id', id).order('created_at'),
+      supabase.from('list_items').select('*, list_claims(*)').eq('list_id', id).order('created_at'),
     ])
     if (!l) { if (navigator.onLine) setMissing(true); return }
     setList(l); setItems(its ?? []); writeCache(`items:${id}`, its ?? [])
@@ -44,14 +43,37 @@ export default function NoteList() {
     // les autres membres voient les changements en direct
     const ch = supabase.channel(`list-${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'list_items', filter: `list_id=eq.${id}` }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'list_claims' }, load)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [id])
 
   // Modifications appliquées tout de suite à l'écran, puis envoyées
-  const patch = async (item: ListItem, changes: Partial<ListItem>) => {
+  const patch = async (item: ListItem, changes: Pick<Partial<ListItem>, 'quantity'>) => {
     setItems((its) => its.map((i) => (i.id === item.id ? { ...i, ...changes } : i)))
     const { error } = await supabase.from('list_items').update(changes).eq('id', item.id)
+    if (error) { notify(errMsg(error)); load() }
+  }
+  const setClaims = (item: ListItem, claims: ListItem['list_claims']) =>
+    setItems((its) => its.map((i) => (i.id === item.id ? { ...i, list_claims: claims } : i)))
+  // Je coche : je prends ce qui reste (modifiable) ; je décoche : je retire ma prise
+  const toggleClaim = async (item: ListItem) => {
+    const mine = item.list_claims.some((c) => c.user_id === me)
+    const others = item.list_claims.filter((c) => c.user_id !== me)
+    const { left } = itemStatus(item.quantity, others)
+    const qty = left ? left : null
+    setClaims(item, mine ? others : [...others, { item_id: item.id, user_id: me, qty }])
+    const { error } = mine
+      ? await supabase.from('list_claims').delete().eq('item_id', item.id).eq('user_id', me)
+      : await supabase.from('list_claims').insert({ item_id: item.id, qty })
+    if (error) { notify(errMsg(error)); load() }
+  }
+  const setMyQty = async (item: ListItem, raw: string) => {
+    const n = parseFloat(raw.replace(',', '.'))
+    const qty = n > 0 ? n : null
+    if (qty === item.list_claims.find((c) => c.user_id === me)?.qty) return
+    setClaims(item, item.list_claims.map((c) => (c.user_id === me ? { ...c, qty } : c)))
+    const { error } = await supabase.from('list_claims').update({ qty }).eq('item_id', item.id).eq('user_id', me)
     if (error) { notify(errMsg(error)); load() }
   }
   const remove = async (item: ListItem) => {
@@ -67,7 +89,7 @@ export default function NoteList() {
     input.current?.focus()
     const { data, error } = await supabase.from('list_items').insert({ list_id: id, content }).select().single()
     if (error) return notify(errMsg(error))
-    setItems((its) => (its.some((i) => i.id === data.id) ? its : [...its, data]))
+    setItems((its) => (its.some((i) => i.id === data.id) ? its : [...its, { ...data, list_claims: [] }]))
   }
   const rename = async (name: string) => {
     setRenaming(false)
@@ -87,19 +109,37 @@ export default function NoteList() {
     <p className="empty">Ce pense-bête n'existe plus ou tu n'y as plus accès.</p>
   </Screen>
 
-  const todo = items.filter((i) => !i.checked)
-  const done = items.filter((i) => i.checked)
-  const row = (i: ListItem) => (
-    <div key={i.id} className={`note-item${i.checked ? ' checked' : ''}`}>
-      <label className="note-check">
-        <input type="checkbox" checked={i.checked} onChange={(e) => patch(i, { checked: e.target.checked, checked_by: e.target.checked ? me : null })} />
-        <span><span className="note-text">{i.content}</span>{i.checked && i.checked_by && people.length > 1 && <small className="checked-by">✓ {nameOf.get(i.checked_by) ?? '?'}</small>}</span>
-      </label>
-      <input className="note-qty" placeholder="Qté" defaultValue={i.quantity ?? ''} maxLength={20} aria-label="Quantité"
-        onBlur={(e) => { const q = e.target.value.trim() || null; if (q !== i.quantity) patch(i, { quantity: q }) }} />
-      <button className="icon-btn" onClick={() => remove(i)} aria-label="Supprimer"><IconClose /></button>
-    </div>
-  )
+  const done = (i: ListItem) => itemStatus(i.quantity, i.list_claims).done
+  const todo = items.filter((i) => !done(i))
+  const finished = items.filter(done)
+  const fmt = (n: number) => n.toLocaleString('fr-FR')
+  const row = (i: ListItem) => {
+    const st = itemStatus(i.quantity, i.list_claims)
+    const mine = i.list_claims.find((c) => c.user_id === me)
+    return (
+      <div key={i.id} className={`note-item${st.done ? ' checked' : ''}`}>
+        <div className="note-line">
+          <label className="note-check">
+            <input type="checkbox" checked={!!mine} onChange={() => toggleClaim(i)} />
+            <span className="note-text">{i.content}</span>
+          </label>
+          <input className="note-qty" placeholder="Qté" defaultValue={i.quantity ?? ''} maxLength={20} aria-label="Quantité demandée"
+            onBlur={(e) => { const q = e.target.value.trim() || null; if (q !== i.quantity) patch(i, { quantity: q }) }} />
+          <button className="icon-btn" onClick={() => remove(i)} aria-label="Supprimer"><IconClose /></button>
+        </div>
+        {i.list_claims.length > 0 && <div className="claims">
+          {i.list_claims.map((c) => c.user_id === me
+            ? <label key={c.user_id} className="claim mine">Moi ×
+                <input inputMode="decimal" placeholder="?" defaultValue={c.qty ?? ''} key={c.qty ?? ''} aria-label="Combien j'en prends"
+                  onBlur={(e) => setMyQty(i, e.target.value)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} /></label>
+            : <span key={c.user_id} className="claim">{nameOf.get(c.user_id) ?? '?'}{c.qty !== null && ` × ${fmt(Number(c.qty))}`}</span>)}
+          {st.want !== null && <span className={`claim-status${st.done ? ' ok' : ''}`}>
+            {st.done ? `${fmt(st.got || st.want)}/${fmt(st.want)} ✓` : `reste ${fmt(st.left!)}`}
+          </span>}
+        </div>}
+      </div>
+    )
+  }
 
   return (
     <Screen header={<>
@@ -119,9 +159,9 @@ export default function NoteList() {
     }>
       {items.length === 0 && <p className="empty">Rien pour l'instant. Ajoute un premier élément en bas.</p>}
       <div className="note-items">{todo.map(row)}</div>
-      {done.length > 0 && <>
-        <div className="section-title">Coché ({done.length})</div>
-        <div className="note-items">{done.map(row)}</div>
+      {finished.length > 0 && <>
+        <div className="section-title">Pris en charge ({finished.length})</div>
+        <div className="note-items">{finished.map(row)}</div>
       </>}
       {list && <button className="settings-row danger note-delete" onClick={destroy}><IconTrash /><span>Supprimer le pense-bête</span></button>}
     </Screen>

@@ -1,11 +1,25 @@
 import { useEffect, useState } from 'react'
-import { supabase, type Profile, type Shared } from './supabase'
+import { supabase, type Claim, type Profile, type Shared } from './supabase'
 import { readCache, writeCache } from './network'
 
 /** Les outils du menu ▽ : même logique de partage, de liste et de création */
 export type ToolKind = 'notes' | 'accounts' | 'polls'
 
 type Row = Shared & Record<string, unknown>
+
+/** Nombre au début de la quantité demandée (« 3 », « 2,5 kg »), sinon null */
+export const wanted = (q: string | null) => { const n = parseFloat((q ?? '').replace(',', '.')); return n > 0 ? n : null }
+
+/**
+ * État d'un élément de pense-bête selon les prises : fait quand quelqu'un s'en occupe sans quantité,
+ * ou quand la somme des prises atteint la quantité demandée.
+ */
+export function itemStatus(quantity: string | null, claims: Claim[] = []) {
+  const want = wanted(quantity)
+  const got = claims.reduce((s, c) => s + Number(c.qty ?? 0), 0)
+  const done = claims.length > 0 && (want === null || got >= want || claims.some((c) => c.qty === null))
+  return { want, got, done, left: want !== null ? Math.max(0, want - got) : null }
+}
 
 export const euro = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
 
@@ -14,10 +28,10 @@ export const TOOLS: Record<ToolKind, {
 }> = {
   notes: {
     table: 'lists', label: 'Pense-bête', newTitle: 'Nouveau pense-bête', placeholder: 'Nom du pense-bête', field: 'name',
-    select: '*, list_items(checked)',
+    select: '*, list_items(quantity, list_claims(qty))',
     summary: (r) => {
-      const items = r.list_items as { checked: boolean }[]
-      const left = items.filter((i) => !i.checked).length
+      const items = r.list_items as { quantity: string | null; list_claims: Claim[] }[]
+      const left = items.filter((i) => !itemStatus(i.quantity, i.list_claims).done).length
       return !items.length ? 'Vide' : left ? `${left} à faire` : 'Tout est coché'
     },
   },

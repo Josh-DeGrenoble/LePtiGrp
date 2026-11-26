@@ -1,28 +1,22 @@
 import { useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { IconBell, IconDown, IconPlus } from './Icons'
-import { LimitedInput } from './LimitedInput'
 import { ReminderSheet } from './ReminderSheet'
 import { ToolIcon } from './ToolIcon'
-import { notify } from './Dialog'
-import { errMsg } from '../lib/supabase'
-import { useMe } from '../lib/auth'
-import { TOOLS, cachedTools, createTool, loadTools, type ToolItem, type ToolKind } from '../lib/tools'
+import { TOOLS, cachedTools, loadTools, type ToolItem, type ToolKind } from '../lib/tools'
 
 const KINDS: ToolKind[] = ['notes', 'accounts', 'polls']
 
 /**
  * Flèche ▽ de l'en-tête : menu des outils (pense-bête, comptes, sondage, rappel).
- * Dans une conversation (`convId`), chaque outil liste aussi ses éléments liés à la conv, avec un champ « Nouveau… ».
+ * Dans une conversation (`convId`), chaque outil liste aussi ses éléments liés à la conv, et « Nouveau » ouvre la création déjà liée à la conv.
  */
 export function HeaderMenu({ convId }: { convId?: string }) {
-  const me = useMe()
   const nav = useNavigate()
   const { pathname } = useLocation()
   const btn = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState<CSSProperties | null>(null)
   const [linked, setLinked] = useState<Partial<Record<ToolKind, ToolItem[]>>>({})
-  const [names, setNames] = useState<Partial<Record<ToolKind, string>>>({})
   const [reminder, setReminder] = useState(false)
 
   const open = () => {
@@ -35,18 +29,9 @@ export function HeaderMenu({ convId }: { convId?: string }) {
       loadTools(k).then(set).catch(() => {})
     }
   }
-  const close = () => { setPos(null); setNames({}) }
+  const close = () => setPos(null)
   // Le retour depuis la page ouverte ramène ici
   const go = (to: string) => { close(); nav(to, { state: { from: pathname } }) }
-
-  const create = async (e: React.FormEvent, k: ToolKind) => {
-    e.preventDefault()
-    const name = names[k]?.trim()
-    if (!name || !convId) return
-    // un sondage a besoin de ses réponses : on passe par la page de création, pré-remplie
-    if (k === 'polls') return go(`/polls/new?conv=${convId}&q=${encodeURIComponent(name)}`)
-    try { go(`/${k}/${(await createTool(k, { name }, { mode: 'conv', conv: convId, ids: [] }, me)).id}`) } catch (err) { notify(errMsg(err)) }
-  }
 
   return <>
     <button ref={btn} className={`icon-btn hmenu-btn${pos ? ' on' : ''}`} onClick={() => (pos ? close() : open())}
@@ -60,10 +45,7 @@ export function HeaderMenu({ convId }: { convId?: string }) {
             {(linked[k] ?? []).map((i) => (
               <button key={i.id} className="hmenu-subitem" onClick={() => go(`/${k}/${i.id}`)}><span>{i.title}</span></button>
             ))}
-            <form className="hmenu-new" onSubmit={(e) => create(e, k)}>
-              <LimitedInput max={k === 'polls' ? 200 : 40} placeholder="Nouveau…" value={names[k] ?? ''} onChange={(e) => setNames((n) => ({ ...n, [k]: e.target.value }))} />
-              <button className="icon-btn" disabled={!names[k]?.trim()} aria-label="Créer"><IconPlus size={20} /></button>
-            </form>
+            <button className="hmenu-subitem hmenu-new" onClick={() => go(`/${k}/new?conv=${convId}`)}><IconPlus size={18} /><span>Nouveau</span></button>
           </div>}
         </div>)}
         <button className="hmenu-item" onClick={() => { close(); setReminder(true) }}><IconBell /><span>Notification</span></button>

@@ -46,7 +46,9 @@ export function errMsg(e: unknown) {
 /** Partage commun aux outils : pour moi seul, pour une conv, ou libre (participants choisis) */
 export type Shared = { id: string; owner_id: string; conversation_id: string | null; participants: string[]; created_at: string }
 export type List = Shared & { name: string }
-export type ListItem = { id: number; list_id: string; content: string; quantity: string | null; checked: boolean; checked_by: string | null; created_at: string }
+export type Claim = { item_id: number; user_id: string; qty: number | null }
+/** `quantity` = quantité demandée (texte libre, ex. « 3 » ou « 2 kg ») ; `list_claims` = qui en prend combien */
+export type ListItem = { id: number; list_id: string; content: string; quantity: string | null; created_at: string; list_claims: Claim[] }
 export type Ledger = Shared & { name: string }
 export type Expense = { id: number; ledger_id: string; label: string; amount: number; paid_by: string; split: string[]; created_at: string }
 export type Poll = Shared & { question: string; options: string[]; multiple: boolean }

@@ -303,10 +303,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .hmenu-subitem span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hmenu-subitem small { background: var(--primary); color: var(--primary-text); border-radius: 99px; padding: 0 7px; }
 .hmenu-subitem:active { background: var(--surface); }
-.hmenu-new { display: flex; align-items: center; gap: 2px; }
-.hmenu-new input { padding: 6px 10px; font-size: 14px; border-radius: 10px; }
-.hmenu-new .icon-btn { width: 34px; height: 34px; color: var(--primary); }
-.hmenu-new .icon-btn:disabled { opacity: .35; }
 
 /* Pense-bêtes */
 .note-row { gap: 12px; }
@@ -315,7 +311,14 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .note-row small { color: var(--muted); font-size: 13px; }
 .chevron { transform: rotate(180deg); color: var(--muted); display: flex; }
 .note-items { display: flex; flex-direction: column; }
-.note-item { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); animation: fade .25s ease; }
+.note-item { border-bottom: 1px solid var(--border); animation: fade .25s ease; }
+.note-line { display: flex; align-items: center; gap: 6px; }
+.claims { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 4px 10px 38px; margin-top: -4px; }
+.claim { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: var(--surface); }
+.claim.mine { display: inline-flex; align-items: center; gap: 4px; background: var(--mention); color: var(--primary); padding: 2px 4px 2px 10px; }
+.claim.mine input { width: 44px; padding: 2px 6px; font-size: 13px; font-weight: 700; text-align: center; border-radius: 99px; background: var(--bg); }
+.claim-status { font-size: 13px; font-weight: 700; color: var(--danger); margin-left: auto; }
+.claim-status.ok { color: #10b981; }
 .note-check { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 4px; cursor: pointer; }
 .note-check span { word-break: break-word; transition: color .2s; }
 .note-check input { width: 22px; height: 22px; border-radius: 50%; }
@@ -343,7 +346,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .reminder-row small { color: var(--muted); }
 .reminder-mode button, .reminder-in .segmented button { font-size: 14px; padding: 8px; }
 .note-row .chevron svg { color: var(--muted); }
-.note-check small.checked-by { display: block; font-size: 12px; color: var(--primary); margin-top: 2px; }
 
 /* Partage d'un outil */
 .share-modes { width: 100%; margin-bottom: 8px; }
@@ -401,3 +403,4 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .dp-day:disabled { opacity: .3; }
 .dp-day.today { box-shadow: inset 0 0 0 2px var(--surface2); }
 .dp-day.on { background: var(--primary); color: var(--primary-text); }
+.hmenu-subitem.hmenu-new { color: var(--primary); font-weight: 600; }
