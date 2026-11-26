@@ -62,10 +62,18 @@ export default function Chat() {
     return () => { supabase.removeChannel(ch); window.clearInterval(t) }
   }, [id, markRead, load])
 
-  const shown = pinnedOnly ? messages.filter((m) => isPinned(m)) : messages
+  const pinnedCount = messages.filter((m) => isPinned(m)).length
   const sentIds = new Set(messages.map((m) => m.client_id))
-  const waiting = pinnedOnly ? [] : pending.filter((p) => !sentIds.has(p.client_id))
-  useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [shown.length, waiting.length])
+  const waiting = pending.filter((p) => !sentIds.has(p.client_id))
+  useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [messages.length, waiting.length])
+  // Filtre épinglés : les autres messages se replient (CSS) ; on suit le bas pendant l'animation
+  useEffect(() => {
+    const end = Date.now() + 400
+    let raf = 0
+    const follow = () => { bottom.current?.scrollIntoView({ block: 'end' }); if (Date.now() < end) raf = requestAnimationFrame(follow) }
+    follow()
+    return () => cancelAnimationFrame(raf)
+  }, [pinnedOnly])
   // Clavier ouvert / fermé : on garde les derniers messages visibles, comme WhatsApp
   useEffect(() => {
     const keep = () => bottom.current?.scrollIntoView({ block: 'end' })
@@ -98,12 +106,14 @@ export default function Chat() {
       ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
       : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
       <div className="messages">
-        {pinnedOnly && shown.length === 0 && <p className="empty">Aucun message épinglé.</p>}
-        {shown.map((m) => (
-          <Bubble key={m.id} m={m} mine={m.author_id === me} author={names.get(m.author_id ?? '') ?? 'Ancien membre'}
-            names={names} me={me} onMenu={() => setSelected(m)} />
+        {pinnedOnly && pinnedCount === 0 && <p className="empty fade-in">Aucun message épinglé.</p>}
+        {messages.map((m) => (
+          <Fold key={m.id} hidden={pinnedOnly && !isPinned(m)}>
+            <Bubble m={m} mine={m.author_id === me} author={names.get(m.author_id ?? '') ?? 'Ancien membre'}
+              names={names} me={me} onMenu={() => setSelected(m)} />
+          </Fold>
         ))}
-        {waiting.map((p) => <PendingBubble key={p.client_id} p={p} />)}
+        {waiting.map((p) => <Fold key={p.client_id} hidden={pinnedOnly}><PendingBubble p={p} /></Fold>)}
         <div ref={bottom} />
       </div>
 
@@ -135,6 +145,11 @@ export default function Chat() {
       </Sheet>
     </Screen>
   )
+}
+
+/** Enveloppe qui replie / déplie son contenu en fondu (filtre des messages épinglés) */
+function Fold({ hidden, children }: { hidden: boolean; children: React.ReactNode }) {
+  return <div className={`fold${hidden ? ' out' : ''}`} aria-hidden={hidden}><div className="fold-in">{children}</div></div>
 }
 
 function Bubble({ m, mine, author, names, me, onMenu }: { m: Message; mine: boolean; author: string; names: Map<string, string>; me: string; onMenu: () => void }) {

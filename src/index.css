@@ -125,7 +125,11 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .chat-title { flex: 1; display: flex; align-items: center; gap: 10px; justify-content: center; color: var(--text); font-size: 20px; font-weight: 600; min-width: 0; }
 .chat-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pin-filter.on { color: var(--pinned); }
-.messages { display: flex; flex-direction: column; gap: 8px; }
+.messages { display: flex; flex-direction: column; }
+.fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .3s ease, opacity .25s ease; }
+.fold.out { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+.fold-in { min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 2px 2px 6px; }
+.fade-in { animation: fade .3s ease; }
 .bubble { max-width: 82%; padding: 8px 12px; border-radius: 14px 14px 14px 4px; background: var(--surface); align-self: flex-start; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: default; white-space: pre-wrap; word-break: break-word; }
 .bubble.mine { align-self: flex-end; background: var(--mine); color: var(--mine-text); border-radius: 14px 14px 4px 14px; }
 .bubble.pinned { background: var(--pinned); color: var(--pinned-text); box-shadow: 0 0 0 2px var(--pinned); }
