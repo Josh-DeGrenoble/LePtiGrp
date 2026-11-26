@@ -34,6 +34,16 @@ async function sendReminders() {
   return Response.json({ reminders: due?.length ?? 0 })
 }
 
+// Remplissage de la base ou du stockage (palier de 10 % franchi) : notification aux admins de l'appli
+async function sendUsage(kind: 'db' | 'storage', pct: number) {
+  const { data: admins } = await db.from('app_admins').select('user_id')
+  const { data: subs } = await db.from('push_subscriptions').select('*').in('user_id', (admins ?? []).map((a) => a.user_id))
+  const what = kind === 'db' ? 'La base de données' : 'Le stockage des fichiers'
+  const payload = JSON.stringify({ title: `${pct >= 80 ? '🚨' : '📊'} ${what} à ${pct} %`, body: 'Détail dans Paramètres > Serveur.', url: '/settings', tag: `usage-${kind}` })
+  await sendAll(subs ?? [], payload)
+  return Response.json({ usage: kind, pct })
+}
+
 // Bouton « Tester » des réglages : appelé par l'appli avec la session de l'utilisateur, envoie une notif à ses appareils
 // et renvoie le détail (nombre d'abonnements, codes d'erreur du service push) pour diagnostiquer
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info' }
@@ -55,8 +65,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (!req.headers.get('x-push-secret')) return sendTest(req)
   if (req.headers.get('x-push-secret') !== Deno.env.get('PUSH_SECRET')) return new Response('forbidden', { status: 403 })
-  const { event, message_id } = await req.json() as { event: 'message' | 'pin' | 'reminders'; message_id: number }
+  const body = await req.json() as { event: 'message' | 'pin' | 'reminders' | 'usage'; message_id: number; kind?: 'db' | 'storage'; pct?: number }
+  const { event, message_id } = body
   if (event === 'reminders') return sendReminders()
+  if (event === 'usage') return sendUsage(body.kind!, body.pct!)
 
   const { data: msg } = await db.from('messages').select('*').eq('id', message_id).single()
   if (!msg) return new Response('no message')

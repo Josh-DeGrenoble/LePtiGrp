@@ -28,6 +28,10 @@ Les clés Supabase (publiques) sont dans `.env`.
 SQL Editor : lancer [`supabase/extras.sql`](supabase/extras.sql). Pour voir les retours (bugs, idées) dans ses réglages, s'ajouter comme admin :
 `insert into public.app_admins select id from auth.users where email = '<ton email>';`
 
+## Remplissage du serveur (admin)
+
+SQL Editor : lancer [`supabase/usage.sql`](supabase/usage.sql), puis redéployer la fonction `push`. Limites du plan modifiables dans `usage_limits()`.
+
 ## Suppression de compte
 
 SQL Editor : lancer [`supabase/account.sql`](supabase/account.sql) (après `tools.sql`).
