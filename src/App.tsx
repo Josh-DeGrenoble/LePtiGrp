@@ -7,6 +7,7 @@ import Friends from './pages/Friends'
 import AddFriend from './pages/AddFriend'
 import Tags from './pages/Tags'
 import { DialogHost } from './components/Dialog'
+import { NotifPrompt } from './components/NotifPrompt'
 import { useTrackHistory, navDirection } from './components/BackButton'
 import { useEffect } from 'react'
 import { startOutbox, useOnline } from './lib/network'
@@ -40,6 +41,7 @@ function Routed() {
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </div>
+    <NotifPrompt />
   </>)
 }
 

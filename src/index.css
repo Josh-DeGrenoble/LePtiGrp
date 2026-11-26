@@ -264,3 +264,6 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 @keyframes page-in-l { from { opacity: 0; transform: translateX(-24px); } }
 .sheet-backdrop { animation: fade .18s; }
 @media (prefers-reduced-motion: reduce) { .page-forward, .page-back, .spinner { animation: none; } }
+.notif-prompt { text-align: center; }
+.notif-prompt .dialog-actions { justify-content: center; }
+.notif-bell { font-size: 36px; margin-bottom: 8px; }
