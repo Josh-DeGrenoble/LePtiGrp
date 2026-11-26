@@ -99,6 +99,8 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: 0 1px 3px #0003; }
 .toggle-row input:checked + .toggle { background: var(--primary); }
 .toggle-row input:checked + .toggle::after { left: 21px; }
+.fav-row { width: 100%; text-align: left; }
+.fav-star { width: 44px; display: flex; justify-content: center; color: var(--pinned); flex: none; }
 .pin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0; }
 @keyframes up { from { transform: translateY(40px); opacity: 0; } }
 @keyframes fade { from { opacity: 0; } }

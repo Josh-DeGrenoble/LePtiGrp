@@ -6,7 +6,7 @@ import { useMe } from '../lib/auth'
 import { shortDate } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconGear, IconPlus, IconUser, IconDown } from '../components/Icons'
+import { IconGear, IconPlus, IconUser, IconDown, IconStar } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { NotifToggles } from '../components/NotifToggles'
 import { readCache, writeCache, useOnResume } from '../lib/network'
@@ -75,9 +75,10 @@ export default function Conversations() {
 
       <Sheet open={!!selected} onClose={() => setSelected(null)} title={selected?.name ?? ''}>
         {selected && <>
-          <SheetButton onClick={() => updateMember({ is_favorite: !selected.is_favorite })}>
-            {selected.is_favorite ? '☆ Retirer des favoris' : '★ Ajouter aux favoris'}
-          </SheetButton>
+          <button className="toggle-row fav-row" onClick={() => updateMember({ is_favorite: !selected.is_favorite })} aria-pressed={selected.is_favorite}>
+            <span>Favori</span>
+            <span className="fav-star"><IconStar size={24} filled={selected.is_favorite} /></span>
+          </button>
           <div className="sheet-section">Notifications</div>
           <NotifToggles prefs={selected} onChange={updateMember} />
           <div className="sheet-sep" />
