@@ -615,3 +615,9 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .pe-hint { text-align: center; font-size: 13px; opacity: .7; margin: 4px 0; }
 .pe-error { color: #fca5a5; text-align: center; font-size: 14px; margin: 4px 10px; }
 .pe-bottom .composer input { flex: 1; min-height: 44px; border-radius: 22px; border: 0; padding: 11px 16px; background: #ffffff22; color: #fff; }
+.srow.gauge { flex-direction: column; align-items: stretch; gap: 6px; padding: 12px 14px; }
+.srow.gauge + .srow.gauge::before { left: 14px; }
+.gauge-top { display: flex; justify-content: space-between; }
+.gauge-bar { height: 8px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
+.gauge-bar span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width .4s; }
+.gauge-bar span.hot { background: var(--danger); }
