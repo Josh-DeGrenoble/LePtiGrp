@@ -25,7 +25,7 @@ import PollPage from './pages/PollPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Confirmed from './pages/Confirmed'
 import { initE2EE, useE2EE } from './lib/e2ee'
-import E2EESetup, { E2EEInfo, infoSeen } from './pages/E2EESetup'
+import E2EESetup, { hasPassword, E2EEInfo, infoSeen } from './pages/E2EESetup'
 
 function Routed() {
   const { session, loading } = useAuth()
@@ -40,7 +40,7 @@ function Routed() {
   if (pathname === '/confirmed') return <Confirmed />
   if (loading) return <div className="splash">LePtiGrp</div>
   if (!session) return <Login />
-  if (e2ee !== 'ready') return <E2EESetup state={e2ee} uid={session.user.id} email={session.user.email ?? ''} />
+  if (e2ee !== 'ready') return <E2EESetup state={e2ee} uid={session.user.id} email={session.user.email ?? ''} hasPassword={hasPassword(session.user)} />
   if (!infoDone && !infoSeen(session.user.id, session.user.user_metadata)) return <E2EEInfo uid={session.user.id} onDone={() => setInfoDone(true)} />
   return (<>
     <div key={pathname} className={`page page-${navDirection}`}>

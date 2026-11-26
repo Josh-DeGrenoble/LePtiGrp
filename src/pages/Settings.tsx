@@ -1,4 +1,5 @@
 import { BackButton } from '../components/BackButton'
+import { hasPassword } from './E2EESetup'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -90,8 +91,13 @@ export default function Settings() {
         </SGroup>
 
         <SGroup title="Compte">
-          <SRow icon={<IconMail size={18} />} color={C.blue} label="Email" sub={session?.user.email} onClick={() => setAccount('email')} />
-          <SRow icon={<IconLock />} color={C.slate} label="Mot de passe" onClick={() => setAccount('password')} />
+          {session && hasPassword(session.user) ? <>
+            <SRow icon={<IconMail size={18} />} color={C.blue} label="Email" sub={session.user.email} onClick={() => setAccount('email')} />
+            <SRow icon={<IconLock />} color={C.slate} label="Mot de passe" onClick={() => setAccount('password')} />
+          </> : <>
+            <SRow icon={<IconMail size={18} />} color={C.blue} label="Compte Google" sub={session?.user.email} />
+            <SRow icon={<IconLock />} color={C.slate} label="Mot de passe de chiffrement" onClick={() => setAccount('password')} />
+          </>}
         </SGroup>
 
         <DevSection />

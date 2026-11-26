@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { restore, newKeys, unlock, parsePhrase, initE2EE, type E2EEState } from '../lib/e2ee'
+import { restore, newKeys, unlock, createKeys, forgotKeys, parsePhrase, initE2EE, type E2EEState } from '../lib/e2ee'
 import { supabase, errMsg } from '../lib/supabase'
 import { ask } from '../components/Dialog'
 
 /** Écran affiché tant que les clés de chiffrement ne sont pas prêtes sur cet appareil (cas rares) */
-export default function E2EESetup({ state, uid, email }: { state: E2EEState; uid: string; email: string }) {
+export default function E2EESetup({ state, uid, email, hasPassword }: { state: E2EEState; uid: string; email: string; hasPassword: boolean }) {
   if (state === 'loading') return <div className="splash">LePtiGrp</div>
   if (state === 'offline') return (
     <div className="login e2ee">
@@ -13,30 +13,66 @@ export default function E2EESetup({ state, uid, email }: { state: E2EEState; uid
       <button className="btn primary" onClick={() => initE2EE(uid)}>Réessayer</button>
     </div>
   )
-  if (state === 'password') return <Unlock uid={uid} email={email} />
+  if (state === 'password') return <Unlock uid={uid} hasPassword={hasPassword} />
+  if (state === 'create') return hasPassword ? <Unlock uid={uid} hasPassword email={email} create /> : <Choose uid={uid} />
   if (state === 'reset') return <Reset uid={uid} />
   return <Restore uid={uid} />
 }
 
 const SignOut = () => <button className="link" onClick={() => supabase.auth.signOut()}>Se déconnecter</button>
+const pwName = (hasPassword: boolean) => hasPassword ? 'ton mot de passe' : 'ton mot de passe de chiffrement'
 
-/** Session ouverte mais clés pas encore récupérées : on redemande le mot de passe une fois */
-function Unlock({ uid, email }: { uid: string; email: string }) {
+/** Session ouverte mais clés pas sur ce téléphone : on demande le mot de passe une fois */
+function Unlock({ uid, hasPassword, email, create }: { uid: string; hasPassword: boolean; email?: string; create?: boolean }) {
   const [password, setPassword] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [forgot, setForgot] = useState(false)
   const go = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('')
-    try { await unlock(uid, email, password) } catch (x) { setErr(errMsg(x)); setBusy(false) }
+    try { await (create ? createKeys(uid, password, email) : unlock(uid, password)) } catch (x) { setErr(errMsg(x)); setBusy(false) }
   }
+  if (forgot) return <Choose uid={uid} forgot onBack={() => setForgot(false)} />
   return (
     <form className="login e2ee" onSubmit={go}>
       <h1>🔒 Déverrouiller tes messages</h1>
-      <p>Tes messages sont chiffrés. Saisis ton mot de passe pour les relire sur ce téléphone.</p>
-      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe" autoComplete="current-password" required autoFocus />
+      <p>Tes messages sont chiffrés. Saisis {pwName(hasPassword)} pour les relire sur ce téléphone.</p>
+      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={hasPassword ? 'Mot de passe' : 'Mot de passe de chiffrement'} autoComplete="current-password" required autoFocus />
       {err && <p className="error">{err}</p>}
       <button className="btn primary" disabled={busy || !password}>{busy ? 'Déverrouillage…' : 'Déverrouiller'}</button>
+      {!hasPassword && !create && <button type="button" className="link danger" onClick={() => setForgot(true)}>J'ai oublié mon mot de passe de chiffrement</button>}
       <SignOut />
+    </form>
+  )
+}
+
+/** Compte Google : choix du mot de passe de chiffrement (première fois, ou après un oubli) */
+function Choose({ uid, forgot, onBack }: { uid: string; forgot?: boolean; onBack?: () => void }) {
+  const [pw, setPw] = useState('')
+  const [pw2, setPw2] = useState('')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const go = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pw !== pw2) return setErr('Les deux mots de passe ne correspondent pas')
+    if (forgot && !(await ask('Repartir avec de nouvelles clés ? Tes anciens messages chiffrés resteront illisibles pour toujours.'))) return
+    setBusy(true); setErr('')
+    try { await (forgot ? forgotKeys(uid, pw) : createKeys(uid, pw)) } catch (x) { setErr(errMsg(x)); setBusy(false) }
+  }
+  return (
+    <form className="login e2ee" onSubmit={go}>
+      <h1>🔒 {forgot ? 'Nouveau mot de passe de chiffrement' : 'Ton mot de passe de chiffrement'}</h1>
+      <ul className="e2ee-points">
+        <li>🔐 Tes messages sont chiffrés de bout en bout. Ce mot de passe protège tes clés : <b>ni Google ni le serveur ne le connaissent</b>.</li>
+        <li>📱 Il te sera demandé seulement sur un nouveau téléphone.</li>
+        <li>⚠️ <b>Oublié = anciens messages perdus.</b> Choisis-en un dont tu te souviendras.</li>
+      </ul>
+      <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Mot de passe de chiffrement" autoComplete="new-password" required minLength={8} autoFocus />
+      <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Confirme-le" autoComplete="new-password" required />
+      <p className={`pw-rule${pw.length >= 8 ? ' ok' : ''}`}>{pw.length >= 8 ? '✓' : '○'} 8 caractères minimum</p>
+      {err && <p className="error">{err}</p>}
+      <button className="btn primary" disabled={busy || pw.length < 8 || !pw2}>{busy ? 'Création des clés…' : 'Valider'}</button>
+      {onBack ? <button type="button" className="link" onClick={onBack}>Retour</button> : <SignOut />}
     </form>
   )
 }
@@ -119,4 +155,10 @@ export function E2EEInfo({ uid, onDone }: { uid: string; onDone: () => void }) {
       <button className="btn primary" onClick={ok}>Compris</button>
     </div>
   )
+}
+
+/** Compte avec un mot de passe (inscription par email) ? Sinon : connexion Google seule */
+export function hasPassword(user: { app_metadata?: { providers?: string[]; provider?: string } }) {
+  const p = user.app_metadata?.providers ?? [user.app_metadata?.provider]
+  return p.includes('email')
 }

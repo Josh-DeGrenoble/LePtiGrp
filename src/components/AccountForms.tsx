@@ -3,7 +3,8 @@ import { supabase, errMsg } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Sheet } from './Sheet'
 import { notify } from './Dialog'
-import { changePassword, signIn } from '../lib/e2ee'
+import { changePassword, changeSecret, signIn } from '../lib/e2ee'
+import { hasPassword } from '../pages/E2EESetup'
 
 type Kind = 'email' | 'password'
 
@@ -16,6 +17,7 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const email = session?.user.email ?? ''
+  const google = !!session && !hasPassword(session.user)  // connexion Google : mot de passe de chiffrement seulement
 
   const close = () => { setCurrent(''); setValue(''); setConfirm(''); setError(''); onClose() }
 
@@ -25,7 +27,7 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
     if (kind === 'password' && value !== confirm) return setError('Les deux mots de passe ne correspondent pas')
     setBusy(true)
     try {
-      if (kind === 'password') await changePassword(email, current, value)
+      if (kind === 'password') await (google ? changeSecret(session!.user.id, current, value) : changePassword(email, current, value))
       else {
         await signIn(email, current).catch(() => { throw new Error('Mot de passe actuel incorrect') })
         const { error } = await supabase.auth.updateUser({ email: value.trim() })
@@ -33,13 +35,13 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
       }
       notify(kind === 'email'
         ? `Un lien de confirmation a été envoyé à ${value.trim()}. Ton email changera une fois le lien validé.`
-        : 'Mot de passe modifié.')
+        : google ? 'Mot de passe de chiffrement modifié.' : 'Mot de passe modifié.')
       close()
     } catch (err) { setError(errMsg(err)) } finally { setBusy(false) }
   }
 
   return (
-    <Sheet open={!!kind} onClose={close} title={kind === 'email' ? "Changer d'email" : 'Changer de mot de passe'}>
+    <Sheet open={!!kind} onClose={close} title={kind === 'email' ? "Changer d'email" : google ? 'Mot de passe de chiffrement' : 'Changer de mot de passe'}>
       <form className="form" onSubmit={submit}>
         {kind === 'email' ? <>
           <p className="muted small">Email actuel : {email}</p>
