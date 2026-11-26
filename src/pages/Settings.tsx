@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth, signOut } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconList, IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShare, IconShield, IconQr } from '../components/Icons'
+import { IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShare, IconShield, IconQr } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { AdminFeedback, DevSection } from '../components/Feedback'
@@ -14,29 +14,40 @@ import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Sheet } from '../components/Sheet'
 import { QrSheet } from '../components/Qr'
+import { ToolIcon } from '../components/ToolIcon'
+import { TOOL_LABELS } from '../components/NotifToggles'
+import type { ToolKey } from '../lib/supabase'
 import { pushState, enablePush, disablePush, isIos, testPush, type PushState } from '../lib/push'
 import { useOnResume } from '../lib/network'
 import { errMsg } from '../lib/supabase'
 import { identity } from '../lib/e2ee'
 
-/** Interrupteur d'un réglage par défaut de l'activité des outils (enregistré sur le profil) */
-function ActivityDefault({ icon, label, field, value }: { icon: React.ReactNode; label: string; field: 'show_activity_default' | 'notify_activity_default'; value: boolean }) {
+/** Réglages par défaut de l'activité des outils (enregistrés sur le profil) */
+function ActivityDefaults() {
   const { profile, refreshProfile } = useAuth()
-  const [v, setV] = useState(value)
-  useEffect(() => setV(value), [value])
-  const change = async (on: boolean) => {
-    setV(on)
-    const { error } = await supabase.from('profiles').update({ [field]: on }).eq('id', profile!.id)
-    if (error) { setV(!on); notify(errMsg(error)) } else refreshProfile()
+  const [show, setShow] = useState<ToolKey[]>(profile?.show_tools_default ?? [])
+  const [notif, setNotif] = useState(profile?.notify_activity_default ?? true)
+  useEffect(() => { setShow(profile?.show_tools_default ?? []); setNotif(profile?.notify_activity_default ?? true) }, [profile])
+  const save = async (patch: { show_tools_default?: ToolKey[]; notify_activity_default?: boolean }) => {
+    if (patch.show_tools_default) setShow(patch.show_tools_default)
+    if (patch.notify_activity_default !== undefined) setNotif(patch.notify_activity_default)
+    const { error } = await supabase.from('profiles').update(patch).eq('id', profile!.id)
+    if (error) notify(errMsg(error))
+    refreshProfile()
   }
-  return (
-    <label className="srow toggle-row">
+  const row = (key: string, icon: React.ReactNode, label: string, checked: boolean, onChange: (v: boolean) => void) => (
+    <label key={key} className="srow toggle-row">
       <span className="srow-icon">{icon}</span>
       <span className="srow-text">{label}</span>
-      <input type="checkbox" checked={v} onChange={(e) => change(e.target.checked)} />
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span className="toggle" />
     </label>
   )
+  return <SGroup title="Modifs des outils" note="Pour les outils rattachés à une conversation. Réglage par défaut : chaque conversation peut avoir le sien (paramètres de la conv).">
+    {TOOL_LABELS.map(([k, label]) => row(k, <ToolIcon kind={k === 'list' ? 'notes' : k === 'poll' ? 'polls' : 'accounts'} size={18} />, `${label} dans le chat`,
+      show.includes(k), (v) => save({ show_tools_default: v ? [...show, k] : show.filter((x) => x !== k) })))}
+    {row('notify', <IconBell size={18} />, 'Me notifier', notif, (v) => save({ notify_activity_default: v }))}
+  </SGroup>
 }
 
 export default function Settings() {
@@ -103,10 +114,7 @@ export default function Settings() {
             onClick={async () => notify(await testPush())} />}
         </SGroup>
 
-        {profile && <SGroup title="Modifs des outils" note="Pense-bêtes, comptes et sondages rattachés à une conversation. Réglage par défaut : chaque conversation peut avoir le sien (paramètres de la conv).">
-          <ActivityDefault icon={<IconList size={18} />} label="Afficher dans le chat" field="show_activity_default" value={profile.show_activity_default ?? true} />
-          <ActivityDefault icon={<IconBell size={18} />} label="Me notifier" field="notify_activity_default" value={profile.notify_activity_default ?? false} />
-        </SGroup>}
+        {profile && <ActivityDefaults />}
 
         <SGroup title="Inviter des amis" note={<details>
           <summary>Installer sur le téléphone</summary>

@@ -9,8 +9,10 @@ export const supabase = createClient(url ?? 'http://localhost', key ?? 'missing'
 export type Profile = {
   id: string; display_name: string; avatar_url: string | null; friend_code: string
   /** Activité des outils dans le chat : réglages par défaut (voir supabase/activity.sql) */
-  show_activity_default?: boolean; notify_activity_default?: boolean
+  show_tools_default?: ToolKey[]; notify_activity_default?: boolean
 }
+/** Outils dont l'activité peut s'afficher dans le chat */
+export type ToolKey = 'list' | 'poll' | 'ledger'
 export type Tag = { id: string; name: string; color: string }
 export type Role = 'super_admin' | 'admin' | 'member'
 
@@ -19,7 +21,7 @@ export type ConvSummary = {
   is_favorite: boolean; notify_all: boolean; notify_mentions: boolean; notify_pins: boolean
   last_message_at: string; last_content: string | null; last_author: string | null; unread: number
   last_ciphertext?: string | null; last_epoch?: number | null; last_author_id?: string | null; last_client_id?: string | null
-  show_activity?: boolean | null; notify_activity?: boolean | null; last_kind?: 'msg' | 'activity'
+  show_tools?: ToolKey[] | null; notify_activity?: boolean | null; last_kind?: 'msg' | 'activity'
 }
 
 export type Conversation = {
@@ -31,7 +33,7 @@ export type Member = {
   conversation_id: string; user_id: string; role: Role; is_favorite: boolean
   notify_all: boolean; notify_mentions: boolean; notify_pins: boolean; joined_at: string
   /** vide = réglage par défaut du profil */
-  show_activity?: boolean | null; notify_activity?: boolean | null
+  show_tools?: ToolKey[] | null; notify_activity?: boolean | null
   profiles?: Profile
 }
 

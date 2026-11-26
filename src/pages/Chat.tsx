@@ -104,9 +104,9 @@ export default function Chat() {
 
   if (c.notFound) return <Screen header={<><BackButton to="/" /><h1>Introuvable</h1><span className="icon-btn" /></>}><p className="empty">Cette conversation n'existe plus ou tu n'en fais plus partie.</p></Screen>
 
-  // Activité des outils : réglage de la conv, sinon celui par défaut (Paramètres). Le filtre « Activité » la montre toujours.
-  const showActivity = c.mine?.show_activity ?? profile?.show_activity_default ?? true
-  const shown = showActivity || filter === 'activity' ? messages : messages.filter((m) => m.kind !== 'activity')
+  // Activité des outils (par outil) : réglage de la conv, sinon celui par défaut (Paramètres). Le filtre « Activité » la montre toujours.
+  const showTools = c.mine?.show_tools ?? profile?.show_tools_default ?? []
+  const shown = filter === 'activity' ? messages : messages.filter((m) => m.kind !== 'activity' || (!!m.tool && showTools.includes(m.tool)))
   const names = new Map(c.members.map((m) => [m.user_id, m.profiles?.display_name ?? '?']))
   // Messages + envois en cours, puis regroupés : même auteur à moins de 5 min = une seule bulle.
   // Clé = client_id quand il existe : l'envoi en cours devient le message reçu sans rien redessiner.
@@ -287,8 +287,18 @@ function Line({ m, plain, mine, names, onMenu, last }: { m: Message; plain: Plai
       {photo && !plain.text && <span className="msg-meta photo-meta">{hhmm(new Date(m.created_at))}
         {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span>}
       {m.poll_id && <PollCard pollId={m.poll_id} compact />}
+      {pinned && <div className="pin-until">{pinUntil(m.pinned_until)}</div>}
     </div>
   )
+}
+
+/** « Épinglé jusqu'à 18h00 (encore 3h) », « jusqu'au ven. 28 nov., 18h00 », ou « sans limite » */
+function pinUntil(until: string | null) {
+  if (!until) return 'Épinglé sans limite'
+  const d = new Date(until)
+  const today = d.toDateString() === new Date().toDateString()
+  const when = today ? `à ${hhmm(d)}` : `au ${d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}, ${hhmm(d)}`
+  return `Épinglé jusqu'${when} (encore ${remaining(until)})`
 }
 
 /** Modif d'un pense-bête, d'un compte ou d'un sondage de la conv : petite carte centrée, touche = ouvre l'outil */

@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     if (m.user_id === actorId) return false
     if (event === 'pin') return m.notify_pins
     // activité des outils (pense-bête, compte, sondage) : réglage de la conv, sinon celui par défaut du profil
-    if (msg.kind === 'activity') return m.notify_activity ?? (m.profiles as unknown as { notify_activity_default?: boolean } | null)?.notify_activity_default ?? false
+    if (msg.kind === 'activity') return m.notify_activity ?? (m.profiles as unknown as { notify_activity_default?: boolean } | null)?.notify_activity_default ?? true
     const mentioned = msg.mention_all || (msg.mentions ?? []).includes(m.user_id)
     return m.notify_all || (m.notify_mentions && mentioned)
   }).map((m) => m.user_id)

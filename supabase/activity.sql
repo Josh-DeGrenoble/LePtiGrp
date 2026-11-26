@@ -23,13 +23,26 @@ create trigger on_list_ledger before insert or update of ledger_id on public.lis
   for each row execute function public.check_list_ledger();
 
 -- ---------- Réglages : afficher / notifier l'activité ----------------
--- Par conv (vide = réglage par défaut du profil)
-alter table public.members add column if not exists show_activity boolean;
+-- Afficher dans le chat : choix par outil ('list' pense-bêtes, 'poll' sondages, 'ledger' comptes).
+-- Par conv (vide = réglage par défaut du profil). Par défaut : rien d'affiché, mais notifié.
+drop function if exists public.my_conversations();
+alter table public.members drop column if exists show_activity;
+alter table public.profiles drop column if exists show_activity_default;
+alter table public.members add column if not exists show_tools text[];
 alter table public.members add column if not exists notify_activity boolean;
-alter table public.profiles add column if not exists show_activity_default boolean not null default true;
-alter table public.profiles add column if not exists notify_activity_default boolean not null default false;
-grant update (show_activity, notify_activity) on public.members to authenticated;
-grant update (show_activity_default, notify_activity_default) on public.profiles to authenticated;
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'show_tools_default') then
+    alter table public.profiles add column show_tools_default text[] not null default '{}';
+    -- première version : la notif était coupée par défaut ; on passe tout le monde au nouveau défaut une seule fois
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'notify_activity_default') then
+      update public.profiles set notify_activity_default = true;
+    end if;
+  end if;
+end $$;
+alter table public.profiles add column if not exists notify_activity_default boolean not null default true;
+alter table public.profiles alter column notify_activity_default set default true;
+grant update (show_tools, notify_activity) on public.members to authenticated;
+grant update (show_tools_default, notify_activity_default) on public.profiles to authenticated;
 
 -- ---------- Messages d'activité ---------------------------------------
 alter table public.messages add column if not exists kind text not null default 'msg';
@@ -156,14 +169,13 @@ create trigger on_vote_activity after insert on public.poll_votes
   for each row execute function public.activity_vote();
 
 -- ---------- Liste des convs : l'activité masquée ne compte pas -------
-drop function if exists public.my_conversations();
 create function public.my_conversations()
 returns table (
   id uuid, is_group boolean, name text, avatar_url text, other_user_id uuid,
   is_favorite boolean, notify_all boolean, notify_mentions boolean, notify_pins boolean,
   last_message_at timestamptz, last_content text, last_author text, unread int,
   last_ciphertext text, last_epoch int, last_author_id uuid, last_client_id uuid,
-  show_activity boolean, notify_activity boolean, last_kind text)
+  show_tools text[], notify_activity boolean, last_kind text)
 language sql stable security definer set search_path = public as $$
   select c.id, c.is_group,
          case when c.is_group then c.name else op.display_name end,
@@ -173,20 +185,20 @@ language sql stable security definer set search_path = public as $$
          c.last_message_at, lm.content, la.display_name,
          (select count(*)::int from messages x where x.conversation_id = c.id
              and x.created_at > m.last_read_at and x.author_id <> auth.uid()
-             and (x.kind = 'msg' or sa.v)),
+             and (x.kind = 'msg' or x.tool = any(sa.v))),
          lm.ciphertext, lm.epoch, lm.author_id, lm.client_id,
-         m.show_activity, m.notify_activity, lm.kind
+         m.show_tools, m.notify_activity, lm.kind
     from members m
     join conversations c on c.id = m.conversation_id
     join profiles me on me.id = m.user_id
-    cross join lateral (select coalesce(m.show_activity, me.show_activity_default) as v) sa
+    cross join lateral (select coalesce(m.show_tools, me.show_tools_default) as v) sa
     left join lateral (
       select p.* from members o join profiles p on p.id = o.user_id
        where not c.is_group and o.conversation_id = c.id and o.user_id <> auth.uid() limit 1) op on true
     left join lateral (
       select * from messages x where x.conversation_id = c.id
          and (m.hidden_at is null or x.created_at > m.hidden_at)
-         and (x.kind = 'msg' or sa.v)
+         and (x.kind = 'msg' or x.tool = any(sa.v))
        order by x.created_at desc limit 1) lm on true
     left join profiles la on la.id = lm.author_id
    where m.user_id = auth.uid()
