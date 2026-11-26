@@ -6,6 +6,20 @@ import { trackViewport } from './lib/viewport'
 
 trackViewport()
 
+// Mise à jour automatique : dès qu'une nouvelle version de l'appli prend la main, on recharge la page
+// (sinon le téléphone garde l'ancienne version en cache jusqu'à la fermeture complète de l'appli)
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller
+  let reloaded = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload() }
+  })
+  // Vérifie s'il existe une nouvelle version à chaque retour dans l'appli
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => {})
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
