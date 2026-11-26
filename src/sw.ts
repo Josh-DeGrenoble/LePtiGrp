@@ -28,7 +28,7 @@ async function decryptBody(d: Payload) {
     if (!m || m.body.u !== x.a) return d.body
     const pins = await local.pins()
     if (!pins[x.a]?.signs.some((s) => sigOk(m.sig, m.signed, s))) return d.body
-    const t = x.prefix + m.body.t
+    const t = x.prefix + (m.body.p ? '📷 Photo' + (m.body.t ? ' : ' + m.body.t : '') : m.body.t)
     return t.length > 120 ? t.slice(0, 119) + '…' : t
   } catch { return d.body }
 }

@@ -73,6 +73,7 @@ export default function Login() {
       <button className="link" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}>
         {mode === 'login' ? "Pas encore de compte ? S'inscrire" : 'Déjà un compte ? Se connecter'}
       </button>
+      <a className="legal-link" href="/confidentialite">Règles de confidentialité</a>
     </div>
   )
 }

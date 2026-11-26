@@ -10,7 +10,7 @@ import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { IconGear, IconPlus, IconUser, IconStar, IconSearch } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
-import { NotifToggles } from '../components/NotifToggles'
+import { NotifToggles, ActivityToggles } from '../components/NotifToggles'
 import { useOnResume } from '../lib/network'
 import { cachedConversations, fetchConversations } from '../lib/myConversations'
 import { useLongPress } from '../components/useLongPress'
@@ -53,8 +53,9 @@ export default function Conversations() {
   const lastText = (c: ConvSummary) => {
     const r = lastRows.get(c.id)
     if (!r || (!r.content && !r.ciphertext)) return null
+    if (c.last_kind === 'activity') return (c.last_content ?? '').split('\n').pop() ?? ''
     const p = plainOf(r)
-    return !p ? '🔒' : p.status === 'locked' ? '🔒 Message chiffré' : p.status === 'invalid' ? '⚠️ Message illisible' : p.text
+    return !p ? '🔒' : p.status === 'locked' ? '🔒 Message chiffré' : p.status === 'invalid' ? '⚠️ Message illisible' : (p.text || (p.photo ? '📷 Photo' : ''))
   }
   const [q, setQ] = useState('')
   const shown = convs.filter((c) => !q.trim() || (c.name ?? '').toLowerCase().includes(q.trim().toLowerCase()))
@@ -109,6 +110,8 @@ export default function Conversations() {
           </button>
           <div className="sheet-section">Notifications</div>
           <NotifToggles prefs={selected} onChange={updateMember} />
+          <div className="sheet-section">Modifs des outils</div>
+          <ActivityToggles prefs={selected} onChange={updateMember} />
           <div className="sheet-sep" />
           <SheetButton danger onClick={async () => { await updateMember({ hidden_at: new Date().toISOString() }); setSelected(null) }}>
             Supprimer la conversation

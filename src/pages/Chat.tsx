@@ -3,18 +3,21 @@ import { PollCard } from '../components/PollCard'
 import { BackButton } from '../components/BackButton'
 import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/supabase'
-import { useMe } from '../lib/auth'
+import { useAuth, useMe } from '../lib/auth'
 import { queueMessage, readCache, writeCache, useOnResume, usePending, dropPending, retryPending, type Pending } from '../lib/network'
 import { useConversation } from '../lib/conversation'
 import { hhmm, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar, colorOf } from '../components/Avatar'
-import { IconCheck, IconClose, IconFilter, IconList, IconPin, IconPoll, IconSend } from '../components/Icons'
-import { SGroup, SRow } from '../components/SettingsRow'
+import { IconCheck, IconClose, IconFilter, IconPin, IconPoll, IconBell, IconSend, IconCamera, IconImage } from '../components/Icons'
+import { ToolIcon } from '../components/ToolIcon'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
+import { Photo, Lightbox } from '../components/Photo'
+import { PhotoEditor } from '../components/PhotoEditor'
+import { uploadPhoto } from '../lib/media'
 import { useDecrypted, type Plain } from '../lib/e2ee'
 
 const PIN_DURATIONS: { label: string; ms: number | null }[] = [
@@ -24,13 +27,17 @@ const PIN_DURATIONS: { label: string; ms: number | null }[] = [
   { label: 'Sans limite', ms: null },
 ]
 
-/** null = tout ; 'pinned' ; 'polls' ; sinon l'id d'un membre */
-type Filter = null | 'pinned' | 'polls' | string
+/** null = tout ; 'pinned' ; 'polls' ; 'activity' (modifs des outils) ; sinon l'id d'un membre */
+type Filter = null | 'pinned' | 'polls' | 'activity' | string
+const TOOL_PATH = { list: 'notes', ledger: 'accounts', poll: 'polls' } as const
+const TOOL_KIND = { list: 'notes', ledger: 'accounts', poll: 'polls' } as const
 
 export default function Chat() {
   const { id = '' } = useParams()
   const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/'
   const me = useMe()
+  const { profile } = useAuth()
+  const nav = useNavigate()
   const c = useConversation(id, me)
   const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(`msgs:${id}`, []))
   const pending = usePending(id)
@@ -73,7 +80,8 @@ export default function Chat() {
     return () => { supabase.removeChannel(ch); window.clearInterval(t) }
   }, [id, markRead, load])
 
-  const keep = (it: Item) => !filter || (!!it.m && (filter === 'pinned' ? isPinned(it.m) : filter === 'polls' ? !!it.m.poll_id : it.author === filter))
+  const keep = (it: Item) => !filter || (!!it.m && (filter === 'pinned' ? isPinned(it.m) : filter === 'polls' ? !!it.m.poll_id
+    : filter === 'activity' ? it.m.kind === 'activity' : it.author === filter))
   const sentIds = new Set(messages.map((m) => m.client_id))
   const waiting = pending.filter((p) => !sentIds.has(p.client_id))
   useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [messages.length, waiting.length])
@@ -94,18 +102,21 @@ export default function Chat() {
 
   if (c.notFound) return <Screen header={<><BackButton to="/" /><h1>Introuvable</h1><span className="icon-btn" /></>}><p className="empty">Cette conversation n'existe plus ou tu n'en fais plus partie.</p></Screen>
 
+  // Activité des outils : réglage de la conv, sinon celui par défaut (Paramètres). Le filtre « Activité » la montre toujours.
+  const showActivity = c.mine?.show_activity ?? profile?.show_activity_default ?? true
+  const shown = showActivity || filter === 'activity' ? messages : messages.filter((m) => m.kind !== 'activity')
   const names = new Map(c.members.map((m) => [m.user_id, m.profiles?.display_name ?? '?']))
   // Messages + envois en cours, puis regroupés : même auteur à moins de 5 min = une seule bulle.
   // Clé = client_id quand il existe : l'envoi en cours devient le message reçu sans rien redessiner.
   const items: Item[] = [
-    ...messages.map((m) => ({ key: m.client_id ?? `m${m.id}`, m, author: m.author_id, created_at: m.created_at })),
+    ...shown.map((m) => ({ key: m.client_id ?? `m${m.id}`, m, author: m.author_id, created_at: m.created_at })),
     ...waiting.map((p) => ({ key: p.client_id, p, author: p.author_id, created_at: p.created_at })),
   ]
   const groups: Item[][] = []
   items.forEach((it, i) => {
     const prev = items[i - 1]
     // un sondage ou un message épinglé a sa propre bulle (jaune pour l'épinglé)
-    const alone = (x: Item) => !!x.m && (!!x.m.poll_id || isPinned(x.m))
+    const alone = (x: Item) => !!x.m && (!!x.m.poll_id || isPinned(x.m) || x.m.kind === 'activity')
     if (prev && follows(prev, it) && !alone(prev) && !alone(it)) groups[groups.length - 1].push(it)
     else groups.push([it])
   })
@@ -135,6 +146,7 @@ export default function Chat() {
       <div className="messages">
         {filter && <div className="filter-chip fade-in">
           {filter === 'pinned' ? <><IconPin size={14} filled /> Épinglés</> : filter === 'polls' ? <><IconPoll size={14} /> Sondages</>
+            : filter === 'activity' ? <><IconBell size={14} /> Activité</>
             : <><Avatar name={names.get(filter) ?? '?'} url={c.members.find((m) => m.user_id === filter)?.profiles?.avatar_url} size={20} /> {filter === me ? 'Moi' : names.get(filter) ?? '?'}</>}
           <button onClick={() => setFilter(null)} aria-label="Retirer le filtre"><IconClose size={14} /></button>
         </div>}
@@ -147,6 +159,13 @@ export default function Chat() {
           const showWho = !mine && !!c.conv?.is_group
           const day = dayLabel(first.created_at)
           const newDay = !filter && (gi === 0 || dayLabel(groups[gi - 1][0].created_at) !== day)
+          if (first.m?.kind === 'activity') return <div key={first.key} className="msg-block">
+            {newDay && <div className="day-sep"><span>{day}</span></div>}
+            <Fold hidden={!keep(first)}>
+              <Activity m={first.m} who={first.author === me ? 'Toi' : name}
+                onOpen={() => first.m!.tool && first.m!.tool_id && nav(`/${TOOL_PATH[first.m!.tool]}/${first.m!.tool_id}`, { state: { from: `/c/${id}` } })} />
+            </Fold>
+          </div>
           return <div key={first.key} className="msg-block">
             {newDay && <div className="day-sep"><span>{day}</span></div>}
             <Fold hidden={!g.some(keep)}>
@@ -169,24 +188,27 @@ export default function Chat() {
 
       <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filtrer les messages">
         <div className="filter-sheet">
-          <SGroup>
-            {([[null, 'Tous les messages', <IconList size={16} />, messages.length],
-              ['pinned', 'Épinglés', <IconPin size={16} />, messages.filter((m) => isPinned(m)).length],
-              ['polls', 'Sondages', <IconPoll size={16} />, messages.filter((m) => m.poll_id).length]] as [Filter, string, React.ReactNode, number][])
+          <div className="filter-chips">
+            {([[null, 'Tous', null, messages.length],
+              ['pinned', 'Épinglés', <IconPin size={15} />, messages.filter((m) => isPinned(m)).length],
+              ['polls', 'Sondages', <IconPoll size={15} />, messages.filter((m) => m.poll_id).length],
+              ['activity', 'Activité', <IconBell size={15} />, messages.filter((m) => m.kind === 'activity').length]] as [Filter, string, React.ReactNode, number][])
               .map(([f, label, icon, n]) => (
-                <SRow key={String(f)} icon={icon} label={label} chevron={false} onClick={() => { setFilter(f); setFilterOpen(false) }}
-                  right={<span className="filter-right"><small>{n}</small>{filter === f && <IconCheck />}</span>} />
+                <button key={String(f)} className={`fchip${filter === f ? ' on' : ''}`} onClick={() => { setFilter(f); setFilterOpen(false) }}>
+                  {icon}{label}<small>{n}</small>
+                </button>
               ))}
-          </SGroup>
-          <SGroup title="Messages de">
+          </div>
+          <div className="sgroup-title">Messages de</div>
+          <div className="sgroup-card">
             {c.members.filter((m) => m.profiles).map((m) => (
               <button key={m.user_id} className="srow" onClick={() => { setFilter(m.user_id); setFilterOpen(false) }}>
-                <Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={24} />
+                <Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={28} />
                 <span className="srow-text">{m.user_id === me ? 'Moi' : m.profiles!.display_name}</span>
-                <span className="filter-right"><small>{messages.filter((x) => x.author_id === m.user_id).length}</small>{filter === m.user_id && <IconCheck />}</span>
+                <span className="filter-right"><small>{messages.filter((x) => x.author_id === m.user_id && x.kind !== 'activity').length}</small>{filter === m.user_id && <IconCheck />}</span>
               </button>
             ))}
-          </SGroup>
+          </div>
         </div>
       </Sheet>
 
@@ -243,16 +265,36 @@ const follows = (prev: Item, it: Item) =>
 function Line({ m, plain, mine, names, onMenu, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; last: boolean }) {
   const press = useLongPress(onMenu)
   const pinned = isPinned(m)
+  const [view, setView] = useState(false)
+  const photo = plain?.photo
   return (
-    <div className={`line${pinned ? ' pinned' : ''}`} {...press}>
-      <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
+    <div className={`line${pinned ? ' pinned' : ''}${photo ? ' has-photo' : ''}`} {...press}>
+      {photo && <><Photo photo={photo} onOpen={() => setView(true)} /><Lightbox photo={view ? photo : null} onClose={() => setView(false)} /></>}
+      {!(photo && !plain.text) && <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
         : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
         : plain.status === 'invalid' ? <i className="muted">⚠️ Message altéré ou signature invalide</i>
         : renderMentions(plain.text, names)}
         <span className="msg-meta">{hhmm(new Date(m.created_at))}
-          {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span></div>
+          {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span></div>}
+      {photo && !plain.text && <span className="msg-meta photo-meta">{hhmm(new Date(m.created_at))}
+        {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span>}
       {m.poll_id && <PollCard pollId={m.poll_id} compact />}
     </div>
+  )
+}
+
+/** Modif d'un pense-bête, d'un compte ou d'un sondage de la conv : petite carte centrée, touche = ouvre l'outil */
+function Activity({ m, who, onOpen }: { m: Message; who: string; onOpen: () => void }) {
+  const lines = (m.content ?? '').split('\n')
+  return (
+    <button className="activity" onClick={onOpen}>
+      <span className="activity-head">
+        {m.tool && <ToolIcon kind={TOOL_KIND[m.tool]} size={15} />}
+        <b>{who}</b><span className="activity-tool">{m.tool_name}</span>
+        <span className="msg-meta">{hhmm(new Date(m.created_at))}</span>
+      </span>
+      <span className="activity-lines">{lines.map((l, i) => <span key={i}>{l}</span>)}</span>
+    </button>
   )
 }
 
@@ -283,6 +325,17 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
     input.current?.focus()
   }
 
+  const [file, setFile] = useState<Blob | null>(null)
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFile(f) }
+  // Photo : chiffrée puis envoyée tout de suite dans Storage ; le message (avec sa clé) suit le chemin habituel
+  const sendPhoto = async (canvas: HTMLCanvasElement, caption: string) => {
+    const client_id = crypto.randomUUID()
+    const photo = await uploadPhoto(convId, client_id, canvas)
+    const mentions = others.filter((m) => caption.includes(`@${m.profiles!.display_name}`)).map((m) => m.user_id)
+    queueMessage({ conversation_id: convId, author_id: me, content: caption, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(caption), photo, client_id })
+    setFile(null)
+  }
+
   const send = async () => {
     const content = text.trim()
     if (!content) return
@@ -304,7 +357,14 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
           ))}
         </div>
       )}
+      {file && <PhotoEditor file={file} onCancel={() => setFile(null)} onSend={sendPhoto} />}
       <div className="composer">
+        {!text && <>
+          <label className="icon-btn composer-media" aria-label="Prendre une photo"><IconCamera />
+            <input type="file" accept="image/*" capture="environment" hidden onChange={pickFile} /></label>
+          <label className="icon-btn composer-media" aria-label="Choisir une photo"><IconImage />
+            <input type="file" accept="image/*" hidden onChange={pickFile} /></label>
+        </>}
         <textarea ref={input} rows={1} placeholder="Message… (@ pour mentionner)" value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); send() } }} />
@@ -325,7 +385,8 @@ function PendingLine({ p }: { p: Pending }) {
   }, [slow, p.created_at])
   return (
     <div className={`line new${p.failed ? ' failed' : slow ? ' slow' : ''}`}>
-      <div className="bubble-text">{p.content}</div>
+      {p.photo && <Photo photo={p.photo} />}
+      {p.content && <div className="bubble-text">{p.content}</div>}
       {p.failed ? <>
         <div className="line-status">⚠️ Non envoyé</div>
         <div className="pending-actions">

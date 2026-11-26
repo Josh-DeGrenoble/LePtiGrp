@@ -17,6 +17,7 @@ import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
 import GroupSettings from './pages/GroupSettings'
+import MediaGallery from './pages/MediaGallery'
 import NoteList from './pages/NoteList'
 import ToolIndex from './pages/ToolIndex'
 import NewTool from './pages/NewTool'
@@ -24,6 +25,7 @@ import LedgerPage from './pages/LedgerPage'
 import PollPage from './pages/PollPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Confirmed from './pages/Confirmed'
+import Privacy from './pages/Privacy'
 import { initE2EE, useE2EE } from './lib/e2ee'
 import E2EESetup, { hasPassword, E2EEInfo, infoSeen } from './pages/E2EESetup'
 
@@ -38,6 +40,7 @@ function Routed() {
   useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush(); startReminders() } }, [uid, e2ee])
   // lien de confirmation du mail : page simple, sans l'appli
   if (pathname === '/confirmed') return <Confirmed />
+  if (pathname === '/confidentialite') return <Privacy />
   if (loading) return <div className="splash">LePtiGrp</div>
   if (!session) return <Login />
   if (e2ee !== 'ready') return <E2EESetup state={e2ee} uid={session.user.id} email={session.user.email ?? ''} hasPassword={hasPassword(session.user)} />
@@ -54,6 +57,7 @@ function Routed() {
       <Route path="/new" element={<NewGroup />} />
       <Route path="/c/:id" element={<Chat />} />
       <Route path="/c/:id/settings" element={<GroupSettings />} />
+      <Route path="/c/:id/media" element={<MediaGallery />} />
       <Route path="/notes" element={<ToolIndex key="notes" kind="notes" />} />
       <Route path="/notes/new" element={<NewTool key="notes" kind="notes" />} />
       <Route path="/notes/:id" element={<NoteList />} />

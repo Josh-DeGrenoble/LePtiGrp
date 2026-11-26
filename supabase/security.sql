@@ -54,11 +54,17 @@ end $$;
 
 -- ---------- 3. Outils : on ne peut plus changer le propriétaire, la conv ou les participants ----------
 -- Avant : un participant pouvait, via l'API, ajouter n'importe quel compte (même pas son ami) et lire son profil.
--- L'appli ne modifie que le nom et les catégories.
+-- L'appli ne modifie que le nom, les catégories et le compte lié.
 revoke update on public.lists, public.ledgers, public.polls from authenticated;
 grant update (name, categories) on public.lists to authenticated;
 grant update (name) on public.ledgers to authenticated;
 grant update (question) on public.polls to authenticated;
+-- liste liée à un compte (activity.sql) : le lien reste modifiable, le trigger on_list_ledger vérifie l'accès au compte
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'lists' and column_name = 'ledger_id') then
+    grant update (ledger_id) on public.lists to authenticated;  -- liste liée à un compte (activity.sql)
+  end if;
+end $$;
 
 -- ---------- 4. Message de sondage : seulement un sondage de la même conv ----------
 -- Avant : on pouvait accrocher n'importe quel sondage (et donc envoyer du texte en clair) à un message.
@@ -92,3 +98,8 @@ create trigger on_vote_check before insert on public.poll_votes
 revoke execute on function public.send_due_reminders() from public, anon, authenticated;
 revoke execute on function public.check_usage() from public, anon, authenticated;
 revoke execute on function public.usage_now() from public, anon, authenticated;
+do $$ begin
+  if to_regprocedure('public.log_activity(uuid, text, uuid, text, text)') is not null then
+    revoke execute on function public.log_activity(uuid, text, uuid, text, text) from public, anon, authenticated;
+  end if;
+end $$;

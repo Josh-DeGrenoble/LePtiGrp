@@ -215,6 +215,11 @@ revoke update on public.lists, public.ledgers, public.polls from authenticated;
 grant update (name, categories) on public.lists to authenticated;
 grant update (name) on public.ledgers to authenticated;
 grant update (question) on public.polls to authenticated;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'lists' and column_name = 'ledger_id') then
+    grant update (ledger_id) on public.lists to authenticated;  -- liste liée à un compte (activity.sql)
+  end if;
+end $$;
 grant usage, select on all sequences in schema public to authenticated;
 
 -- Mises à jour en direct

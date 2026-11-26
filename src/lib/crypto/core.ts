@@ -123,7 +123,25 @@ export function openEpoch(me: Identity, r: EpochRow): Uint8Array | null {
 
 // ---------- Messages ----------
 
-export type Body = { u: string; t: string; m: string[]; a: boolean }
+/** Photo jointe : chemin du fichier chiffré dans Storage, sa clé (32 octets, base64), taille, miniature floue */
+export type PhotoRef = { path: string; k: string; w: number; h: number; th: string }
+export type Body = { u: string; t: string; m: string[]; a: boolean; p?: PhotoRef }
+
+// ---------- Fichiers (photos) ----------
+
+/** Chiffre un fichier avec une clé aléatoire qui lui est propre (elle voyage dans le message, lui-même chiffré) */
+export function sealFile(data: Uint8Array) {
+  const key = sodium.randombytes_buf(32)
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
+  const ct = sodium.crypto_secretbox_easy(data, nonce, key)
+  const out = new Uint8Array(nonce.length + ct.length)
+  out.set(nonce); out.set(ct, nonce.length)
+  return { key: b64(key), data: out }
+}
+export function openFile(data: Uint8Array, key: string): Uint8Array | null {
+  const n = sodium.crypto_secretbox_NONCEBYTES
+  try { return sodium.crypto_secretbox_open_easy(data.slice(n), data.slice(0, n), unb64(key)) } catch { return null }
+}
 type Sealed = { b: string; s: string }
 const msgAd = (conv: string, epoch: number, clientId: string) => `LPG-msg-v1|${conv}|${epoch}|${clientId}`
 
@@ -148,7 +166,8 @@ export function openMessage(key: Uint8Array, conv: string, epoch: number, client
     const { b, s } = JSON.parse(sodium.to_string(pt)) as Sealed
     const body = JSON.parse(b) as Body
     if (typeof body.t !== 'string' || typeof body.u !== 'string') return null
-    return { body: { ...body, m: Array.isArray(body.m) ? body.m : [], a: !!body.a }, sig: s, signed: `${ad}|${b}` }
+    const p = body.p && typeof body.p.path === 'string' && typeof body.p.k === 'string' ? body.p : undefined
+    return { body: { ...body, m: Array.isArray(body.m) ? body.m : [], a: !!body.a, p }, sig: s, signed: `${ad}|${b}` }
   } catch { return null }
 }
 

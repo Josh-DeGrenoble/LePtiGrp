@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth, signOut } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBell, IconSend, IconLogout, IconLink, IconLock, IconMail, IconNext, IconShare, IconShield } from '../components/Icons'
+import { IconList, IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShare, IconShield, IconQr } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { AdminFeedback, DevSection } from '../components/Feedback'
@@ -13,10 +13,31 @@ import { AdminUsage } from '../components/AdminUsage'
 import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Sheet } from '../components/Sheet'
+import { QrSheet } from '../components/Qr'
 import { pushState, enablePush, disablePush, isIos, testPush, type PushState } from '../lib/push'
 import { useOnResume } from '../lib/network'
 import { errMsg } from '../lib/supabase'
 import { identity } from '../lib/e2ee'
+
+/** Interrupteur d'un réglage par défaut de l'activité des outils (enregistré sur le profil) */
+function ActivityDefault({ icon, label, field, value }: { icon: React.ReactNode; label: string; field: 'show_activity_default' | 'notify_activity_default'; value: boolean }) {
+  const { profile, refreshProfile } = useAuth()
+  const [v, setV] = useState(value)
+  useEffect(() => setV(value), [value])
+  const change = async (on: boolean) => {
+    setV(on)
+    const { error } = await supabase.from('profiles').update({ [field]: on }).eq('id', profile!.id)
+    if (error) { setV(!on); notify(errMsg(error)) } else refreshProfile()
+  }
+  return (
+    <label className="srow toggle-row">
+      <span className="srow-icon">{icon}</span>
+      <span className="srow-text">{label}</span>
+      <input type="checkbox" checked={v} onChange={(e) => change(e.target.checked)} />
+      <span className="toggle" />
+    </label>
+  )
+}
 
 export default function Settings() {
   const { session, profile } = useAuth()
@@ -46,7 +67,10 @@ export default function Settings() {
     await navigator.clipboard.writeText(appUrl)
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
-  const share = () => navigator.share?.({ title: 'LePtiGrp', text: 'Rejoins-moi sur LePtiGrp !', url: appUrl }).catch(() => {})
+  const share = () => navigator.share
+    ? navigator.share({ title: 'LePtiGrp', text: 'Rejoins-moi sur LePtiGrp !', url: appUrl }).catch(() => {})
+    : copy()
+  const [qr, setQr] = useState(false)
 
   return (
     <Screen header={<>
@@ -66,7 +90,7 @@ export default function Settings() {
         )}
 
         <SGroup title="Notifications" note={push === 'on' || push === 'off' ? 'Le détail (tous les messages, mentions, épinglés) se règle dans chaque conversation.' : undefined}>
-          {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (voir « Partager l'appli »), puis ouvre-la depuis l'icône.</p>
+          {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (voir « Inviter des amis »), puis ouvre-la depuis l'icône.</p>
             : push === 'unsupported' ? <p className="muted small help">Ce navigateur ne gère pas les notifications.</p>
             : push === 'denied' ? <DeniedGuide onCheck={recheck} />
             : <label className="srow toggle-row">
@@ -79,15 +103,20 @@ export default function Settings() {
             onClick={async () => notify(await testPush())} />}
         </SGroup>
 
-        <SGroup title="Partager l'appli" note={<details>
+        {profile && <SGroup title="Modifs des outils" note="Pense-bêtes, comptes et sondages rattachés à une conversation. Réglage par défaut : chaque conversation peut avoir le sien (paramètres de la conv).">
+          <ActivityDefault icon={<IconList size={18} />} label="Afficher dans le chat" field="show_activity_default" value={profile.show_activity_default ?? true} />
+          <ActivityDefault icon={<IconBell size={18} />} label="Me notifier" field="notify_activity_default" value={profile.notify_activity_default ?? false} />
+        </SGroup>}
+
+        <SGroup title="Inviter des amis" note={<details>
           <summary>Installer sur le téléphone</summary>
           <p><b>Android</b> : ouvrir le lien dans Chrome, menu ⋮, « Installer l'application ».<br />
             <b>iPhone</b> : ouvrir le lien dans Safari, Partager, « Sur l'écran d'accueil ».</p>
         </details>}>
-          {'share' in navigator && <SRow icon={<IconShare size={18} />} label="Inviter des amis" onClick={share} />}
-          <SRow icon={<IconLink />} label="Lien de l'appli" sub={appUrl.replace(/^https?:\/\//, '')}
-            right={<button className="srow-btn" onClick={copy}>{copied ? 'Copié ✓' : 'Copier'}</button>} />
+          <SRow icon={<IconShare size={18} />} label="Partager l'appli" sub={copied ? 'Lien copié ✓' : appUrl.replace(/^https?:\/\//, '')} onClick={share}
+            right={<button className="srow-btn icon" onClick={(e) => { e.stopPropagation(); setQr(true) }} aria-label="QR code et scanner"><IconQr size={20} /></button>} />
         </SGroup>
+        <QrSheet open={qr} onClose={() => setQr(false)} url={appUrl} title="Inviter des amis" caption="Fais scanner ce code pour ouvrir l'appli." />
 
         <SGroup title="Compte">
           {session && hasPassword(session.user) ? <>
