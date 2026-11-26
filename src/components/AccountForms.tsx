@@ -44,7 +44,7 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
         {kind === 'email' ? <>
           <p className="muted small">Email actuel : {email}</p>
           <label className="field-label">Nouvel email
-            <input type="email" placeholder="nouvel@email.fr" value={value} onChange={(e) => setValue(e.target.value)} required autoComplete="email" autoFocus />
+            <input type="email" placeholder="nouvel@email.fr" value={value} onChange={(e) => setValue(e.target.value)} required maxLength={254} autoComplete="email" autoFocus />
           </label>
         </> : <>
           <label className="field-label">Nouveau mot de passe

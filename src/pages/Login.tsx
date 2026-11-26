@@ -14,6 +14,7 @@ export default function Login() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (mode === 'signup' && name.includes('@')) return setError('Mets ton prénom ou pseudo, pas ton email.')
     setError(''); setInfo(''); setBusy(true)
     try {
       if (mode === 'login') {
@@ -30,10 +31,12 @@ export default function Login() {
     <div className="login">
       <h1 className="logo">LePtiGrp</h1>
       <form onSubmit={submit} className="card form">
-        {mode === 'signup' && (
-          <LimitedInput placeholder="Ton prénom / pseudo" value={name} onChange={(e) => setName(e.target.value)} required max={30} />
-        )}
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+        <input type="email" name="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value.trim())} required maxLength={254} autoComplete="email" inputMode="email" />
+        {mode === 'signup' && <>
+          {/* nickname : le navigateur n'y colle pas l'email (sinon coupé à 30 caractères) */}
+          <LimitedInput name="nickname" autoComplete="nickname" placeholder="Ton prénom ou pseudo (30 caractères max)" value={name} onChange={(e) => setName(e.target.value)} required max={30} />
+          {name.includes('@') && <p className="error">Ici c'est ton prénom ou pseudo, pas ton email 🙂</p>}
+        </>}
         <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'signup' ? 8 : 6}
           autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
         {error && <p className="error">{error}</p>}
