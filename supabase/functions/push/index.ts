@@ -73,6 +73,8 @@ async function sendTest(req: Request) {
     subs: results.length,
     sent: results.filter((r) => r.status === 'fulfilled').length,
     errors: results.flatMap((r) => (r.status === 'rejected' ? [`${(r.reason as { statusCode?: number }).statusCode ?? '?'} ${String((r.reason as { body?: string }).body ?? r.reason).slice(0, 120)}`] : [])),
+    // abonnements expirés (404/410), déjà supprimés de la base : l'appli se réabonne si le sien en fait partie
+    dead: (subs ?? []).filter((_, i) => { const r = results[i]; return r.status === 'rejected' && [404, 410].includes((r.reason as { statusCode?: number }).statusCode ?? 0) }).map((x) => x.endpoint),
     trigger_secret: !!Deno.env.get('PUSH_SECRET'), vapid: !!Deno.env.get('VAPID_PRIVATE_KEY'), user: user.id,
   }, { headers: cors })
 }
