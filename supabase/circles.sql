@@ -57,28 +57,69 @@ begin
 end $$;
 
 -- Ouvrir le lien : je rejoins le cercle et deviens ami(e) avec tous ses membres
+-- Met quelqu'un dans le cercle et le rend ami avec tous les autres membres ; renvoie le nombre de nouveaux amis
+create or replace function public.circle_enroll(circle uuid, who uuid)
+returns int language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  insert into circle_members (circle_id, user_id) values (circle, who) on conflict do nothing;
+  with others as (
+    select m.user_id from circle_members m join profiles p on p.id = m.user_id
+     where m.circle_id = circle and m.user_id <> who and p.deleted_at is null
+       and not exists (select 1 from friendships f where f.user_id = who and f.friend_id = m.user_id)
+  ), ins as (
+    insert into friendships (user_id, friend_id)
+    select who, user_id from others union all select user_id, who from others
+    on conflict do nothing returning 1
+  )
+  select count(*) / 2 into n from ins;
+  return n;
+end $$;
+revoke all on function public.circle_enroll(uuid, uuid) from public, anon, authenticated;
+
 create or replace function public.join_circle(circle_token text)
 returns table (name text, new_friends int)
 language plpgsql security definer set search_path = public as $$
-declare c friend_circles; me uuid := auth.uid(); n int;
+declare c friend_circles; me uuid := auth.uid();
 begin
   if me is null then raise exception 'Non connecté'; end if;
   select * into c from friend_circles where token = trim(circle_token);
   if c.id is null then raise exception 'Lien inconnu'; end if;
   if not c.active then raise exception 'Ce lien a été désactivé'; end if;
-  insert into circle_members (circle_id, user_id) values (c.id, me) on conflict do nothing;
-  with others as (
-    select m.user_id from circle_members m join profiles p on p.id = m.user_id
-     where m.circle_id = c.id and m.user_id <> me and p.deleted_at is null
-       and not exists (select 1 from friendships f where f.user_id = me and f.friend_id = m.user_id)
-  ), ins as (
-    insert into friendships (user_id, friend_id)
-    select me, user_id from others union all select user_id, me from others
-    on conflict do nothing returning 1
-  )
-  select count(*) / 2 into n from ins;
-  return query select c.name, n;
+  return query select c.name, circle_enroll(c.id, me);
 end $$;
+
+-- Admin : tous les comptes de l'appli, avec « dans le cercle » ou non
+create or replace function public.circle_people(circle uuid)
+returns table (id uuid, display_name text, avatar_url text, in_circle boolean)
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not is_app_admin() then raise exception 'Réservé à l''admin'; end if;
+  return query select p.id, p.display_name, p.avatar_url,
+    exists (select 1 from circle_members m where m.circle_id = circle and m.user_id = p.id)
+    from profiles p where p.deleted_at is null order by p.display_name;
+end $$;
+
+-- Admin : ajouter à la main (même effet que le lien, même désactivé)
+create or replace function public.circle_add(circle uuid, who uuid)
+returns int language plpgsql security definer set search_path = public as $$
+begin
+  if not is_app_admin() then raise exception 'Réservé à l''admin'; end if;
+  if not exists (select 1 from friend_circles where id = circle) then raise exception 'Cercle introuvable'; end if;
+  if not exists (select 1 from profiles where id = who and deleted_at is null) then raise exception 'Compte introuvable'; end if;
+  return circle_enroll(circle, who);
+end $$;
+
+-- Admin : retirer du cercle (les amitiés déjà créées restent)
+create or replace function public.circle_remove(circle uuid, who uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not is_app_admin() then raise exception 'Réservé à l''admin'; end if;
+  delete from circle_members where circle_id = circle and user_id = who;
+end $$;
+
+revoke all on function public.circle_people(uuid), public.circle_add(uuid, uuid), public.circle_remove(uuid, uuid) from public, anon;
+grant execute on function public.circle_people(uuid), public.circle_add(uuid, uuid), public.circle_remove(uuid, uuid) to authenticated;
 
 revoke all on function public.create_circle(text), public.list_circles(), public.set_circle_active(uuid, boolean),
   public.delete_circle(uuid), public.join_circle(text) from public, anon;

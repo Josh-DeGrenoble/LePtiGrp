@@ -727,3 +727,10 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 /* Message en cours d'envoi : coche grisée, qui devient normale à l'arrivée */
 .tick.wait { opacity: .35; }
 .tick { transition: opacity .25s; }
+/* Cercles d'amis : membres */
+.circle-people { display: flex; flex-direction: column; gap: 6px; }
+.circle-people input { margin-top: 8px; }
+.circle-person { display: flex; align-items: center; gap: 10px; padding: 6px 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; width: 100%; }
+.circle-person > span { flex: 1; }
+.circle-person.add { color: var(--text); cursor: pointer; }
+.circle-person.add svg { color: var(--primary); }
