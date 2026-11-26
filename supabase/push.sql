@@ -45,3 +45,13 @@ drop trigger if exists on_message_push on public.messages;
 create trigger on_message_push
   after insert or update of pinned_at on public.messages
   for each row execute function public.notify_push();
+
+-- Enregistrer l'abonnement de ce téléphone pour moi, même s'il appartenait à un autre compte
+-- (plusieurs comptes testés sur le même téléphone : sinon l'abonnement reste à l'ancien compte)
+create or replace function public.save_push_subscription(endpoint text, p256dh text, auth text)
+returns void language sql security definer set search_path = public as $$
+  insert into push_subscriptions (endpoint, user_id, p256dh, auth) values (endpoint, auth.uid(), p256dh, auth)
+  on conflict (endpoint) do update set user_id = auth.uid(), p256dh = excluded.p256dh, auth = excluded.auth
+$$;
+revoke all on function public.save_push_subscription(text, text, text) from public, anon;
+grant execute on function public.save_push_subscription(text, text, text) to authenticated;

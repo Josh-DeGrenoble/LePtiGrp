@@ -28,13 +28,32 @@ async function sendReminders() {
     .is('sent_at', null).lte('remind_at', new Date().toISOString()).select()
   for (const r of due ?? []) {
     const { data: subs } = await db.from('push_subscriptions').select('*').eq('user_id', r.user_id)
-    const payload = JSON.stringify({ title: '⏰ Rappel', body: short(r.message), url: r.conversation_id ? `/c/${r.conversation_id}` : '/', tag: `reminder-${r.id}` })
+    const payload = JSON.stringify({ title: '⏰ Rappel', body: short(r.message), url: r.conversation_id ? `/c/${r.conversation_id}` : '/', tag: `reminder-${r.client_id ?? r.id}` })
     await sendAll(subs ?? [], payload)
   }
   return Response.json({ reminders: due?.length ?? 0 })
 }
 
+// Bouton « Tester » des réglages : appelé par l'appli avec la session de l'utilisateur, envoie une notif à ses appareils
+// et renvoie le détail (nombre d'abonnements, codes d'erreur du service push) pour diagnostiquer
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info' }
+async function sendTest(req: Request) {
+  const { data: { user } } = await db.auth.getUser((req.headers.get('authorization') ?? '').replace('Bearer ', ''))
+  if (!user) return Response.json({ error: 'not signed in' }, { status: 401, headers: cors })
+  const { data: subs } = await db.from('push_subscriptions').select('*').eq('user_id', user.id)
+  const payload = JSON.stringify({ title: '🔔 Test', body: 'Les notifications marchent !', url: '/settings', tag: 'test' })
+  const results = await sendAll(subs ?? [], payload)
+  return Response.json({
+    subs: results.length,
+    sent: results.filter((r) => r.status === 'fulfilled').length,
+    errors: results.flatMap((r) => (r.status === 'rejected' ? [`${(r.reason as { statusCode?: number }).statusCode ?? '?'} ${String((r.reason as { body?: string }).body ?? r.reason).slice(0, 120)}`] : [])),
+    trigger_secret: !!Deno.env.get('PUSH_SECRET'), vapid: !!Deno.env.get('VAPID_PRIVATE_KEY'),
+  }, { headers: cors })
+}
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  if (!req.headers.get('x-push-secret')) return sendTest(req)
   if (req.headers.get('x-push-secret') !== Deno.env.get('PUSH_SECRET')) return new Response('forbidden', { status: 403 })
   const { event, message_id } = await req.json() as { event: 'message' | 'pin' | 'reminders'; message_id: number }
   if (event === 'reminders') return sendReminders()

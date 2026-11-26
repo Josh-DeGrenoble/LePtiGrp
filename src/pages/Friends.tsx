@@ -54,10 +54,11 @@ export default function Friends() {
     else { await navigator.clipboard.writeText(url); setMsg('Lien copié !') }
   }
 
-  const openDm = async (friendId: string) => {
+  // Avatar : paramètres de la conv avec l'ami ; le reste de la ligne : la conv
+  const openDm = async (friendId: string, settings = false) => {
     const { data, error } = await supabase.rpc('get_or_create_dm', { friend: friendId })
     if (error) return notify(errMsg(error))
-    nav(`/c/${data}/settings`, { state: { from: '/friends' } })
+    nav(`/c/${data}${settings ? '/settings' : ''}`, { state: { from: '/friends' } })
   }
 
   const toggleTag = async (tag: Tag, on: boolean) => {
@@ -133,8 +134,10 @@ export default function Friends() {
       <div className="list">
         {shown.map((f) => (
           <div key={f.id} className="friend-row">
-            <button className="friend-main" onClick={() => openDm(f.id)}>
+            <button className="friend-avatar" onClick={() => openDm(f.id, true)} aria-label={`Paramètres de la conversation avec ${f.display_name}`}>
               <Avatar name={f.display_name} url={f.avatar_url} />
+            </button>
+            <button className="friend-main" onClick={() => openDm(f.id)}>
               <div>
                 <div className="friend-name">{f.display_name}</div>
                 <div className="chips">{f.tags.map((t) => <TagChip key={t.id} tag={t} />)}</div>

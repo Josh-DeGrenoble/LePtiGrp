@@ -235,6 +235,8 @@ create table if not exists public.reminders (
   created_at      timestamptz not null default now()
 );
 create index if not exists reminders_due_idx on public.reminders (remind_at) where sent_at is null;
+-- identifiant créé par le téléphone : le rappel local (hors réseau) et le push du serveur ne font qu'une notification
+alter table public.reminders add column if not exists client_id uuid unique;
 alter table public.reminders enable row level security;
 drop policy if exists "reminders own" on public.reminders;
 create policy "reminders own" on public.reminders for all to authenticated
@@ -247,6 +249,8 @@ create or replace function public.send_due_reminders()
 returns void language plpgsql security definer set search_path = public as $$
 declare secret text;
 begin
+  -- ménage : les rappels passés depuis plus de 24 h disparaissent
+  delete from reminders where remind_at < now() - interval '24 hours';
   if not exists (select 1 from reminders where sent_at is null and remind_at <= now()) then return; end if;
   select decrypted_secret into secret from vault.decrypted_secrets where name = 'push_secret';
   if secret is null then return; end if;

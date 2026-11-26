@@ -3,7 +3,7 @@ import { PollCard } from '../components/PollCard'
 import { BackButton } from '../components/BackButton'
 import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { queueMessage, readCache, writeCache, useOnResume, usePending, dropPending, retryPending, type Pending } from '../lib/network'
@@ -25,6 +25,7 @@ const PIN_DURATIONS: { label: string; ms: number | null }[] = [
 
 export default function Chat() {
   const { id = '' } = useParams()
+  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/'
   const me = useMe()
   const c = useConversation(id, me)
   const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(`msgs:${id}`, []))
@@ -101,7 +102,7 @@ export default function Chat() {
 
   return (
     <Screen header={<>
-      <BackButton to="/" />
+      <BackButton to={backTo} />
       <Link to={`/c/${id}/settings`} className="chat-title">
         <Avatar name={c.title} url={c.conv?.is_group ? c.conv.avatar_url : c.other?.avatar_url} size={34} group={c.members.length > 2} />
         <span>{c.title}</span>
@@ -117,13 +118,16 @@ export default function Chat() {
       </Link>}
       <div className="messages">
         {pinnedOnly && pinnedCount === 0 && <p className="empty fade-in">Aucun message épinglé.</p>}
-        {messages.map((m) => (
-          <Fold key={m.id} hidden={pinnedOnly && !isPinned(m)}>
+        {messages.map((m, i) => (
+          <Fold key={m.id} hidden={pinnedOnly && !isPinned(m)} cont={!pinnedOnly && follows(messages[i - 1], m)}>
             <Bubble m={m} plain={plainOf(m)} mine={m.author_id === me} author={names.get(m.author_id ?? '') ?? 'Ancien membre'}
-              names={names} me={me} onMenu={() => setSelected(m)} />
+              names={names} me={me} onMenu={() => setSelected(m)} cont={!pinnedOnly && follows(messages[i - 1], m)} />
           </Fold>
         ))}
-        {waiting.map((p) => <Fold key={p.client_id} hidden={pinnedOnly}><PendingBubble p={p} /></Fold>)}
+        {waiting.map((p, i) => {
+          const cont = follows(i ? waiting[i - 1] : messages.at(-1), p)
+          return <Fold key={p.client_id} hidden={pinnedOnly} cont={cont}><PendingBubble p={p} cont={cont} /></Fold>
+        })}
         <div ref={bottom} />
       </div>
 
@@ -157,23 +161,27 @@ export default function Chat() {
   )
 }
 
-/** Enveloppe qui replie / déplie son contenu en fondu (filtre des messages épinglés) */
-function Fold({ hidden, children }: { hidden: boolean; children: React.ReactNode }) {
-  return <div className={`fold${hidden ? ' out' : ''}`} aria-hidden={hidden}><div className="fold-in">{children}</div></div>
+/** Enveloppe qui replie / déplie son contenu en fondu (filtre des messages épinglés) ; `cont` : suite d'un groupe, collée au précédent */
+function Fold({ hidden, cont, children }: { hidden: boolean; cont?: boolean; children: React.ReactNode }) {
+  return <div className={`fold${hidden ? ' out' : ''}${cont ? ' cont' : ''}`} aria-hidden={hidden}><div className="fold-in">{children}</div></div>
 }
 
-function Bubble({ m, plain, mine, author, names, me, onMenu }: { m: Message; plain: Plain | undefined; mine: boolean; author: string; names: Map<string, string>; me: string; onMenu: () => void }) {
+/** Même auteur, à moins de 5 minutes d'écart : on groupe (pas de nom ni d'heure répétés) */
+const follows = (prev: { author_id: string | null; created_at: string } | undefined, m: { author_id: string | null; created_at: string }) =>
+  !!prev && !!m.author_id && prev.author_id === m.author_id && Date.parse(m.created_at) - Date.parse(prev.created_at) < 5 * 60_000
+
+function Bubble({ m, plain, mine, author, names, me, onMenu, cont }: { m: Message; plain: Plain | undefined; mine: boolean; author: string; names: Map<string, string>; me: string; onMenu: () => void; cont: boolean }) {
   const press = useLongPress(onMenu)
   const pinned = isPinned(m)
   const mentionsMe = !!plain && (plain.mention_all || plain.mentions.includes(me))
   return (
-    <div className={`bubble${mine ? ' mine' : ''}${pinned ? ' pinned' : ''}${mentionsMe && !mine ? ' mentioned' : ''}${m.poll_id ? ' has-poll' : ''}`} {...press}>
-      <div className="bubble-head">
-        {!mine && <b>{author}</b>}{!mine && ' - '}{messageDate(m.created_at)}
-        {plain?.status === 'legacy' && !m.poll_id && <span className="e2ee-tag" title="Envoyé avant le chiffrement de bout en bout">non chiffré</span>}
+    <div className={`bubble${mine ? ' mine' : ''}${cont ? ' cont' : ''}${pinned ? ' pinned' : ''}${mentionsMe && !mine ? ' mentioned' : ''}${m.poll_id ? ' has-poll' : ''}`} {...press}>
+      {(!cont || pinned || plain?.status === 'unverified') && <div className="bubble-head">
+        {!cont && <>{!mine && <b>{author}</b>}{!mine && ' - '}{messageDate(m.created_at)}</>}
+        {plain?.status === 'legacy' && !m.poll_id && !cont && <span className="e2ee-tag" title="Envoyé avant le chiffrement de bout en bout">non chiffré</span>}
         {plain?.status === 'unverified' && <span className="e2ee-tag warn" title="Signature valide, mais la clé de l'auteur n'est pas confirmée">clé non confirmée</span>}
         {pinned && <span className="pin-info"><IconPin size={14} filled /> <i>{remaining(m.pinned_until)}</i></span>}
-      </div>
+      </div>}
       <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
         : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
         : plain.status === 'invalid' ? <i className="muted">⚠️ Message altéré ou signature invalide</i>
@@ -241,8 +249,21 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
   )
 }
 
-/** Message pas encore arrivé sur le serveur */
-function PendingBubble({ p }: { p: Pending }) {
+/** Message pas encore arrivé sur le serveur : affiché normalement (petite horloge), et en « attente de réseau »
+ *  seulement si on est hors ligne ou si l'envoi traîne plus d'une seconde et demie */
+function PendingBubble({ p, cont }: { p: Pending; cont: boolean }) {
+  const [slow, setSlow] = useState(() => !navigator.onLine || Date.now() - Date.parse(p.created_at) > 1500)
+  useEffect(() => {
+    if (slow) return
+    const t = setTimeout(() => setSlow(true), Math.max(0, 1500 - (Date.now() - Date.parse(p.created_at))))
+    return () => clearTimeout(t)
+  }, [slow, p.created_at])
+  if (!slow && !p.failed) return (
+    <div className={`bubble mine sending${cont ? ' cont' : ''}`}>
+      {!cont && <div className="bubble-head">{messageDate(p.created_at)}</div>}
+      <div className="bubble-text">{p.content}<span className="sending-clock" aria-label="Envoi…">🕓</span></div>
+    </div>
+  )
   return (
     <div className={`bubble mine pending${p.failed ? ' failed' : ''}`}>
       <div className="bubble-head">{p.failed ? '⚠️ Non envoyé' : <><span className="spinner" aria-hidden /> En attente de réseau</>}</div>

@@ -24,8 +24,8 @@ function keyToBytes(base64: string) {
 
 async function save(sub: PushSubscription) {
   const { keys } = sub.toJSON() as { keys: { p256dh: string; auth: string } }
-  const { error } = await supabase.from('push_subscriptions')
-    .upsert({ endpoint: sub.endpoint, p256dh: keys.p256dh, auth: keys.auth }, { onConflict: 'endpoint' })
+  // via une fonction : l'abonnement repasse à ce compte même s'il était à un autre compte sur ce téléphone
+  const { error } = await supabase.rpc('save_push_subscription', { endpoint: sub.endpoint, p256dh: keys.p256dh, auth: keys.auth })
   if (error) throw error
 }
 
@@ -51,4 +51,19 @@ export async function syncPush() {
   if ((await pushState()) !== 'on') return
   const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription()
   if (sub) await save(sub).catch(() => {})
+}
+
+/** Bouton « Tester » : le serveur envoie une notification à ce compte et dit ce qui coince */
+export async function testPush(): Promise<string> {
+  const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription()
+  if (!sub) return "Ce téléphone n'est pas abonné : coupe puis réactive l'interrupteur."
+  await save(sub)
+  const { data, error } = await supabase.functions.invoke('push', { body: { event: 'test' } })
+  if (error) return `Le serveur ne répond pas (${error.message}). La fonction « push » est-elle déployée ?`
+  const r = data as { subs: number; sent: number; errors: string[]; vapid: boolean }
+  if (!r.vapid) return 'Il manque les clés VAPID dans les secrets de la fonction « push ».'
+  if (!r.subs) return "Aucun appareil enregistré pour ce compte : coupe puis réactive l'interrupteur."
+  if (r.errors.some((e) => e.startsWith('403') || e.startsWith('401'))) return 'Clés VAPID différentes entre l\'appli (Vercel) et la fonction « push » : vérifie VITE_VAPID_PUBLIC_KEY et VAPID_PUBLIC_KEY.'
+  if (r.errors.length) return `Envoi refusé : ${r.errors[0]}`
+  return `Notification envoyée à ${r.sent} appareil${r.sent > 1 ? 's' : ''}. Si rien n'arrive, vérifie que Chrome a le droit d'afficher les notifications (réglages Android).`
 }

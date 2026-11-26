@@ -12,6 +12,7 @@ import { useTrackHistory, navDirection } from './components/BackButton'
 import { useEffect, useState } from 'react'
 import { startOutbox } from './lib/network'
 import { syncPush } from './lib/push'
+import { startReminders } from './lib/reminders'
 import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
@@ -34,7 +35,7 @@ function Routed() {
   const { state: e2ee } = useE2EE()
   const [infoDone, setInfoDone] = useState(false)
   useEffect(() => { if (uid) initE2EE(uid) }, [uid])
-  useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush() } }, [uid, e2ee])
+  useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush(); startReminders() } }, [uid, e2ee])
   // lien de confirmation du mail : page simple, sans l'appli
   if (pathname === '/confirmed') return <Confirmed />
   if (loading) return <div className="splash">LePtiGrp</div>

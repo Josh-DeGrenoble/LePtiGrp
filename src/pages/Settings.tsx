@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBell, IconLogout, IconLink, IconLock, IconMail, IconNext, IconShare, IconShield } from '../components/Icons'
+import { IconBell, IconSend, IconLogout, IconLink, IconLock, IconMail, IconNext, IconShare, IconShield } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { C } from '../lib/palette'
 import { ProfileEditor } from '../components/ProfileEditor'
@@ -12,7 +12,7 @@ import { AdminFeedback, DevSection } from '../components/Feedback'
 import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Sheet } from '../components/Sheet'
-import { pushState, enablePush, disablePush, isIos, type PushState } from '../lib/push'
+import { pushState, enablePush, disablePush, isIos, testPush, type PushState } from '../lib/push'
 import { useOnResume } from '../lib/network'
 import { errMsg } from '../lib/supabase'
 import { identity, safetyCode } from '../lib/e2ee'
@@ -75,6 +75,8 @@ export default function Settings() {
                 <input type="checkbox" checked={push === 'on'} disabled={!push} onChange={(e) => togglePush(e.target.checked)} />
                 <span className="toggle" />
               </label>}
+          {push === 'on' && <SRow icon={<IconSend size={16} />} color={C.blue} label="Envoyer une notification de test" chevron={false}
+            onClick={async () => notify(await testPush())} />}
         </SGroup>
 
         <SGroup title="Partager l'appli" note={<details>
