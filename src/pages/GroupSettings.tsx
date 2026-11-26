@@ -1,7 +1,7 @@
 import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, type Member, type Role } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { useConversation } from '../lib/conversation'
@@ -19,6 +19,7 @@ const ROLE_LABEL: Record<Role, string> = { super_admin: 'Super admin', admin: 'A
 
 export default function GroupSettings() {
   const { id = '' } = useParams()
+  const backTo = (useLocation().state as { from?: string } | null)?.from ?? `/c/${id}`
   const me = useMe()
   const nav = useNavigate()
   const c = useConversation(id, me)
@@ -73,7 +74,7 @@ export default function GroupSettings() {
 
   return (
     <Screen header={<>
-      <BackButton to={`/c/${id}`} />
+      <BackButton to={backTo} />
       <div className="chat-title">
         <button className="avatar-btn" disabled={!conv.is_group || !c.can('edit_info')} onClick={() => setEditPhoto(true)} aria-label="Changer la photo">
           <Avatar name={c.title} url={conv.is_group ? conv.avatar_url : c.other?.avatar_url} size={34} group={conv.is_group} />

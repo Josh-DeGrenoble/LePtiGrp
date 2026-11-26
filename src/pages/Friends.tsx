@@ -56,7 +56,7 @@ export default function Friends() {
   const openDm = async (friendId: string) => {
     const { data, error } = await supabase.rpc('get_or_create_dm', { friend: friendId })
     if (error) return notify(errMsg(error))
-    nav(`/c/${data}`)
+    nav(`/c/${data}/settings`, { state: { from: '/friends' } })
   }
 
   const toggleTag = async (tag: Tag, on: boolean) => {
