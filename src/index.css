@@ -286,3 +286,62 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 }
 @media (prefers-color-scheme: dark) { .topbar.offline :is(h1, .chat-title)::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa1ad' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M17.5 19H7a5 5 0 0 1-.9-9.9A6 6 0 0 1 17.7 8 4.5 4.5 0 0 1 20 16.3'/%3E%3Cpath d='M3 3l18 18'/%3E%3C/svg%3E"); } }
 .friend-code { margin-left: auto; font-weight: 700; letter-spacing: 2px; color: var(--muted); }
+
+/* Menu ▽ de l'en-tête */
+.hmenu-btn svg { transition: transform .2s; }
+.hmenu-btn.on svg { transform: rotate(180deg); }
+.hmenu-backdrop { position: fixed; inset: 0; z-index: 40; }
+.hmenu { position: fixed; z-index: 41; width: 250px; max-height: 70vh; overflow-y: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 6px; transform-origin: top right; animation: pop .16s ease-out; }
+@keyframes pop { from { opacity: 0; transform: scale(.92) translateY(-6px); } }
+.hmenu-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; border-radius: 10px; text-align: left; font-weight: 600; }
+.hmenu-item svg { color: var(--primary); flex: none; }
+.hmenu-item:active { background: var(--surface); }
+.hmenu-item:disabled { opacity: .45; }
+.hmenu-item small, .hmenu-subitem small { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--muted); }
+.hmenu-sub { margin: 0 0 4px 22px; padding-left: 12px; border-left: 2px solid var(--surface2); }
+.hmenu-subitem { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 6px; border-radius: 8px; text-align: left; }
+.hmenu-subitem span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hmenu-subitem small { background: var(--primary); color: var(--primary-text); border-radius: 99px; padding: 0 7px; }
+.hmenu-subitem:active { background: var(--surface); }
+.hmenu-new { display: flex; align-items: center; gap: 2px; }
+.hmenu-new input { padding: 6px 10px; font-size: 14px; border-radius: 10px; }
+.hmenu-new .icon-btn { width: 34px; height: 34px; color: var(--primary); }
+.hmenu-new .icon-btn:disabled { opacity: .35; }
+
+/* Pense-bêtes */
+.note-create { margin: 4px 0 8px; }
+.note-create select { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
+.note-row { gap: 12px; }
+.note-row svg { color: var(--primary); flex: none; }
+.note-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.note-row small { color: var(--muted); font-size: 13px; }
+.chevron { transform: rotate(180deg); color: var(--muted); display: flex; }
+.note-items { display: flex; flex-direction: column; }
+.note-item { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); animation: fade .25s ease; }
+.note-check { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 4px; cursor: pointer; }
+.note-check span { word-break: break-word; transition: color .2s; }
+.note-check input { width: 22px; height: 22px; border-radius: 50%; }
+.note-item.checked .note-check span { color: var(--muted); text-decoration: line-through; }
+.note-qty { width: 70px; flex: none; padding: 6px 8px; font-size: 14px; text-align: center; }
+.note-item .icon-btn { color: var(--muted); }
+.note-delete { margin-top: 24px; border-bottom: 0; }
+
+/* Pop-up Notification */
+.reminder-warn { background: var(--surface); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 14px; }
+.reminder-warn button { color: var(--primary); font-weight: 700; margin-left: 4px; }
+.reminder-mode { margin: 12px 0 10px; width: 100%; }
+.reminder-mode button { flex: 1; }
+.reminder-in { display: flex; gap: 8px; align-items: center; }
+.reminder-in input { width: 80px; flex: none; text-align: center; }
+.reminder-in .segmented { flex: 1; }
+.reminder-in .segmented button { flex: 1; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.chip.quick { font-size: 13px; padding: 4px 10px; border-color: var(--border); background: var(--surface); color: var(--text); }
+.chip.quick.on { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+.reminder-when { color: var(--muted); font-size: 14px; margin: 12px 2px 0; }
+.reminder-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-bottom: 1px solid var(--border); }
+.reminder-row > div { flex: 1; min-width: 0; }
+.reminder-msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reminder-row small { color: var(--muted); }
+.reminder-mode button, .reminder-in .segmented button { font-size: 14px; padding: 8px; }
+.note-row .chevron svg { color: var(--muted); }

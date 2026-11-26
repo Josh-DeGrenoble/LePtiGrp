@@ -36,3 +36,7 @@ export const IconPencil = ({ size = 16 }: P) => svg(size, <><path d="M12 20h9" /
 export const IconSearch = ({ size = 18 }: P) => svg(size, <><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></>)
 export const IconUserPlus = ({ size = 18 }: P) => svg(size, <><circle cx="10" cy="8" r="4" /><path d="M2 21c0-4 4-6 8-6s8 2 8 6" /><path d="M19 8v6M16 11h6" /></>)
 export const IconClose = ({ size = 18 }: P) => svg(size, <><path d="M18 6L6 18M6 6l12 12" /></>)
+export const IconList = ({ size = 22 }: P) => svg(size, <><path d="M9 6h12M9 12h12M9 18h12" /><path d="M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2" /></>)
+export const IconPoll = ({ size = 22 }: P) => svg(size, <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>)
+export const IconBell = ({ size = 22 }: P) => svg(size, <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>)
+export const IconTrash = ({ size = 20 }: P) => svg(size, <><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></>)

@@ -1,4 +1,4 @@
-import { useState, type InputHTMLAttributes } from 'react'
+import { useState, type InputHTMLAttributes, type Ref } from 'react'
 
 /**
  * Champ texte avec longueur max fiable : le texte est coupé à chaque frappe
@@ -6,7 +6,7 @@ import { useState, type InputHTMLAttributes } from 'react'
  * et le champ tremble en rouge quand on essaie de dépasser.
  */
 export function LimitedInput({ max, value, defaultValue, onChange, className = '', ...rest }:
-  Omit<InputHTMLAttributes<HTMLInputElement>, 'maxLength'> & { max: number }) {
+  Omit<InputHTMLAttributes<HTMLInputElement>, 'maxLength'> & { max: number; ref?: Ref<HTMLInputElement> }) {
   const [inner, setInner] = useState(String(value ?? defaultValue ?? ''))
   const [over, setOver] = useState(0)
   const current = value !== undefined ? String(value) : inner

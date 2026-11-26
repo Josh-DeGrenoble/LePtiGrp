@@ -16,6 +16,8 @@ import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
 import GroupSettings from './pages/GroupSettings'
+import Notes from './pages/Notes'
+import NoteList from './pages/NoteList'
 
 function Routed() {
   const { session, loading } = useAuth()
@@ -36,6 +38,8 @@ function Routed() {
       <Route path="/new" element={<NewGroup />} />
       <Route path="/c/:id" element={<Chat />} />
       <Route path="/c/:id/settings" element={<GroupSettings />} />
+      <Route path="/notes" element={<Notes />} />
+      <Route path="/notes/:id" element={<NoteList />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </div>

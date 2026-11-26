@@ -1,3 +1,4 @@
+import { HeaderMenu } from '../components/HeaderMenu'
 import { BackButton } from '../components/BackButton'
 import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -9,7 +10,7 @@ import { useConversation } from '../lib/conversation'
 import { messageDate, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconDown, IconPin, IconSend } from '../components/Icons'
+import { IconPin, IconSend } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
 
@@ -99,7 +100,7 @@ export default function Chat() {
         <Avatar name={c.title} url={c.conv?.is_group ? c.conv.avatar_url : c.other?.avatar_url} size={34} group={c.conv?.is_group} />
         <span>{c.title}</span>
       </Link>
-      <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
+      <HeaderMenu convId={id} />
       <button className={`icon-btn pin-filter${pinnedOnly ? ' on' : ''}`} onClick={() => setPinnedOnly(!pinnedOnly)}
         aria-pressed={pinnedOnly} aria-label="Afficher uniquement les messages épinglés"><IconPin filled={pinnedOnly} /></button>
     </>} footer={!pinnedOnly && c.mine && (c.can('write')

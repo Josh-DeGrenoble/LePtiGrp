@@ -1,3 +1,4 @@
+import { HeaderMenu } from '../components/HeaderMenu'
 import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { useEffect, useState } from 'react'
@@ -8,7 +9,7 @@ import { useConversation } from '../lib/conversation'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { FriendPicker } from '../components/FriendPicker'
-import { IconDown, IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconUserMinus } from '../components/Icons'
+import { IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconUserMinus } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
@@ -108,7 +109,7 @@ export default function GroupSettings() {
           </button>
         ) : <span>{c.title}</span>}
       </div>
-      <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
+      <HeaderMenu convId={id} />
       <button className="icon-btn star" onClick={toggleFav} aria-label="Favori"><IconStar size={24} filled={c.mine.is_favorite} /></button>
     </>}>
       <div className="settings-row disabled"><span>Médias</span><IconImages /></div>

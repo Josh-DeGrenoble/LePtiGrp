@@ -1,3 +1,4 @@
+import { HeaderMenu } from '../components/HeaderMenu'
 import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -6,7 +7,7 @@ import { norm } from '../lib/format'
 import { loadFriends, cachedFriends, TAG_COLORS, type FriendWithTags } from '../lib/friends'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconPencil, IconPlus, IconDown } from '../components/Icons'
+import { IconPencil, IconPlus } from '../components/Icons'
 import { ask, notify } from '../components/Dialog'
 
 /**
@@ -100,7 +101,7 @@ export default function Tags() {
     <Screen header={<>
       <BackButton to="/friends" />
       <h1>Tags</h1>
-      <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
+      <HeaderMenu />
     </>}>
       <div className="tag-bar">
         {tags.map((t) => (

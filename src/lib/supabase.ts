@@ -42,3 +42,7 @@ export function errMsg(e: unknown) {
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: string }).message)
   return String(e)
 }
+
+export type List = { id: string; owner_id: string; conversation_id: string | null; name: string; created_at: string }
+export type ListItem = { id: number; list_id: string; content: string; quantity: string | null; checked: boolean; created_at: string }
+export type Reminder = { id: number; conversation_id: string | null; message: string; remind_at: string; sent_at: string | null }

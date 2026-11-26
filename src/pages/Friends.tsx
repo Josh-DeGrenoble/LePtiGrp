@@ -1,3 +1,4 @@
+import { HeaderMenu } from '../components/HeaderMenu'
 import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { notify } from '../components/Dialog'
@@ -10,7 +11,7 @@ import { loadFriends, cachedFriends, friendLink, TAG_COLORS, type FriendWithTags
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { TagChip } from '../components/TagChip'
-import { IconShare, IconTag, IconDown, IconSearch, IconUserPlus, IconClose } from '../components/Icons'
+import { IconShare, IconTag, IconSearch, IconUserPlus, IconClose } from '../components/Icons'
 import { Sheet } from '../components/Sheet'
 import { ProfileEditor } from '../components/ProfileEditor'
 
@@ -87,7 +88,7 @@ export default function Friends() {
     <Screen header={<>
       <BackButton to="/" />
       <h1>Amis</h1>
-      <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
+      <HeaderMenu />
       <Link to="/tags" className="icon-btn" aria-label="Gérer les tags"><IconTag /></Link>
     </>}>
       {profile && (

@@ -13,9 +13,31 @@ webpush.setVapidDetails(
 
 const short = (s: string, n = 120) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
 
+type Sub = { endpoint: string; p256dh: string; auth: string }
+// Envoie une notification à chaque appareil ; supprime les abonnements expirés (appli désinstallée, notifs coupées)
+const sendAll = (subs: Sub[], payload: string) => Promise.allSettled(subs.map((s) =>
+  webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 86400 })
+    .catch(async (e: { statusCode?: number }) => {
+      if (e.statusCode === 404 || e.statusCode === 410) await db.from('push_subscriptions').delete().eq('endpoint', s.endpoint)
+      throw e
+    })))
+
+// Rappels échus : on les marque envoyés d'abord (un appel en double ne les renvoie pas)
+async function sendReminders() {
+  const { data: due } = await db.from('reminders').update({ sent_at: new Date().toISOString() })
+    .is('sent_at', null).lte('remind_at', new Date().toISOString()).select()
+  for (const r of due ?? []) {
+    const { data: subs } = await db.from('push_subscriptions').select('*').eq('user_id', r.user_id)
+    const payload = JSON.stringify({ title: '⏰ Rappel', body: short(r.message), url: r.conversation_id ? `/c/${r.conversation_id}` : '/', tag: `reminder-${r.id}` })
+    await sendAll(subs ?? [], payload)
+  }
+  return Response.json({ reminders: due?.length ?? 0 })
+}
+
 Deno.serve(async (req) => {
   if (req.headers.get('x-push-secret') !== Deno.env.get('PUSH_SECRET')) return new Response('forbidden', { status: 403 })
-  const { event, message_id } = await req.json() as { event: 'message' | 'pin'; message_id: number }
+  const { event, message_id } = await req.json() as { event: 'message' | 'pin' | 'reminders'; message_id: number }
+  if (event === 'reminders') return sendReminders()
 
   const { data: msg } = await db.from('messages').select('*').eq('id', message_id).single()
   if (!msg) return new Response('no message')
@@ -45,12 +67,6 @@ Deno.serve(async (req) => {
     : conv?.is_group ? `${who} : ${short(msg.content)}` : short(msg.content)
   const payload = JSON.stringify({ title, body, url: `/c/${msg.conversation_id}`, tag: `${msg.conversation_id}-${event}` })
 
-  const results = await Promise.allSettled((subs ?? []).map((s) =>
-    webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 86400 })
-      .catch(async (e: { statusCode?: number }) => {
-        // abonnement expiré (appli désinstallée, notifs coupées) : on le supprime
-        if (e.statusCode === 404 || e.statusCode === 410) await db.from('push_subscriptions').delete().eq('endpoint', s.endpoint)
-        throw e
-      })))
+  const results = await sendAll(subs ?? [], payload)
   return Response.json({ sent: results.filter((r) => r.status === 'fulfilled').length, total: results.length })
 })

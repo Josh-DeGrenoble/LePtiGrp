@@ -23,6 +23,12 @@ Les clés Supabase (publiques) sont dans `.env`.
 4. Edge Functions > *Secrets* : `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUSH_SECRET` (même valeur que l'étape 2).
 5. Dans l'appli : Paramètres > Notifications > Activer (sur iPhone, depuis l'appli installée sur l'écran d'accueil).
 
+## Pense-bêtes et rappels
+
+1. Database > *Extensions* : activer `pg_cron`.
+2. SQL Editor : lancer [`supabase/notes.sql`](supabase/notes.sql) (listes, éléments, rappels + tâche planifiée chaque minute).
+3. Redéployer la fonction `push` (Edge Functions > `push` > *Code* > coller la nouvelle version > *Deploy*).
+
 La clé VAPID publique est aussi dans `.env` (`VITE_VAPID_PUBLIC_KEY`).
 
 ## Hors-ligne

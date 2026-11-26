@@ -1,3 +1,4 @@
+import { HeaderMenu } from '../components/HeaderMenu'
 import { ask, notify } from '../components/Dialog'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -6,7 +7,7 @@ import { useMe } from '../lib/auth'
 import { shortDate } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconGear, IconPlus, IconUser, IconDown, IconStar } from '../components/Icons'
+import { IconGear, IconPlus, IconUser, IconStar } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { NotifToggles } from '../components/NotifToggles'
 import { readCache, writeCache, useOnResume } from '../lib/network'
@@ -57,7 +58,7 @@ export default function Conversations() {
     <Screen header={<>
       <Link to="/friends" className="icon-btn" aria-label="Amis"><IconUser /></Link>
       <h1>Chat</h1>
-      <button className="icon-btn" disabled aria-label="Bientôt"><IconDown /></button>
+      <HeaderMenu />
       <Link to="/settings" className="icon-btn" aria-label="Paramètres"><IconGear /></Link>
     </>}>
       {loaded && convs.length === 0 && (
