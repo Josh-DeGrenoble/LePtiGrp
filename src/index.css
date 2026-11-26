@@ -29,7 +29,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .splash.small { font-size: 16px; color: var(--muted); }
 
 /* Écran */
-.screen { height: var(--app-h, 100dvh); display: flex; flex-direction: column; max-width: 640px; margin: 0 auto; }
+.screen { height: 100%; display: flex; flex-direction: column; max-width: 640px; margin: 0 auto; }
 .topbar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; padding-top: max(8px, env(safe-area-inset-top)); border-bottom: 1px solid var(--border); min-height: 56px; }
 .topbar h1 { flex: 1; text-align: center; margin: 0; font-size: 22px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .content { flex: 1; overflow-y: auto; position: relative; padding: 10px; }
@@ -209,7 +209,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .shake-0 { animation: shake-a .25s; } .shake-1 { animation: shake-b .25s; }
 @keyframes shake-a { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 @keyframes shake-b { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-.bubble.pending { opacity: .6; }
+.bubble.pending { box-shadow: inset 4px 0 0 var(--danger); opacity: .85; }
 .bubble.failed { opacity: 1; background: var(--danger); }
 .pending-actions { display: flex; gap: 14px; margin-top: 6px; font-weight: 700; font-size: 13px; }
 .pending-actions button { text-decoration: underline; }
@@ -252,3 +252,15 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 @media (prefers-reduced-motion: reduce) { .slide-right, .slide-left, .tag-lists .tag-friend { animation: none; } }
 .field-label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .field-label input { font-weight: 400; }
+.spinner { width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; vertical-align: -1px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Transitions entre pages */
+#root { display: flex; flex-direction: column; height: var(--app-h, 100dvh); }
+.page { flex: 1; min-height: 0; }
+.page-forward { animation: page-in-r .22s cubic-bezier(.2,.8,.3,1); }
+.page-back { animation: page-in-l .22s cubic-bezier(.2,.8,.3,1); }
+@keyframes page-in-r { from { opacity: 0; transform: translateX(24px); } }
+@keyframes page-in-l { from { opacity: 0; transform: translateX(-24px); } }
+.sheet-backdrop { animation: fade .18s; }
+@media (prefers-reduced-motion: reduce) { .page-forward, .page-back, .spinner { animation: none; } }

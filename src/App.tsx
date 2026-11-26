@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
 import { isConfigured } from './lib/supabase'
 import Login from './pages/Login'
@@ -7,7 +7,7 @@ import Friends from './pages/Friends'
 import AddFriend from './pages/AddFriend'
 import Tags from './pages/Tags'
 import { DialogHost } from './components/Dialog'
-import { useTrackHistory } from './components/BackButton'
+import { useTrackHistory, navDirection } from './components/BackButton'
 import { useEffect } from 'react'
 import { startOutbox, useOnline } from './lib/network'
 import { syncPush } from './lib/push'
@@ -20,12 +20,14 @@ function Routed() {
   const { session, loading } = useAuth()
   const online = useOnline()
   useTrackHistory()
+  const { pathname } = useLocation()
   const uid = session?.user.id
   useEffect(() => { if (uid) { startOutbox(); syncPush() } }, [uid])
   if (loading) return <div className="splash">LePtiGrp</div>
   if (!session) return <Login />
   return (<>
     {!online && <div className="offline-banner">Hors connexion · tes messages partiront dès le retour du réseau</div>}
+    <div key={pathname} className={`page page-${navDirection}`}>
     <Routes>
       <Route path="/" element={<Conversations />} />
       <Route path="/friends" element={<Friends />} />
@@ -37,6 +39,7 @@ function Routed() {
       <Route path="/c/:id/settings" element={<GroupSettings />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </div>
   </>)
 }
 

@@ -214,7 +214,7 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
 function PendingBubble({ p }: { p: Pending }) {
   return (
     <div className={`bubble mine pending${p.failed ? ' failed' : ''}`}>
-      <div className="bubble-head">{p.failed ? '⚠️ Non envoyé' : '🕓 En attente de réseau…'}</div>
+      <div className="bubble-head">{p.failed ? '⚠️ Non envoyé' : <><span className="spinner" aria-hidden /> En attente de réseau</>}</div>
       <div className="bubble-text">{p.content}</div>
       {p.failed && <div className="pending-actions">
         <button onClick={() => retryPending(p.client_id)}>Réessayer</button>
