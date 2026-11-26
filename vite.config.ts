@@ -27,7 +27,7 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // Le service worker est un script classique : `import.meta` (utilisé par libsodium) y est interdit
         // et empêcherait toute mise à jour de l'appli. On le remplace par l'adresse du service worker.
         buildPlugins: {

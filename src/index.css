@@ -683,3 +683,7 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .event-chip:disabled { opacity: 1; }
 .title-stack { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; gap: 2px; }
 .title-stack .event-chip { padding: 2px 8px; font-size: 12px; }
+
+/* Police des titres : Sora (embarquée, marche hors ligne) */
+:root { --font-title: 'Sora', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, .logo, .title-edit span, .section-title { font-family: var(--font-title); letter-spacing: -.01em; }
