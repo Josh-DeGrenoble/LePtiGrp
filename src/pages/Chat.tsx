@@ -29,8 +29,8 @@ const PIN_DURATIONS: { label: string; ms: number | null }[] = [
 
 /** null = tout ; 'pinned' ; 'polls' ; 'activity' (modifs des outils) ; sinon l'id d'un membre */
 type Filter = null | 'pinned' | 'polls' | 'activity' | string
-const TOOL_PATH = { list: 'notes', ledger: 'accounts', poll: 'polls' } as const
-const TOOL_KIND = { list: 'notes', ledger: 'accounts', poll: 'polls' } as const
+const TOOL_PATH = { list: 'notes', ledger: 'accounts', poll: 'polls', event: 'calendar' } as const
+const TOOL_KIND = TOOL_PATH
 
 export default function Chat() {
   const { id = '' } = useParams()

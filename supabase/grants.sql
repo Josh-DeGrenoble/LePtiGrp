@@ -36,6 +36,10 @@ begin
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'lists' and column_name = 'ledger_id') then
     grant update (ledger_id) on public.lists to authenticated;  -- liste liée à un compte (activity.sql)
   end if;
+  if to_regclass('public.events') is not null then  -- calendrier (calendar.sql)
+    revoke update on public.events from authenticated;
+    grant update (title, day, at_time, place) on public.events to authenticated;
+  end if;
   -- réglages de l'activité des outils (activity.sql)
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'members' and column_name = 'show_tools') then
     grant update (show_tools, notify_tools) on public.members to authenticated;

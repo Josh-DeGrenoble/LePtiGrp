@@ -26,14 +26,21 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
   const [byDates, setByDates] = useState(false)
   const [dates, setDates] = useState<Date[]>([])
   const [busy, setBusy] = useState(false)
+  // calendrier
+  const [day, setDay] = useState<Date[]>(() => { const d = params.get('day'); return d ? [new Date(`${d}T00:00:00`)] : [] })
+  const [time, setTime] = useState('')
+  const [place, setPlace] = useState('')
 
   const filled = byDates ? dates.map(dateLabel) : options.map((o) => o.trim()).filter(Boolean)
-  const valid = !!title.trim() && (share.mode !== 'conv' || !!share.conv) && (kind !== 'polls' || filled.length >= 2)
+  const valid = !!title.trim() && (share.mode !== 'conv' || !!share.conv) && (kind !== 'polls' || filled.length >= 2) && (kind !== 'calendar' || day.length === 1)
 
   const create = async () => {
     setBusy(true)
     try {
-      const fields = kind === 'polls' ? { question: title.trim(), options: filled, multiple } : { name: title.trim() }
+      const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const fields = kind === 'polls' ? { question: title.trim(), options: filled, multiple }
+        : kind === 'calendar' ? { title: title.trim(), day: ymd(day[0]), at_time: time || null, place: place.trim() || null }
+        : { name: title.trim() }
       const item = await createTool(kind, fields, share, me)
       // Un sondage de conv apparaît aussi dans le chat, comme un message votable
       if (kind === 'polls' && item.conversation_id) {
@@ -57,8 +64,16 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
       <div className="footer-bar"><button className="btn primary wide" disabled={!valid || busy} onClick={create}>Créer</button></div>
     }>
       <div className="card form">
-        <LimitedInput placeholder={t.placeholder} value={title} max={kind === 'polls' ? 200 : 40} onChange={(e) => setTitle(e.target.value)} autoFocus />
+        <LimitedInput placeholder={t.placeholder} value={title} max={kind === 'polls' ? 200 : kind === 'calendar' ? 100 : 40} onChange={(e) => setTitle(e.target.value)} autoFocus />
       </div>
+      {kind === 'calendar' && <>
+        <div className="section-title">Date</div>
+        <DatePicker value={day} onChange={setDay} max={1} single />
+        <div className="card form event-extra">
+          <label className="event-time"><span>Heure (facultatif)</span><input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
+          <LimitedInput placeholder="Lieu (facultatif)" value={place} max={100} onChange={(e) => setPlace(e.target.value)} />
+        </div>
+      </>}
       {kind === 'polls' && <>
         <div className="section-title">Réponses</div>
         <div className="segmented share-modes">

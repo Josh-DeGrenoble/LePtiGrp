@@ -23,6 +23,8 @@ import ToolIndex from './pages/ToolIndex'
 import NewTool from './pages/NewTool'
 import LedgerPage from './pages/LedgerPage'
 import PollPage from './pages/PollPage'
+import CalendarPage from './pages/CalendarPage'
+import EventPage from './pages/EventPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Confirmed from './pages/Confirmed'
 import Privacy from './pages/Privacy'
@@ -73,6 +75,9 @@ function Routed() {
       <Route path="/polls" element={<ToolIndex key="polls" kind="polls" />} />
       <Route path="/polls/new" element={<NewTool key="polls" kind="polls" />} />
       <Route path="/polls/:id" element={<PollPage />} />
+      <Route path="/calendar" element={<CalendarPage />} />
+      <Route path="/calendar/new" element={<NewTool key="calendar" kind="calendar" />} />
+      <Route path="/calendar/:id" element={<EventPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </ErrorBoundary>

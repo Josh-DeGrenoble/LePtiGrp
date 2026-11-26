@@ -3,7 +3,7 @@ import { supabase, type Claim, type Profile, type Shared } from './supabase'
 import { readCache, writeCache } from './network'
 
 /** Les outils du menu ▽ : même logique de partage, de liste et de création */
-export type ToolKind = 'notes' | 'accounts' | 'polls'
+export type ToolKind = 'notes' | 'accounts' | 'polls' | 'calendar'
 
 type Row = Shared & Record<string, unknown>
 
@@ -22,10 +22,16 @@ export function itemStatus(quantity: string | null, claims: Claim[] = [], kind =
   return { want, got, done, left: want !== null ? Math.max(0, want - got) : null }
 }
 
+/** « Sam. 5 déc. à 20h » */
+export function eventWhen(day: string, at: string | null, opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' }) {
+  const s = new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', opts)
+  return s.charAt(0).toUpperCase() + s.slice(1) + (at ? ` à ${at.slice(0, 5).replace(':', 'h').replace(/h00$/, 'h')}` : '')
+}
+
 export const euro = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
 
 export const TOOLS: Record<ToolKind, {
-  table: string; label: string; newTitle: string; placeholder: string; field: 'name' | 'question'; select: string; summary: (r: Row) => string
+  table: string; label: string; newTitle: string; placeholder: string; field: 'name' | 'question' | 'title'; select: string; summary: (r: Row) => string
 }> = {
   notes: {
     table: 'lists', label: 'Pense-bête', newTitle: 'Nouveau pense-bête', placeholder: 'Nom du pense-bête', field: 'name',
@@ -42,6 +48,14 @@ export const TOOLS: Record<ToolKind, {
     summary: (r) => {
       const total = (r.expenses as { amount: number }[]).reduce((s, e) => s + Number(e.amount), 0)
       return total ? `${euro(total)} au total` : 'Aucune dépense'
+    },
+  },
+  calendar: {
+    table: 'events', label: 'Calendrier', newTitle: 'Nouvel événement', placeholder: "Nom (ex. : Resto d'anniv)", field: 'title',
+    select: '*, event_replies(going)',
+    summary: (r) => {
+      const yes = (r.event_replies as { going: boolean }[]).filter((x) => x.going).length
+      return eventWhen(String(r.day), r.at_time as string | null) + (yes ? ` · ${yes} ✓` : '')
     },
   },
   polls: {

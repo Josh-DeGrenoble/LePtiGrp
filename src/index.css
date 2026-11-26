@@ -734,3 +734,35 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .circle-person > span { flex: 1; }
 .circle-person.add { color: var(--text); cursor: pointer; }
 .circle-person.add svg { color: var(--primary); }
+
+/* Calendrier */
+.cal-month { padding: 10px 12px; }
+.cal-day { position: relative; display: flex; align-items: center; justify-content: center; }
+.cal-day.past { color: var(--muted); }
+.cal-dots { position: absolute; bottom: 3px; left: 0; right: 0; display: flex; justify-content: center; gap: 2px; }
+.cal-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
+.cal-day.on .cal-dots i { background: var(--primary-text); }
+.cal-picked { display: flex; justify-content: space-between; align-items: center; text-transform: capitalize; }
+.link-btn { color: var(--primary); font-weight: 600; font-size: 14px; text-transform: none; }
+.section-title.cap { text-transform: capitalize; }
+.event-row { align-items: center; gap: 12px; }
+.event-date { display: flex; flex-direction: column; align-items: center; min-width: 40px; line-height: 1.1; }
+.event-date b { font-size: 20px; font-family: var(--font-title); }
+.event-date small { color: var(--muted); font-size: 12px; text-transform: capitalize; }
+.event-main { flex: 1; display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.event-main small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.event-me { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
+.event-me.yes { background: #16a34a22; color: #16a34a; }
+.event-me.no { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+.event-me.wait { background: var(--surface2); color: var(--muted); }
+.event-person { gap: 10px; align-items: center; }
+.event-person > span:nth-child(2) { flex: 1; }
+.event-head { display: flex; gap: 12px; align-items: flex-start; text-align: left; width: 100%; color: inherit; font: inherit; }
+.event-head > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.event-head b { font-size: 18px; font-family: var(--font-title); }
+.event-head .muted:first-letter { text-transform: uppercase; }
+.event-head-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--surface2); display: flex; align-items: center; justify-content: center; color: var(--primary); flex: none; }
+.event-answer { display: flex; gap: 8px; margin: 12px 0 4px; }
+.event-time { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.event-time input { width: auto; }
+.event-extra { display: flex; flex-direction: column; gap: 8px; }

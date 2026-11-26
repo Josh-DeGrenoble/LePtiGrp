@@ -14,7 +14,7 @@ declare
 begin
   -- Dans l'ordre : conversations (messages, membres, clés, outils et rappels rattachés), puis le reste.
   -- Une table absente (fichier SQL pas encore lancé) est ignorée.
-  foreach t in array array['conversations', 'lists', 'ledgers', 'polls', 'reminders', 'feedback', 'friend_circles',
+  foreach t in array array['conversations', 'lists', 'ledgers', 'polls', 'reminders', 'feedback', 'friend_circles', 'events',
                            'friend_code_attempts', 'usage_alerts', 'friend_tags', 'tags', 'friendships'] loop
     if to_regclass('public.' || t) is not null then execute format('delete from public.%I', t); end if;
   end loop;

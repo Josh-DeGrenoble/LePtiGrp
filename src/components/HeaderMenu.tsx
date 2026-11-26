@@ -5,7 +5,7 @@ import { ReminderSheet } from './ReminderSheet'
 import { ToolIcon } from './ToolIcon'
 import { TOOLS, cachedTools, loadTools, type ToolItem, type ToolKind } from '../lib/tools'
 
-const KINDS: ToolKind[] = ['notes', 'accounts', 'polls']
+const KINDS: ToolKind[] = ['notes', 'accounts', 'polls', 'calendar']
 
 /**
  * Flèche ▽ de l'en-tête : menu des outils (pense-bête, comptes, sondage, rappel).
@@ -32,7 +32,7 @@ export function HeaderMenu({ convId }: { convId?: string }) {
   const close = () => setPos(null)
   // Les outils sont des pages sœurs : passer de l'un à l'autre remplace la page (pas d'empilement)
   // et le retour ramène toujours à la page d'origine (la conv, ou la liste des convs)
-  const inTool = /^\/(notes|accounts|polls)(\/|$)/.test(pathname)
+  const inTool = /^\/(notes|accounts|polls|calendar)(\/|$)/.test(pathname)
   const root = inTool ? (state as { root?: string } | null)?.root ?? '/' : pathname
   const go = (to: string) => { close(); nav(to, { replace: inTool, state: { from: root, root } }) }
 

@@ -64,6 +64,10 @@ do $$ begin
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'lists' and column_name = 'ledger_id') then
     grant update (ledger_id) on public.lists to authenticated;  -- liste liée à un compte (activity.sql)
   end if;
+  if to_regclass('public.events') is not null then  -- calendrier (calendar.sql)
+    revoke update on public.events from authenticated;
+    grant update (title, day, at_time, place) on public.events to authenticated;
+  end if;
 end $$;
 
 -- ---------- 4. Message de sondage : seulement un sondage de la même conv ----------

@@ -16,9 +16,9 @@ export function NotifToggles({ prefs, onChange }: { prefs: NotifPrefs; onChange:
 }
 
 export type ActivityPrefs = { show_tools?: ToolKey[] | null; notify_tools?: ToolKey[] | null }
-export const TOOL_LABELS: [ToolKey, string][] = [['list', 'Pense-bêtes'], ['poll', 'Sondages'], ['ledger', 'Comptes']]
-export const ALL_TOOLS: ToolKey[] = ['list', 'poll', 'ledger']
-const KIND = { list: 'notes', poll: 'polls', ledger: 'accounts' } as const
+export const TOOL_LABELS: [ToolKey, string][] = [['list', 'Pense-bêtes'], ['poll', 'Sondages'], ['ledger', 'Comptes'], ['event', 'Calendrier']]
+export const ALL_TOOLS: ToolKey[] = ['list', 'poll', 'ledger', 'event']
+const KIND = { list: 'notes', poll: 'polls', ledger: 'accounts', event: 'calendar' } as const
 
 /** Une ligne par outil, avec deux cases : « Chat » (afficher ses modifs dans le chat) et « Notif » */
 export function ToolPrefsGrid({ show, notify, onChange }: { show: ToolKey[]; notify: ToolKey[]; onChange: (patch: { show?: ToolKey[]; notify?: ToolKey[] }) => void }) {

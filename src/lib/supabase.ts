@@ -12,7 +12,7 @@ export type Profile = {
   show_tools_default?: ToolKey[]; notify_tools_default?: ToolKey[]
 }
 /** Outils dont l'activité peut s'afficher dans le chat */
-export type ToolKey = 'list' | 'poll' | 'ledger'
+export type ToolKey = 'list' | 'poll' | 'ledger' | 'event'
 export type Tag = { id: string; name: string; color: string }
 export type Role = 'super_admin' | 'admin' | 'member'
 
@@ -80,6 +80,9 @@ export type ListItem = {
   qty_kind: QtyKind; quantity: string | null; level: number | null  // « à prendre » : quantity ; « restant » : level en %
 }
 export type Ledger = Shared & { name: string }
+/** Événement du calendrier (calendar.sql) : `day` AAAA-MM-JJ, `at_time` HH:MM:SS */
+export type CalEvent = Shared & { title: string; day: string; at_time: string | null; place: string | null }
+export type EventReply = { event_id: string; user_id: string; going: boolean }
 export type Expense = { id: number; ledger_id: string; label: string; amount: number; paid_by: string; split: string[]; spent_at: string; created_at: string }
 export type Poll = Shared & { question: string; options: string[]; multiple: boolean }
 export type Vote = { poll_id: string; user_id: string; option: number }

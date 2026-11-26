@@ -79,15 +79,30 @@ async function sendTest(req: Request) {
   }, { headers: cors })
 }
 
+// Calendrier : événement proposé « avec des amis » (hors conv) → notif aux invités
+async function sendInvite(id: string) {
+  const { data: ev } = await db.from('events').select('id, owner_id, participants, title, day, at_time').eq('id', id).single()
+  if (!ev) return new Response('no event')
+  const { data: owner } = await db.from('profiles').select('display_name').eq('id', ev.owner_id).single()
+  const invited = (ev.participants as string[]).filter((u) => u !== ev.owner_id)
+  const { data: subs } = await db.from('push_subscriptions').select('*').in('user_id', invited)
+  const day = new Date(`${ev.day}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+  const at = ev.at_time ? ` à ${String(ev.at_time).slice(0, 5).replace(':', 'h').replace(/h00$/, 'h')}` : ''
+  const payload = JSON.stringify({ title: `📅 ${owner?.display_name ?? "Quelqu'un"} te propose`, body: `${short(ev.title, 60)} · ${day}${at}`, url: `/calendar/${ev.id}`, tag: `event-${ev.id}` })
+  const results = await sendAll(subs ?? [], payload)
+  return Response.json({ sent: results.filter((r) => r.status === 'fulfilled').length })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (!req.headers.get('x-push-secret')) return sendTest(req)
   if (req.headers.get('x-push-secret') !== Deno.env.get('PUSH_SECRET')) return new Response('forbidden', { status: 403 })
-  const body = await req.json() as { event: 'message' | 'pin' | 'reminders' | 'usage' | 'purge'; message_id: number; kind?: 'db' | 'storage'; pct?: number; conv?: string }
+  const body = await req.json() as { event: 'message' | 'pin' | 'reminders' | 'usage' | 'purge' | 'invite'; message_id: number; event_id?: string; kind?: 'db' | 'storage'; pct?: number; conv?: string }
   const { event, message_id } = body
   if (event === 'reminders') return sendReminders()
   if (event === 'usage') return sendUsage(body.kind!, body.pct!)
   if (event === 'purge') return purgeMedia(body.conv ?? '')
+  if (event === 'invite') return sendInvite(body.event_id ?? '')
 
   const { data: msg } = await db.from('messages').select('*').eq('id', message_id).single()
   if (!msg) return new Response('no message')
@@ -110,7 +125,7 @@ Deno.serve(async (req) => {
     if (m.user_id === actorId) return false
     if (event === 'pin') return m.notify_pins
     // activité des outils : « Notif » cochée pour cet outil (réglage de la conv, sinon celui par défaut du profil)
-    if (msg.kind === 'activity') return (m.notify_tools ?? (m.profiles as unknown as { notify_tools_default?: string[] } | null)?.notify_tools_default ?? ['list', 'poll', 'ledger']).includes(msg.tool)
+    if (msg.kind === 'activity') return (m.notify_tools ?? (m.profiles as unknown as { notify_tools_default?: string[] } | null)?.notify_tools_default ?? ['list', 'poll', 'ledger', 'event']).includes(msg.tool)
     const mentioned = msg.mention_all || (msg.mentions ?? []).includes(m.user_id)
     return m.notify_all || (m.notify_mentions && mentioned)
   }).map((m) => m.user_id)
