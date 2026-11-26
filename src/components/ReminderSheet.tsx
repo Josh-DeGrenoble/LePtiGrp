@@ -47,7 +47,7 @@ export function ReminderSheet({ open, onClose, convId }: { open: boolean; onClos
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title="Notification">
+    <Sheet open={open} onClose={onClose} title="Rappel">
       {!pushOn && <div className="reminder-warn">Les notifications sont désactivées sur ce téléphone. <button onClick={activate}>Activer</button></div>}
       <LimitedInput max={200} placeholder="Message du rappel" value={message} onChange={(e) => setMessage(e.target.value)} />
       <div className="segmented reminder-mode">

@@ -44,6 +44,20 @@ async function sendUsage(kind: 'db' | 'storage', pct: number) {
   return Response.json({ usage: kind, pct })
 }
 
+// Conversation supprimée : efface ses photos (dossier media/<conv>/), par paquets
+async function purgeMedia(conv: string) {
+  if (!/^[0-9a-f-]{36}$/.test(conv)) return new Response('bad conv', { status: 400 })
+  let removed = 0
+  for (;;) {
+    const { data } = await db.storage.from('media').list(conv, { limit: 100 })
+    if (!data?.length) break
+    const { error } = await db.storage.from('media').remove(data.map((f) => `${conv}/${f.name}`))
+    if (error) break
+    removed += data.length
+  }
+  return Response.json({ purged: removed })
+}
+
 // Bouton « Tester » des réglages : appelé par l'appli avec la session de l'utilisateur, envoie une notif à ses appareils
 // et renvoie le détail (nombre d'abonnements, codes d'erreur du service push) pour diagnostiquer
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info' }
@@ -65,10 +79,11 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (!req.headers.get('x-push-secret')) return sendTest(req)
   if (req.headers.get('x-push-secret') !== Deno.env.get('PUSH_SECRET')) return new Response('forbidden', { status: 403 })
-  const body = await req.json() as { event: 'message' | 'pin' | 'reminders' | 'usage'; message_id: number; kind?: 'db' | 'storage'; pct?: number }
+  const body = await req.json() as { event: 'message' | 'pin' | 'reminders' | 'usage' | 'purge'; message_id: number; kind?: 'db' | 'storage'; pct?: number; conv?: string }
   const { event, message_id } = body
   if (event === 'reminders') return sendReminders()
   if (event === 'usage') return sendUsage(body.kind!, body.pct!)
+  if (event === 'purge') return purgeMedia(body.conv ?? '')
 
   const { data: msg } = await db.from('messages').select('*').eq('id', message_id).single()
   if (!msg) return new Response('no message')

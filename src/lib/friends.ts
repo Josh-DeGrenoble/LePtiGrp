@@ -1,5 +1,6 @@
 import { supabase, type Profile, type Tag } from './supabase'
 import { readCache, writeCache } from './network'
+import { notify } from '../components/Dialog'
 
 export type FriendWithTags = Profile & { tags: Tag[] }
 
@@ -32,4 +33,18 @@ export const TAG_COLORS = ['#2563eb', '#f59e0b', '#10b981', '#ec4899', '#ef4444'
 
 export function friendLink(code: string) {
   return `${window.location.origin}/add/${code}`
+}
+
+/** Lien d'ami ouvert avant d'avoir un compte : le code est gardé jusqu'à la première connexion */
+const PENDING = 'pending-friend'
+export function rememberFriendCode(code: string) {
+  try { localStorage.setItem(PENDING, code) } catch { /* stockage indisponible */ }
+}
+export async function addPendingFriend() {
+  let code: string | null = null
+  try { code = localStorage.getItem(PENDING) } catch { return }
+  if (!code) return
+  const { data, error } = await supabase.rpc('add_friend_by_code', { code })
+  try { localStorage.removeItem(PENDING) } catch { /* rien */ }
+  if (!error) notify(`${(data as { display_name: string }).display_name} est maintenant ton ami(e) !`)
 }

@@ -51,7 +51,7 @@ export function HeaderMenu({ convId }: { convId?: string }) {
             <button className="hmenu-subitem hmenu-new" onClick={() => go(`/${k}/new?conv=${convId}`)}><IconPlus size={18} /><span>Nouveau</span></button>
           </div>}
         </div>)}
-        <button className="hmenu-item" onClick={() => { close(); setReminder(true) }}><IconBell /><span>Notification</span></button>
+        <button className="hmenu-item" onClick={() => { close(); setReminder(true) }}><IconBell /><span>Rappel</span></button>
       </div>
     </>}
     <ReminderSheet open={reminder} onClose={() => setReminder(false)} convId={convId} />

@@ -81,7 +81,7 @@ export default function Conversations() {
   return (
     <Screen header={<>
       <Link to="/friends" className="icon-btn" aria-label="Amis"><IconUser /></Link>
-      <h1>Chat</h1>
+      <h1 className="brand">LePti<span>Grp</span></h1>
       <HeaderMenu />
       <Link to="/settings" className="icon-btn" aria-label="Paramètres"><IconGear /></Link>
     </>}>

@@ -6,7 +6,7 @@ import type { ConvSummary } from '../lib/supabase'
 import { cachedConversations, fetchConversations } from '../lib/myConversations'
 import type { Share } from '../lib/tools'
 
-const MODES: { mode: Share['mode']; label: string }[] = [{ mode: 'me', label: 'Moi seul' }, { mode: 'conv', label: 'Une conv' }, { mode: 'free', label: 'Libre' }]
+const MODES: { mode: Share['mode']; label: string }[] = [{ mode: 'me', label: 'Moi seul' }, { mode: 'conv', label: 'Une conv' }, { mode: 'free', label: 'Avec des amis' }]
 
 /** Avec qui partager un outil : moi seul, les membres d'une conv, ou des amis choisis (filtre par tags) */
 export function ShareChooser({ value, onChange }: { value: Share; onChange: (s: Share) => void }) {

@@ -2,14 +2,15 @@ import { HeaderMenu } from '../components/HeaderMenu'
 import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, type Member, type Role } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { useConversation } from '../lib/conversation'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { FriendPicker } from '../components/FriendPicker'
-import { IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconTrash, IconUserMinus, IconCalendar } from '../components/Icons'
+import { IconImages, IconPencil, IconLeave, IconPin, IconPlus, IconStar, IconTrash, IconUserMinus, IconCalendar, IconUserPlus } from '../components/Icons'
+import { SGroup, SRow } from '../components/SettingsRow'
 import { DatePicker } from '../components/DatePicker'
 import { eventLabel } from '../lib/format'
 import { Sheet, SheetButton } from '../components/Sheet'
@@ -74,8 +75,8 @@ export default function GroupSettings() {
 
   const leave = async () => {
     if (conv.is_group) {
-      if ((await ask('Quitter la conversation ?')) && (await call('leave_conversation', { conv: id }))) nav('/', { replace: true })
-    } else if (await ask('Supprimer la conversation de ta liste ?')) {
+      if ((await ask('Quitter le groupe ?')) && (await call('leave_conversation', { conv: id }))) nav('/', { replace: true })
+    } else if (await ask('Supprimer la conversation ? Elle disparaît de ta liste. Si l\'autre la supprime aussi, elle est effacée pour de bon, photos comprises.')) {
       await supabase.from('members').update({ hidden_at: new Date().toISOString() }).eq('conversation_id', id).eq('user_id', me)
       nav('/', { replace: true })
     }
@@ -133,20 +134,19 @@ export default function GroupSettings() {
           onChange={(ds) => { setEventDate(ds[0] ?? null); setPickDate(false) }} />
         {conv.event_date && <SheetButton danger onClick={() => { setEventDate(null); setPickDate(false) }}>Retirer la date</SheetButton>}
       </Sheet>
-      <Link to={`/c/${id}/media`} className="settings-row"><span>Médias</span><IconImages /></Link>
-      {other && (
-        <button className="settings-row" onClick={copyCode}>
-          <span>Code ami</span><span className="friend-code">{copied ? 'Copié !' : other.friend_code}</span>
-        </button>
-      )}
+      <div className="settings-page">
+      <SGroup>
+        <SRow icon={<IconImages size={20} />} label="Médias" sub="Toutes les photos de la conversation" onClick={() => nav(`/c/${id}/media`)} />
+        {other && <SRow icon={<IconUserPlus size={18} />} label="Code ami" onClick={copyCode} chevron={false}
+          right={<span className="friend-code">{copied ? 'Copié !' : other.friend_code}</span>} />}
+      </SGroup>
 
-      <div className="settings-block">
-        <div className="section-title">Amis dans le groupe ({c.members.length})</div>
+      <SGroup title={conv.is_group ? `Membres (${c.members.length})` : 'Membres'}>
         {c.members.map((m) => {
           const r = effectiveRole(m)
           return (
-            <div key={m.user_id} className="member-row">
-              <Avatar name={m.profiles?.display_name ?? '?'} url={m.profiles?.avatar_url} size={38} />
+            <div key={m.user_id} className="member-row srow">
+              <Avatar name={m.profiles?.display_name ?? '?'} url={m.profiles?.avatar_url} size={36} />
               <button className="member-name" disabled={!canSetRole(m)} onClick={() => setRoleFor(m)}>
                 {m.profiles?.display_name}{m.user_id === me && ' (moi)'}
                 {conv.is_group && r !== 'member' && <span className="role-star" title={ROLE_LABEL[r]}><IconStar size={18} filled={r === 'super_admin'} /></span>}
@@ -157,22 +157,18 @@ export default function GroupSettings() {
             </div>
           )
         })}
-        {c.can('invite') && <button className="icon-btn add-member" onClick={() => setAdding(true)} aria-label="Ajouter des membres"><IconPlus /></button>}
-      </div>
+        {c.can('invite') && <SRow icon={<IconPlus size={20} />} label="Ajouter des membres" onClick={() => setAdding(true)} chevron={false} />}
+      </SGroup>
 
-      <div className="settings-block">
-        <div className="section-title">Mes notifications</div>
+      <SGroup title="Mes notifications">
         <NotifToggles prefs={c.mine} onChange={setNotif} />
-      </div>
-      <div className="settings-block">
-        <div className="section-title">Modifs des pense-bêtes, comptes et sondages</div>
+      </SGroup>
+      <SGroup title="Modifs des outils" note="Pense-bêtes, sondages et comptes de cette conversation : afficher leurs modifs dans le chat, et/ou en être notifié.">
         <ActivityToggles prefs={c.mine} onChange={setNotif} />
-      </div>
-
+      </SGroup>
 
       {conv.is_group && (
-        <div className="settings-block">
-          <div className="section-title">Droits</div>
+        <SGroup title="Droits" note={!isSuper ? 'Seul un super admin peut modifier les droits.' : undefined}>
           <Check label="Tout le monde admin" checked={conv.everyone_admin} disabled={!isSuper} onChange={(v) => updateSettings(v)} />
           {PERMISSIONS.map((p) => (
             <div key={p.action} className={`perm-row${isSuper ? '' : ' disabled'}`}>
@@ -185,30 +181,24 @@ export default function GroupSettings() {
               </div>
             </div>
           ))}
-          {!isSuper && <p className="muted small">Seul un super admin peut modifier les droits.</p>}
-        </div>
+        </SGroup>
       )}
 
-      {c.can('pin') && (
-        <button className="settings-row" onClick={async () => (await ask('Désépingler tous les messages ?')) && call('unpin_all', { conv: id })}>
-          <IconPin filled /><span>Désépingler tous les messages</span>
-        </button>
-      )}
-      {isFriend && (
-        <button className="settings-row danger" onClick={unfriend}>
-          <IconUserMinus /><span>Retirer des amis</span>
-        </button>
-      )}
-      <button className="settings-row danger" onClick={leave}>
-        <IconLeave /><span>{conv.is_group ? 'Quitter la conversation' : 'Supprimer la conversation'}</span>
-      </button>
-      {conv.is_group && isSuper && <button className="settings-row danger" onClick={() => { setWord(''); setDeleting(true) }}>
-        <IconTrash /><span>Supprimer le groupe pour tout le monde</span>
-      </button>}
+      <SGroup>
+        {c.can('pin') && <SRow icon={<IconPin size={18} />} label="Désépingler tous les messages" chevron={false}
+          onClick={async () => (await ask('Désépingler tous les messages ?')) && call('unpin_all', { conv: id })} />}
+        {isFriend && <SRow icon={<IconUserMinus size={18} />} label="Retirer des amis" danger chevron={false} onClick={unfriend} />}
+        <SRow icon={conv.is_group ? <IconLeave size={18} /> : <IconTrash size={18} />} danger chevron={false} onClick={leave}
+          label={conv.is_group ? 'Quitter le groupe' : 'Supprimer la conversation'}
+          sub={conv.is_group ? undefined : "Effacée pour de bon quand vous l'avez supprimée tous les deux"} />
+        {conv.is_group && isSuper && <SRow icon={<IconTrash size={18} />} danger chevron={false} label="Supprimer le groupe pour tout le monde"
+          sub="Messages, photos, pense-bêtes, comptes et sondages" onClick={() => { setWord(''); setDeleting(true) }} />}
+      </SGroup>
+      </div>
 
       <Sheet open={deleting} onClose={() => setDeleting(false)} title="Supprimer le groupe">
         <p className="small">C'est <b>définitif</b> : le groupe « {conv.name} » disparaît pour tous ses membres, avec tous ses messages,
-          ses pense-bêtes, comptes et sondages.</p>
+          ses photos, pense-bêtes, comptes, sondages et rappels.</p>
         <p className="small">Tape <b>SUPPRIMER</b> pour confirmer :</p>
         <input value={word} onChange={(e) => setWord(e.target.value)} placeholder="SUPPRIMER" autoCapitalize="characters" autoComplete="off" />
         <div className="inline-form">

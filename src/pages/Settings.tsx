@@ -14,6 +14,7 @@ import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Sheet } from '../components/Sheet'
 import { QrSheet } from '../components/Qr'
+import { friendLink } from '../lib/friends'
 import { ToolPrefsGrid, ALL_TOOLS } from '../components/NotifToggles'
 import type { ToolKey } from '../lib/supabase'
 import { pushState, enablePush, disablePush, isIos, testPush, type PushState } from '../lib/push'
@@ -45,7 +46,8 @@ export default function Settings() {
   const [copied, setCopied] = useState(false)
   const [account, setAccount] = useState<'email' | 'password' | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const appUrl = window.location.origin
+  // Un seul lien : celui d'ami. Il ouvre l'appli (inscription si besoin) et ajoute en ami directement.
+  const appUrl = profile ? friendLink(profile.friend_code) : window.location.origin
   const [push, setPush] = useState<PushState | null>(null)
   useEffect(() => { pushState().then(setPush) }, [])
   // Au retour des réglages du téléphone : si l'autorisation a été donnée, on active tout de suite
@@ -68,7 +70,7 @@ export default function Settings() {
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
   const share = () => navigator.share
-    ? navigator.share({ title: 'LePtiGrp', text: 'Rejoins-moi sur LePtiGrp !', url: appUrl }).catch(() => {})
+    ? navigator.share({ title: 'LePtiGrp', text: `Rejoins-moi sur LePtiGrp ! Mon code ami : ${profile?.friend_code ?? ''}`, url: appUrl }).catch(() => {})
     : copy()
   const [qr, setQr] = useState(false)
 
@@ -110,10 +112,10 @@ export default function Settings() {
           <p><b>Android</b> : ouvrir le lien dans Chrome, menu ⋮, « Installer l'application ».<br />
             <b>iPhone</b> : ouvrir le lien dans Safari, Partager, « Sur l'écran d'accueil ».</p>
         </details>}>
-          <SRow icon={<IconShare size={18} />} label="Partager l'appli" sub={copied ? 'Lien copié ✓' : appUrl.replace(/^https?:\/\//, '')} onClick={share}
+          <SRow icon={<IconShare size={18} />} label="Partager mon lien" sub={copied ? 'Lien copié ✓' : "Installe l'appli et t'ajoute en ami"} onClick={share}
             right={<button className="srow-btn icon" onClick={(e) => { e.stopPropagation(); setQr(true) }} aria-label="QR code et scanner"><IconQr size={20} /></button>} />
         </SGroup>
-        <QrSheet open={qr} onClose={() => setQr(false)} url={appUrl} title="Inviter des amis" caption="Fais scanner ce code pour ouvrir l'appli." />
+        <QrSheet open={qr} onClose={() => setQr(false)} url={appUrl} title="Inviter des amis" caption={`Fais-le scanner : ouvre l'appli et t'ajoute en ami. Code : ${profile?.friend_code ?? ''}`} />
 
         <SGroup title="Compte">
           {session && hasPassword(session.user) ? <>

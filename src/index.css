@@ -714,3 +714,10 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .pref-chip { padding: 6px 12px; border-radius: 99px; font-size: 13.5px; font-weight: 600; color: var(--muted); border: 1px solid var(--border); background: transparent; }
 .pref-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .settings-block .tool-prefs .tool-pref { padding: 10px 0; }
+.brand span { color: var(--primary); }
+
+/* Paramètres d'une conv en cartes */
+.sgroup-card > .toggle-row, .sgroup-card > .check-row, .sgroup-card > .perm-row { padding: 12px 14px; }
+.sgroup-card > .toggle-row + .toggle-row, .sgroup-card > .perm-row, .sgroup-card > .member-row + .member-row, .sgroup-card > .member-row + .srow { border-top: 1px solid var(--border); }
+.sgroup-card > .member-row { min-height: 0; padding: 8px 14px; }
+.sgroup-card > .member-row .member-name { flex: 1; text-align: left; display: flex; align-items: center; gap: 6px; }

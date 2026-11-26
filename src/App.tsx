@@ -26,6 +26,7 @@ import PollPage from './pages/PollPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Confirmed from './pages/Confirmed'
 import Privacy from './pages/Privacy'
+import { rememberFriendCode, addPendingFriend } from './lib/friends'
 import { initE2EE, useE2EE } from './lib/e2ee'
 import E2EESetup, { hasPassword, E2EEInfo, infoSeen } from './pages/E2EESetup'
 
@@ -37,7 +38,9 @@ function Routed() {
   const { state: e2ee } = useE2EE()
   const [infoDone, setInfoDone] = useState(false)
   useEffect(() => { if (uid) initE2EE(uid) }, [uid])
-  useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush(); startReminders() } }, [uid, e2ee])
+  useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush(); startReminders(); addPendingFriend() } }, [uid, e2ee])
+  // lien d'ami ouvert sans être connecté : on garde le code, l'ami est ajouté à la 1re connexion (après l'inscription)
+  if (!session && /^\/add\/\d{5}$/.test(pathname)) rememberFriendCode(pathname.slice(5))
   // lien de confirmation du mail : page simple, sans l'appli
   if (pathname === '/confirmed') return <Confirmed />
   if (pathname === '/confidentialite') return <Privacy />
