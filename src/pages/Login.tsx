@@ -1,6 +1,6 @@
 import { LimitedInput } from '../components/LimitedInput'
 import { useState } from 'react'
-import { errMsg } from '../lib/supabase'
+import { errMsg, supabase } from '../lib/supabase'
 import { signIn, signUp } from '../lib/e2ee'
 
 export default function Login() {
@@ -10,6 +10,8 @@ export default function Login() {
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
+  // compte créé, email pas encore validé : bandeau + renvoi possible
+  const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
@@ -19,17 +21,28 @@ export default function Login() {
     try {
       if (mode === 'login') {
         await signIn(email, password)
-      } else {
-        if (!(await signUp(email, password, name))) setInfo('Compte créé. Valide le lien reçu par mail, puis connecte-toi.')
+      } else if (!(await signUp(email, password, name))) {
+        setMode('login'); setConfirm(true)  // email et mot de passe restent remplis
       }
     } catch (err) {
-      setError(errMsg(err))
+      if (/email not confirmed/i.test(errMsg(err) + String((err as { message?: string })?.message))) setConfirm(true)
+      else setError(errMsg(err))
     } finally { setBusy(false) }
+  }
+
+  const resend = async () => {
+    const { error } = await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${window.location.origin}/confirmed` } })
+    setInfo(error ? errMsg(error) : `Email renvoyé à ${email}.`)
   }
 
   return (
     <div className="login">
       <h1 className="logo">LePtiGrp</h1>
+      {confirm && mode === 'login' && <div className="confirm-banner">
+        <b>📧 Plus qu'une étape !</b>
+        <p>Valide ton email via le lien reçu à <b>{email}</b> (pense aux spams), puis connecte-toi ici.</p>
+        <button className="link" type="button" onClick={resend}>Renvoyer l'email</button>
+      </div>}
       <form onSubmit={submit} className="card form">
         <input type="email" name="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value.trim())} required maxLength={254} autoComplete="email" inputMode="email" />
         {mode === 'signup' && <>

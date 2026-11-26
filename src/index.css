@@ -522,3 +522,6 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .sending-clock { font-size: 10px; margin-left: 6px; opacity: .7; vertical-align: 1px; }
 .pw-rule { margin: -4px 4px 0; font-size: 13px; color: var(--muted); }
 .pw-rule.ok { color: #10b981; font-weight: 600; }
+.confirm-banner { width: 100%; max-width: 360px; margin: 0 auto 14px; padding: 14px 16px; border-radius: 16px; background: var(--mention); border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent); }
+.confirm-banner p { margin: 6px 0 4px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.confirm-banner .link { padding: 4px 0; font-weight: 700; }
