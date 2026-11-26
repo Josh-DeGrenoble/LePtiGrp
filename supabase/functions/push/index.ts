@@ -89,15 +89,20 @@ Deno.serve(async (req) => {
   if (!msg) return new Response('no message')
   const actorId = event === 'pin' ? msg.pinned_by : msg.author_id
 
-  const [{ data: conv }, { data: members }, { data: actor }] = await Promise.all([
+  const [{ data: conv }, membersRes, { data: actor }] = await Promise.all([
     db.from('conversations').select('id, name, is_group').eq('id', msg.conversation_id).single(),
     db.from('members').select('user_id, notify_all, notify_mentions, notify_pins, notify_tools, profiles(notify_tools_default)').eq('conversation_id', msg.conversation_id),
     db.from('profiles').select('display_name').eq('id', actorId).single(),
   ])
+  // activity.sql pas encore lancé (colonnes absentes) : on relit sans les réglages d'activité plutôt que de ne rien envoyer
+  const members: { user_id: string; notify_all: boolean; notify_mentions: boolean; notify_pins: boolean; notify_tools?: string[] | null; profiles?: unknown }[] =
+    membersRes.error
+      ? (await db.from('members').select('user_id, notify_all, notify_mentions, notify_pins').eq('conversation_id', msg.conversation_id)).data ?? []
+      : membersRes.data ?? []
   const who = actor?.display_name ?? "Quelqu'un"
 
   // Qui reçoit la notification, selon ses réglages pour cette conversation
-  const recipients = (members ?? []).filter((m) => {
+  const recipients = members.filter((m) => {
     if (m.user_id === actorId) return false
     if (event === 'pin') return m.notify_pins
     // activité des outils : « Notif » cochée pour cet outil (réglage de la conv, sinon celui par défaut du profil)
@@ -114,13 +119,13 @@ Deno.serve(async (req) => {
   const title = conv?.is_group ? conv.name : who
   const prefix = event === 'pin' ? `📌 ${who} a épinglé : ` : conv?.is_group ? `${who} : ` : ''
   const fallback = event === 'pin' ? `📌 ${who} a épinglé un message` : conv?.is_group ? `${who} : nouveau message` : 'Nouveau message'
-  const body = msg.ciphertext ? fallback : prefix + short(msg.content ?? '')
+  const text = msg.ciphertext ? fallback : prefix + short(msg.content ?? '')
   const e2ee = msg.ciphertext && msg.ciphertext.length <= 2800
     ? { c: msg.conversation_id, e: msg.epoch, id: msg.client_id, ct: msg.ciphertext, a: msg.author_id, prefix }
     : undefined
   const payload = msg.kind === 'activity'
     ? JSON.stringify({ title, body: `${who} · ${short(msg.tool_name ?? '', 40)} : ${short(msg.content ?? '', 100)}`, url: `/c/${msg.conversation_id}`, tag: `${msg.conversation_id}-activity` })
-    : JSON.stringify({ title, body, url: `/c/${msg.conversation_id}`, tag: `${msg.conversation_id}-${event}`, e2ee })
+    : JSON.stringify({ title, body: text, url: `/c/${msg.conversation_id}`, tag: `${msg.conversation_id}-${event}`, e2ee })
 
   const results = await sendAll(subs ?? [], payload)
   return Response.json({ sent: results.filter((r) => r.status === 'fulfilled').length, total: results.length })
