@@ -13,7 +13,6 @@ import { Screen } from '../components/Layout'
 import { Avatar, colorOf } from '../components/Avatar'
 import { IconCheck, IconClose, IconFilter, IconList, IconPin, IconPoll, IconSend } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
-import { C } from '../lib/palette'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
 import { useDecrypted, type Plain } from '../lib/e2ee'
@@ -171,18 +170,18 @@ export default function Chat() {
       <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filtrer les messages">
         <div className="filter-sheet">
           <SGroup>
-            {([[null, 'Tous les messages', <IconList size={16} />, C.slate, messages.length],
-              ['pinned', 'Épinglés', <IconPin size={16} filled />, C.amber, messages.filter((m) => isPinned(m)).length],
-              ['polls', 'Sondages', <IconPoll size={16} />, C.violet, messages.filter((m) => m.poll_id).length]] as [Filter, string, React.ReactNode, string, number][])
-              .map(([f, label, icon, color, n]) => (
-                <SRow key={String(f)} icon={icon} color={color} label={label} chevron={false} onClick={() => { setFilter(f); setFilterOpen(false) }}
+            {([[null, 'Tous les messages', <IconList size={16} />, messages.length],
+              ['pinned', 'Épinglés', <IconPin size={16} />, messages.filter((m) => isPinned(m)).length],
+              ['polls', 'Sondages', <IconPoll size={16} />, messages.filter((m) => m.poll_id).length]] as [Filter, string, React.ReactNode, number][])
+              .map(([f, label, icon, n]) => (
+                <SRow key={String(f)} icon={icon} label={label} chevron={false} onClick={() => { setFilter(f); setFilterOpen(false) }}
                   right={<span className="filter-right"><small>{n}</small>{filter === f && <IconCheck />}</span>} />
               ))}
           </SGroup>
           <SGroup title="Messages de">
             {c.members.filter((m) => m.profiles).map((m) => (
               <button key={m.user_id} className="srow" onClick={() => { setFilter(m.user_id); setFilterOpen(false) }}>
-                <Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={32} />
+                <Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={24} />
                 <span className="srow-text">{m.user_id === me ? 'Moi' : m.profiles!.display_name}</span>
                 <span className="filter-right"><small>{messages.filter((x) => x.author_id === m.user_id).length}</small>{filter === m.user_id && <IconCheck />}</span>
               </button>

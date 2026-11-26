@@ -483,9 +483,10 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .sgroup-note summary::-webkit-details-marker { display: none; }
 .sgroup-note p { margin: 6px 0 0; }
 .srow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 10px 14px; text-align: left; position: relative; }
-.srow + .srow::before, .sgroup-card > * + .srow::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; border-top: 1px solid var(--border); }
+.srow + .srow::before, .sgroup-card > * + .srow::before { content: ''; position: absolute; top: 0; left: 50px; right: 0; border-top: 1px solid var(--border); }
 button.srow:active, label.srow:active { background: var(--surface2); }
-.srow-icon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: #fff; flex: none; }
+.srow-icon { width: 24px; display: grid; place-items: center; color: var(--primary); flex: none; }
+.srow-icon svg { width: 22px; height: 22px; }
 .srow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .srow-text small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .srow-chev { color: var(--muted); opacity: .6; display: flex; flex: none; }
@@ -501,7 +502,7 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .settings-page .feedback-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; position: relative; }
 .settings-page .feedback-row + .feedback-row::before { content: ''; position: absolute; top: 0; left: 14px; right: 0; border-top: 1px solid var(--border); }
 .sgroup-card > .muted.help { padding: 12px 14px; margin: 0; }
-.srow-icon.small { width: 28px; height: 28px; border-radius: 8px; margin-top: 2px; }
+.srow-icon.small { margin-top: 2px; }
 
 /* Bulles : un groupe de messages (même auteur, < 5 min), une ligne par message */
 .fold.line { margin: 0 -8px; }

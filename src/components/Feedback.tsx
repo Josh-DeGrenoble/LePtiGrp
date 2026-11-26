@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { IconBug, IconBulb, IconClose, IconCoffee } from './Icons'
 import { ask, notify } from './Dialog'
 import { SGroup, SRow } from './SettingsRow'
-import { C } from '../lib/palette'
 import { supabase, errMsg } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 
@@ -43,9 +42,9 @@ export function DevSection() {
 
   return <>
     <SGroup title="Le dev">
-      <SRow icon={<IconCoffee size={18} />} color={C.amber} label="Payer un café au dev" onClick={() => setCoffee(true)} />
-      <SRow icon={<IconBug size={18} />} color={C.pink} label="Remonter un bug" onClick={() => setKind('bug')} />
-      <SRow icon={<IconBulb size={18} />} color={C.violet} label="Proposer une évolution" onClick={() => setKind('idea')} />
+      <SRow icon={<IconCoffee size={18} />} label="Payer un café au dev" onClick={() => setCoffee(true)} />
+      <SRow icon={<IconBug size={18} />} label="Remonter un bug" onClick={() => setKind('bug')} />
+      <SRow icon={<IconBulb size={18} />} label="Proposer une évolution" onClick={() => setKind('idea')} />
     </SGroup>
 
     {coffee && <Popup onClose={() => setCoffee(false)}>
@@ -89,7 +88,7 @@ export function AdminFeedback() {
       {items.length === 0 && <p className="muted small help">Aucun retour pour l'instant.</p>}
       {items.map((it) => (
         <div key={it.id} className="feedback-row">
-          <span className="srow-icon small" style={{ background: it.kind === 'bug' ? C.pink : C.violet }}>{it.kind === 'bug' ? <IconBug size={16} /> : <IconBulb size={16} />}</span>
+          <span className="srow-icon small">{it.kind === 'bug' ? <IconBug size={16} /> : <IconBulb size={16} />}</span>
           <div>
             <small className="muted">{it.profiles?.display_name ?? 'Ancien compte'} · {new Date(it.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</small>
             <div className="feedback-msg">{it.message}</div>

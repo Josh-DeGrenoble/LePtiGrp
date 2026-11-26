@@ -7,7 +7,6 @@ import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { IconBell, IconSend, IconLogout, IconLink, IconLock, IconMail, IconNext, IconShare, IconShield } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
-import { C } from '../lib/palette'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { AdminFeedback, DevSection } from '../components/Feedback'
 import { AccountForm } from '../components/AccountForms'
@@ -70,12 +69,12 @@ export default function Settings() {
             : push === 'unsupported' ? <p className="muted small help">Ce navigateur ne gère pas les notifications.</p>
             : push === 'denied' ? <DeniedGuide onCheck={recheck} />
             : <label className="srow toggle-row">
-                <span className="srow-icon" style={{ background: C.red }}><IconBell size={18} /></span>
+                <span className="srow-icon"><IconBell size={18} /></span>
                 <span className="srow-text">Sur cet appareil</span>
                 <input type="checkbox" checked={push === 'on'} disabled={!push} onChange={(e) => togglePush(e.target.checked)} />
                 <span className="toggle" />
               </label>}
-          {push === 'on' && <SRow icon={<IconSend size={16} />} color={C.blue} label="Envoyer une notification de test" chevron={false}
+          {push === 'on' && <SRow icon={<IconSend size={16} />} label="Envoyer une notification de test" chevron={false}
             onClick={async () => notify(await testPush())} />}
         </SGroup>
 
@@ -84,18 +83,18 @@ export default function Settings() {
           <p><b>Android</b> : ouvrir le lien dans Chrome, menu ⋮, « Installer l'application ».<br />
             <b>iPhone</b> : ouvrir le lien dans Safari, Partager, « Sur l'écran d'accueil ».</p>
         </details>}>
-          {'share' in navigator && <SRow icon={<IconShare size={18} />} color={C.green} label="Inviter des amis" onClick={share} />}
-          <SRow icon={<IconLink />} color={C.teal} label="Lien de l'appli" sub={appUrl.replace(/^https?:\/\//, '')}
+          {'share' in navigator && <SRow icon={<IconShare size={18} />} label="Inviter des amis" onClick={share} />}
+          <SRow icon={<IconLink />} label="Lien de l'appli" sub={appUrl.replace(/^https?:\/\//, '')}
             right={<button className="srow-btn" onClick={copy}>{copied ? 'Copié ✓' : 'Copier'}</button>} />
         </SGroup>
 
         <SGroup title="Compte">
           {session && hasPassword(session.user) ? <>
-            <SRow icon={<IconMail size={18} />} color={C.blue} label="Email" sub={session.user.email} onClick={() => setAccount('email')} />
-            <SRow icon={<IconLock />} color={C.slate} label="Mot de passe" onClick={() => setAccount('password')} />
+            <SRow icon={<IconMail size={18} />} label="Email" sub={session.user.email} onClick={() => setAccount('email')} />
+            <SRow icon={<IconLock />} label="Mot de passe" onClick={() => setAccount('password')} />
           </> : <>
-            <SRow icon={<IconMail size={18} />} color={C.blue} label="Compte Google" sub={session?.user.email} />
-            <SRow icon={<IconLock />} color={C.slate} label="Mot de passe de chiffrement" onClick={() => setAccount('password')} />
+            <SRow icon={<IconMail size={18} />} label="Compte Google" sub={session?.user.email} />
+            <SRow icon={<IconLock />} label="Mot de passe de chiffrement" onClick={() => setAccount('password')} />
           </>}
         </SGroup>
 
@@ -106,7 +105,7 @@ export default function Settings() {
         <AdminFeedback />
 
         <SGroup>
-          <SRow icon={<IconLogout />} color={C.slate} label="Se déconnecter" chevron={false}
+          <SRow icon={<IconLogout />} label="Se déconnecter" chevron={false}
             onClick={async () => { if (await ask('Se déconnecter ?')) supabase.auth.signOut() }} />
         </SGroup>
 
@@ -179,7 +178,7 @@ function Encryption() {
       <p>Restent visibles par le serveur : qui parle à qui, quand, les mentions, et les outils (pense-bêtes, comptes, sondages).</p>
     </details>}>
       <div className="srow">
-        <span className="srow-icon" style={{ background: C.green }}><IconShield /></span>
+        <span className="srow-icon"><IconShield /></span>
         <span className="srow-text">Messages chiffrés de bout en bout<small>Actif sur ce téléphone</small></span>
       </div>
     </SGroup>
