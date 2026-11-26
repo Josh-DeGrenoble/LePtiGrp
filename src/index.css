@@ -71,16 +71,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .logo { text-align: center; color: var(--primary); font-size: 36px; margin: 0 0 8px; }
 
 /* Liste des conversations */
-.conv-list { display: flex; flex-direction: column; gap: 6px; }
-.conv-gap { height: 14px; }
-.conv-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--surface); border-radius: 14px; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.conv-row:active { background: var(--surface2); }
-.conv-main { flex: 1; min-width: 0; }
-.conv-name { font-weight: 700; }
-.conv-last { color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.conv-date { font-style: italic; font-size: 14px; color: var(--muted); }
-.badge { background: var(--primary); color: var(--primary-text); font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 7px; }
+.badge { background: var(--primary); color: var(--primary-text); font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 7px; min-width: 20px; text-align: center; flex: none; }
 .fab { position: fixed; right: max(20px, calc(50vw - 300px)); bottom: calc(24px + env(safe-area-inset-bottom)); width: 60px; height: 60px; border-radius: 50%; background: var(--text); color: var(--bg); display: grid; place-items: center; box-shadow: var(--shadow); }
 
 /* Sheet */
@@ -537,3 +528,27 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .or-sep { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
 .or-sep::before, .or-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--bg); color: var(--text); border: 1px solid var(--border); font-weight: 600; }
+/* Liste des discussions */
+.conv-search { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 0 12px; background: var(--surface); border-radius: 12px; color: var(--muted); }
+.conv-search input { border: 0; background: none; padding: 10px 0; }
+.conv-section + .conv-section { margin-top: 20px; }
+.conv-list { display: flex; flex-direction: column; background: var(--surface); border-radius: 18px; overflow: hidden; }
+.conv-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; position: relative; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.conv-row + .conv-row::before { content: ''; position: absolute; top: 0; left: 78px; right: 0; border-top: 1px solid var(--border); }
+.conv-row:active { background: var(--surface2); }
+.conv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.conv-top, .conv-bottom { display: flex; align-items: center; gap: 8px; }
+.conv-name { flex: 1; min-width: 0; font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-date { font-size: 12px; color: var(--muted); flex: none; }
+.conv-last { flex: 1; min-width: 0; color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-last b { font-weight: 600; }
+.conv-row.unread .conv-date { color: var(--primary); font-weight: 700; }
+.conv-row.unread .conv-last { color: var(--text); }
+/* Feuille « Filtrer » */
+.filter-sheet { display: flex; flex-direction: column; gap: 18px; padding-bottom: 6px; }
+.filter-right { display: inline-flex; align-items: center; gap: 8px; color: var(--primary); flex: none; }
+.filter-right small { color: var(--muted); font-size: 13px; font-weight: 600; }
+.filter-sheet .srow > .avatar { flex: none; }
+.filter-chip { gap: 6px; }
+.filter-chip .avatar { font-size: 9px !important; }
+.conv-section:last-of-type { padding-bottom: 84px; }

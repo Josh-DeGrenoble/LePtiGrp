@@ -51,3 +51,4 @@ export const IconLink = ({ size = 18 }: P) => svg(size, <><path d="M10 13a5 5 0 
 export const IconInbox = ({ size = 18 }: P) => svg(size, <><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z" /></>)
 export const IconLogout = ({ size = 18 }: P) => svg(size, <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></>)
 export const IconFilter = ({ size = 22, filled }: P) => svg(size, <path d="M3 4h18l-7 8.5V19l-4 2v-8.5z" fill={filled ? 'currentColor' : 'none'} />)
+export const IconCheck = ({ size = 20 }: P) => svg(size, <path d="M5 12.5l4.5 4.5L19 7.5" />)

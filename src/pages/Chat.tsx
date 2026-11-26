@@ -11,7 +11,9 @@ import { useConversation } from '../lib/conversation'
 import { messageDate, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconClose, IconFilter, IconPin, IconSend } from '../components/Icons'
+import { IconCheck, IconClose, IconFilter, IconList, IconPin, IconPoll, IconSend } from '../components/Icons'
+import { SGroup, SRow } from '../components/SettingsRow'
+import { C } from '../lib/palette'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
 import { useDecrypted, usePins, keyChanged, type Plain } from '../lib/e2ee'
@@ -137,7 +139,8 @@ export default function Chat() {
       </Link>}
       <div className="messages">
         {filter && <div className="filter-chip fade-in">
-          <span>{filter === 'pinned' ? '📌 Épinglés' : filter === 'polls' ? '📊 Sondages' : `👤 ${filter === me ? 'Moi' : names.get(filter) ?? '?'}`}</span>
+          {filter === 'pinned' ? <><IconPin size={14} filled /> Épinglés</> : filter === 'polls' ? <><IconPoll size={14} /> Sondages</>
+            : <><Avatar name={names.get(filter) ?? '?'} url={c.members.find((m) => m.user_id === filter)?.profiles?.avatar_url} size={20} /> {filter === me ? 'Moi' : names.get(filter) ?? '?'}</>}
           <button onClick={() => setFilter(null)} aria-label="Retirer le filtre"><IconClose size={14} /></button>
         </div>}
         {filter && !items.some(keep) && <p className="empty fade-in">Aucun message.</p>}
@@ -159,18 +162,27 @@ export default function Chat() {
         <div ref={bottom} />
       </div>
 
-      <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filtrer">
-        {([[null, 'Tous les messages'], ['pinned', `📌 Épinglés (${messages.filter((m) => isPinned(m)).length})`],
-          ['polls', `📊 Sondages (${messages.filter((m) => m.poll_id).length})`]] as [Filter, string][]).map(([f, label]) => (
-          <SheetButton key={String(f)} onClick={() => { setFilter(f); setFilterOpen(false) }}>{label}{filter === f && ' ✓'}</SheetButton>
-        ))}
-        <div className="sheet-section">Messages de…</div>
-        {c.members.filter((m) => m.profiles).map((m) => (
-          <SheetButton key={m.user_id} onClick={() => { setFilter(m.user_id); setFilterOpen(false) }}>
-            <span className="filter-member"><Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={26} />
-              {m.user_id === me ? 'Moi' : m.profiles!.display_name}{filter === m.user_id && ' ✓'}</span>
-          </SheetButton>
-        ))}
+      <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filtrer les messages">
+        <div className="filter-sheet">
+          <SGroup>
+            {([[null, 'Tous les messages', <IconList size={16} />, C.slate, messages.length],
+              ['pinned', 'Épinglés', <IconPin size={16} filled />, C.amber, messages.filter((m) => isPinned(m)).length],
+              ['polls', 'Sondages', <IconPoll size={16} />, C.violet, messages.filter((m) => m.poll_id).length]] as [Filter, string, React.ReactNode, string, number][])
+              .map(([f, label, icon, color, n]) => (
+                <SRow key={String(f)} icon={icon} color={color} label={label} chevron={false} onClick={() => { setFilter(f); setFilterOpen(false) }}
+                  right={<span className="filter-right"><small>{n}</small>{filter === f && <IconCheck />}</span>} />
+              ))}
+          </SGroup>
+          <SGroup title="Messages de">
+            {c.members.filter((m) => m.profiles).map((m) => (
+              <button key={m.user_id} className="srow" onClick={() => { setFilter(m.user_id); setFilterOpen(false) }}>
+                <Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={32} />
+                <span className="srow-text">{m.user_id === me ? 'Moi' : m.profiles!.display_name}</span>
+                <span className="filter-right"><small>{messages.filter((x) => x.author_id === m.user_id).length}</small>{filter === m.user_id && <IconCheck />}</span>
+              </button>
+            ))}
+          </SGroup>
+        </div>
       </Sheet>
 
       <Sheet open={!!selected} onClose={() => { setSelected(null); setPinDate('') }} title="Message">

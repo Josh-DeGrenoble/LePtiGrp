@@ -8,7 +8,7 @@ import { useMe } from '../lib/auth'
 import { shortDate } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconGear, IconPlus, IconUser, IconStar } from '../components/Icons'
+import { IconGear, IconPlus, IconUser, IconStar, IconSearch } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { NotifToggles } from '../components/NotifToggles'
 import { readCache, writeCache, useOnResume } from '../lib/network'
@@ -52,8 +52,11 @@ export default function Conversations() {
     const p = plainOf(r)
     return !p ? '🔒' : p.status === 'locked' ? '🔒 Message chiffré' : p.status === 'invalid' ? '⚠️ Message illisible' : p.text
   }
-  const favs = convs.filter((c) => c.is_favorite)
-  const others = convs.filter((c) => !c.is_favorite)
+  const [q, setQ] = useState('')
+  const shown = convs.filter((c) => !q.trim() || (c.name ?? '').toLowerCase().includes(q.trim().toLowerCase()))
+  const favs = shown.filter((c) => c.is_favorite)
+  const others = shown.filter((c) => !c.is_favorite)
+  const row = (c: ConvSummary) => <ConvRow key={c.id} c={c} last={lastText(c)} me={me} onMenu={() => setSelected(c)} crowd={isCrowd(sizes, c)} />
 
   const updateMember = async (patch: Partial<ConvSummary> & { hidden_at?: string }) => {
     if (!selected) return
@@ -83,11 +86,17 @@ export default function Conversations() {
           <p><Link to="/friends">Ajoute des amis</Link> puis touche l'un d'eux pour discuter, ou crée un groupe avec le bouton +.</p>
         </div>
       )}
-      <div className="conv-list">
-        {favs.map((c) => <ConvRow key={c.id} c={c} last={lastText(c)} onMenu={() => setSelected(c)} crowd={isCrowd(sizes, c)} />)}
-        {favs.length > 0 && others.length > 0 && <div className="conv-gap" />}
-        {others.map((c) => <ConvRow key={c.id} c={c} last={lastText(c)} onMenu={() => setSelected(c)} crowd={isCrowd(sizes, c)} />)}
-      </div>
+      {convs.length > 4 && <label className="conv-search"><IconSearch />
+        <input placeholder="Rechercher" value={q} onChange={(e) => setQ(e.target.value)} type="search" /></label>}
+      {favs.length > 0 && <section className="conv-section">
+        <h2 className="sgroup-title">Favoris</h2>
+        <div className="conv-list">{favs.map(row)}</div>
+      </section>}
+      {others.length > 0 && <section className="conv-section">
+        {favs.length > 0 && <h2 className="sgroup-title">Discussions</h2>}
+        <div className="conv-list">{others.map(row)}</div>
+      </section>}
+      {q && shown.length === 0 && <p className="empty">Aucune discussion trouvée.</p>}
       <Link to="/new" className="fab" aria-label="Nouveau groupe"><IconPlus size={32} /></Link>
 
       <Sheet open={!!selected} onClose={() => setSelected(null)} title={selected?.name ?? ''}>
@@ -109,23 +118,28 @@ export default function Conversations() {
   )
 }
 
-function ConvRow({ c, last, onMenu, crowd }: { c: ConvSummary; last: string | null; onMenu: () => void; crowd: boolean }) {
+function ConvRow({ c, last, me, onMenu, crowd }: { c: ConvSummary; last: string | null; me: string; onMenu: () => void; crowd: boolean }) {
   const nav = useNavigate()
   const press = useLongPress(onMenu, () => nav(`/c/${c.id}`))
   const name = c.name ?? 'Discussion'
+  const unread = c.unread > 0
+  // « Toi : » pour mes messages ; le prénom de l'auteur seulement dans les groupes
+  const who = c.last_author_id === me ? 'Toi' : c.is_group ? c.last_author?.split(' ')[0] : null
   return (
-    <div className="conv-row" {...press} role="button" tabIndex={0}>
+    <div className={`conv-row${unread ? ' unread' : ''}`} {...press} role="button" tabIndex={0}>
       <button className="avatar-btn" aria-label="Paramètres" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
         onClick={() => nav(`/c/${c.id}/settings`)}>
-        <Avatar name={name} url={c.avatar_url} group={crowd} />
+        <Avatar name={name} url={c.avatar_url} group={crowd} size={52} />
       </button>
       <div className="conv-main">
-        <div className="conv-name">{name}</div>
-        <div className="conv-last">{last ? `${c.last_author ?? '?'} : ${last}` : <i>Aucun message</i>}</div>
-      </div>
-      <div className="conv-meta">
-        <span className="conv-date">{shortDate(c.last_message_at)}</span>
-        {c.unread > 0 && <span className="badge">{c.unread}</span>}
+        <div className="conv-top">
+          <span className="conv-name">{name}</span>
+          <span className="conv-date">{shortDate(c.last_message_at)}</span>
+        </div>
+        <div className="conv-bottom">
+          <span className="conv-last">{last ? <>{who && <b>{who} : </b>}{last}</> : <i>Aucun message</i>}</span>
+          {unread && <span className="badge">{c.unread > 99 ? '99+' : c.unread}</span>}
+        </div>
       </div>
     </div>
   )
