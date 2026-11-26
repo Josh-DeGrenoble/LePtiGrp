@@ -125,7 +125,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 /* Discussion */
 .chat-title { flex: 1; display: flex; align-items: center; gap: 10px; justify-content: center; color: var(--text); font-size: 20px; font-weight: 600; min-width: 0; }
 .chat-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pin-filter.on { color: var(--pinned); }
+.chat-filter.on { color: var(--primary); }
 .messages { display: flex; flex-direction: column; }
 .fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .3s ease, opacity .25s ease; }
 .fold.out { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
@@ -529,3 +529,6 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .confirm-banner { width: 100%; max-width: 360px; margin: 0 auto 14px; padding: 14px 16px; border-radius: 16px; background: var(--mention); border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent); }
 .confirm-banner p { margin: 6px 0 4px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
 .confirm-banner .link { padding: 4px 0; font-weight: 700; }
+.filter-chip { align-self: center; display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 8px; padding: 4px 6px 4px 12px; border-radius: 99px; background: var(--mention); color: var(--primary); font-size: 13px; font-weight: 700; }
+.filter-chip button { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: inherit; }
+.filter-member { display: inline-flex; align-items: center; gap: 10px; }

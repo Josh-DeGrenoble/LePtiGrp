@@ -11,7 +11,7 @@ import { useConversation } from '../lib/conversation'
 import { messageDate, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconPin, IconSend } from '../components/Icons'
+import { IconClose, IconFilter, IconPin, IconSend } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
 import { useDecrypted, usePins, keyChanged, type Plain } from '../lib/e2ee'
@@ -23,6 +23,9 @@ const PIN_DURATIONS: { label: string; ms: number | null }[] = [
   { label: 'Sans limite', ms: null },
 ]
 
+/** null = tout ; 'pinned' ; 'polls' ; sinon l'id d'un membre */
+type Filter = null | 'pinned' | 'polls' | string
+
 export default function Chat() {
   const { id = '' } = useParams()
   const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/'
@@ -30,7 +33,9 @@ export default function Chat() {
   const c = useConversation(id, me)
   const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(`msgs:${id}`, []))
   const pending = usePending(id)
-  const [pinnedOnly, setPinnedOnly] = useState(false)
+  // Filtre : épinglés, sondages, ou les messages d'un membre (null = tout)
+  const [filter, setFilter] = useState<Filter>(null)
+  const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Message | null>(null)
   const [pinDate, setPinDate] = useState('')
   const [, tick] = useState(0)
@@ -68,7 +73,7 @@ export default function Chat() {
     return () => { supabase.removeChannel(ch); window.clearInterval(t) }
   }, [id, markRead, load])
 
-  const pinnedCount = messages.filter((m) => isPinned(m)).length
+  const keep = (it: Item) => !filter || (!!it.m && (filter === 'pinned' ? isPinned(it.m) : filter === 'polls' ? !!it.m.poll_id : it.author === filter))
   const sentIds = new Set(messages.map((m) => m.client_id))
   const waiting = pending.filter((p) => !sentIds.has(p.client_id))
   useLayoutEffect(() => { bottom.current?.scrollIntoView() }, [messages.length, waiting.length])
@@ -79,7 +84,7 @@ export default function Chat() {
     const follow = () => { bottom.current?.scrollIntoView({ block: 'end' }); if (Date.now() < end) raf = requestAnimationFrame(follow) }
     follow()
     return () => cancelAnimationFrame(raf)
-  }, [pinnedOnly])
+  }, [filter])
   // Clavier ouvert / fermé : on garde les derniers messages visibles, comme WhatsApp
   useEffect(() => {
     const keep = () => bottom.current?.scrollIntoView({ block: 'end' })
@@ -122,24 +127,28 @@ export default function Chat() {
         <span>{c.title}</span>
       </Link>
       <HeaderMenu convId={id} />
-      <button className={`icon-btn pin-filter${pinnedOnly ? ' on' : ''}`} onClick={() => setPinnedOnly(!pinnedOnly)}
-        aria-pressed={pinnedOnly} aria-label="Afficher uniquement les messages épinglés"><IconPin filled={pinnedOnly} /></button>
-    </>} footer={!pinnedOnly && c.mine && (c.can('write')
+      <button className={`icon-btn chat-filter${filter ? ' on' : ''}`} onClick={() => setFilterOpen(true)}
+        aria-label="Filtrer les messages"><IconFilter filled={!!filter} /></button>
+    </>} footer={!filter && c.mine && (c.can('write')
       ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
       : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
       {changed.length > 0 && <Link to={`/c/${id}/settings#securite`} className="key-alert">
         ⚠️ La clé de sécurité de {changed.map((m) => m.profiles?.display_name ?? '?').join(', ')} a changé. Vérifie-la avant d'écrire.
       </Link>}
       <div className="messages">
-        {pinnedOnly && pinnedCount === 0 && <p className="empty fade-in">Aucun message épinglé.</p>}
+        {filter && <div className="filter-chip fade-in">
+          <span>{filter === 'pinned' ? '📌 Épinglés' : filter === 'polls' ? '📊 Sondages' : `👤 ${filter === me ? 'Moi' : names.get(filter) ?? '?'}`}</span>
+          <button onClick={() => setFilter(null)} aria-label="Retirer le filtre"><IconClose size={14} /></button>
+        </div>}
+        {filter && !items.some(keep) && <p className="empty fade-in">Aucun message.</p>}
         {groups.map((g) => {
           const first = g[0]
           const mine = first.author === me
           const pinnedLine = (it: Item) => !!it.m && isPinned(it.m)
-          return <Fold key={first.key} hidden={pinnedOnly && !g.some(pinnedLine)}>
+          return <Fold key={first.key} hidden={!g.some(keep)}>
             <div className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}${g.every(pinnedLine) ? ' pinned' : ''}${!mine && g.some((it) => { const pl = it.m && plainOf(it.m); return !!pl && (pl.mention_all || pl.mentions.includes(me)) }) ? ' mentioned' : ''}`}>
               <div className="bubble-head">{!mine && <><b>{names.get(first.author ?? '') ?? 'Ancien membre'}</b> - </>}{messageDate(first.created_at)}</div>
-              {g.map((it, j) => <Fold key={it.key} line hidden={pinnedOnly && !pinnedLine(it)}>
+              {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)}>
                 {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} first={j === 0} last={j === g.length - 1}
                     onMenu={() => setSelected(it.m!)} />
                   : <PendingLine p={it.p!} />}
@@ -150,11 +159,25 @@ export default function Chat() {
         <div ref={bottom} />
       </div>
 
+      <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filtrer">
+        {([[null, 'Tous les messages'], ['pinned', `📌 Épinglés (${messages.filter((m) => isPinned(m)).length})`],
+          ['polls', `📊 Sondages (${messages.filter((m) => m.poll_id).length})`]] as [Filter, string][]).map(([f, label]) => (
+          <SheetButton key={String(f)} onClick={() => { setFilter(f); setFilterOpen(false) }}>{label}{filter === f && ' ✓'}</SheetButton>
+        ))}
+        <div className="sheet-section">Messages de…</div>
+        {c.members.filter((m) => m.profiles).map((m) => (
+          <SheetButton key={m.user_id} onClick={() => { setFilter(m.user_id); setFilterOpen(false) }}>
+            <span className="filter-member"><Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={26} />
+              {m.user_id === me ? 'Moi' : m.profiles!.display_name}{filter === m.user_id && ' ✓'}</span>
+          </SheetButton>
+        ))}
+      </Sheet>
+
       <Sheet open={!!selected} onClose={() => { setSelected(null); setPinDate('') }} title="Message">
         {selected && <>
           {c.can('pin') && <>
             {isPinned(selected) && <div className="pin-status">
-              <IconPin size={16} filled /> Épinglé {selected.pinned_until ? `jusqu'au ${new Date(selected.pinned_until).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}` : 'sans limite'}
+              <IconPin size={16} filled /> Épinglé {selected.pinned_until ? `jusqu'au ${new Date(selected.pinned_until).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}` : 'sans limite'}{selected.pinned_until && ` (encore ${remaining(selected.pinned_until)})`}
             </div>}
             <div className="sheet-section">{isPinned(selected) ? 'Changer la durée :' : 'Épingler pendant…'}</div>
             <div className="pin-grid">
@@ -197,10 +220,9 @@ function Line({ m, plain, mine, names, onMenu, first, last }: { m: Message; plai
   const legacy = plain?.status === 'legacy' && !m.poll_id && first
   return (
     <div className={`line${pinned ? ' pinned' : ''}`} {...press}>
-      {(pinned || legacy || plain?.status === 'unverified') && <div className="bubble-head">
+      {(legacy || plain?.status === 'unverified') && <div className="bubble-head">
         {legacy && <span className="e2ee-tag" title="Envoyé avant le chiffrement de bout en bout">non chiffré</span>}
         {plain?.status === 'unverified' && <span className="e2ee-tag warn" title="Signature valide, mais la clé de l'auteur n'est pas confirmée">clé non confirmée</span>}
-        {pinned && <span className="pin-info"><IconPin size={14} filled /> <i>{remaining(m.pinned_until)}</i></span>}
       </div>}
       <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
         : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
