@@ -18,7 +18,8 @@ async function loadGroups(): Promise<Group[]> {
     g.memberIds.push(r.user_id)
     map.set(r.conversation_id, g)
   }
-  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  // un « groupe » à deux n'en est pas un : pas de raccourci pour lui
+  return [...map.values()].filter((g) => g.memberIds.length > 2).sort((a, b) => a.name.localeCompare(b.name, 'fr'))
 }
 
 /** Sélection d'amis : recherche, sélection rapide par tag ou par groupe existant, tags visibles sur chaque ami */
