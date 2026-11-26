@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { supabase, type Message } from './supabase'
 import { encryptMessage, forgetDevice } from './e2ee'
+import type { PhotoRef } from './crypto/core'
 
 // ---------- État de la connexion ----------
 
@@ -32,7 +33,7 @@ export function writeCache(key: string, value: unknown) {
 // ---------- File d'attente des messages (envoi hors-ligne) ----------
 
 export type Pending = Pick<Message, 'conversation_id' | 'author_id' | 'mentions' | 'mention_all' | 'created_at'>
-  & { content: string; client_id: string; failed?: string }
+  & { content: string; client_id: string; failed?: string; photo?: PhotoRef }
 
 const KEY = 'outbox'
 const listeners = new Set<() => void>()
@@ -47,8 +48,8 @@ export function usePending(convId: string) {
   return outbox.filter((p) => p.conversation_id === convId)
 }
 
-export function queueMessage(m: Omit<Pending, 'client_id' | 'created_at'>) {
-  set([...outbox, { ...m, client_id: crypto.randomUUID(), created_at: new Date().toISOString() }])
+export function queueMessage(m: Omit<Pending, 'client_id' | 'created_at'> & { client_id?: string }) {
+  set([...outbox, { ...m, client_id: m.client_id ?? crypto.randomUUID(), created_at: new Date().toISOString() }])
   flushOutbox()
 }
 
@@ -63,12 +64,12 @@ export async function flushOutbox() {
   flushing = true
   try {
     for (const p of outbox.filter((x) => !x.failed)) {
-      const { failed: _f, created_at: _c, ...row } = p
+      const { failed: _f, created_at: _c, photo, ...row } = p
       // Chiffré juste avant l'envoi, avec la clé à jour de la conversation
       let error: { message: string } | null
       try {
         const enc = await encryptMessage(p)
-        ;({ error } = await supabase.from('messages').upsert({ ...row, ...enc, content: null }, { onConflict: 'client_id', ignoreDuplicates: true }))
+        ;({ error } = await supabase.from('messages').upsert({ ...row, ...enc, content: null, has_media: !!photo }, { onConflict: 'client_id', ignoreDuplicates: true }))
       } catch (e) {
         error = { message: (e as Error)?.message ?? String(e) }
       }

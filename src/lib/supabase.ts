@@ -31,7 +31,7 @@ export type Member = {
 export type Message = {
   id: number; conversation_id: string; author_id: string | null
   /** En clair seulement pour les anciens messages et les cartes de sondage ; sinon `ciphertext` (voir lib/e2ee) */
-  content: string | null; ciphertext?: string | null; epoch?: number | null
+  content: string | null; ciphertext?: string | null; epoch?: number | null; has_media?: boolean
   mentions: string[]; mention_all: boolean
   pinned_at: string | null; pinned_until: string | null; pinned_by: string | null; created_at: string
   client_id?: string | null; poll_id?: string | null

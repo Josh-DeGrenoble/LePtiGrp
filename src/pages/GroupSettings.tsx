@@ -2,7 +2,7 @@ import { HeaderMenu } from '../components/HeaderMenu'
 import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, type Member, type Role } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { useConversation } from '../lib/conversation'
@@ -114,7 +114,7 @@ export default function GroupSettings() {
       <HeaderMenu convId={id} />
       <button className="icon-btn star" onClick={toggleFav} aria-label="Favori"><IconStar size={24} filled={c.mine.is_favorite} /></button>
     </>}>
-      <div className="settings-row disabled"><span>Médias</span><IconImages /></div>
+      <Link to={`/c/${id}/media`} className="settings-row"><span>Médias</span><IconImages /></Link>
       {other && (
         <button className="settings-row" onClick={copyCode}>
           <span>Code ami</span><span className="friend-code">{copied ? 'Copié !' : other.friend_code}</span>
