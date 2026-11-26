@@ -39,7 +39,7 @@ export function HeaderMenu({ convId }: { convId?: string }) {
     {pos && <>
       <div className="hmenu-backdrop" onClick={close} />
       <div className="hmenu" style={pos} role="menu">
-        {KINDS.map((k) => <div key={k}>
+        {KINDS.map((k) => <div key={k} className="hmenu-group">
           <button className="hmenu-item" onClick={() => go(`/${k}`)}><ToolIcon kind={k} /><span>{TOOLS[k].label}</span></button>
           {convId && <div className="hmenu-sub">
             {(linked[k] ?? []).map((i) => (

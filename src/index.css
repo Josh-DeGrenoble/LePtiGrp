@@ -298,8 +298,8 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .hmenu-item:active { background: var(--surface); }
 .hmenu-item:disabled { opacity: .45; }
 .hmenu-item small, .hmenu-subitem small { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--muted); }
-.hmenu-sub { margin: 0 0 4px 22px; padding-left: 12px; border-left: 2px solid var(--surface2); }
-.hmenu-subitem { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 6px; border-radius: 8px; text-align: left; }
+.hmenu-sub { margin: -6px 0 6px 21px; padding-left: 12px; border-left: 2px solid var(--surface2); }
+.hmenu-subitem { display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 6px; border-radius: 8px; text-align: left; font-size: 14px; }
 .hmenu-subitem span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hmenu-subitem small { background: var(--primary); color: var(--primary-text); border-radius: 99px; padding: 0 7px; }
 .hmenu-subitem:active { background: var(--surface); }
@@ -401,7 +401,8 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .dp-day:disabled { opacity: .3; }
 .dp-day.today { box-shadow: inset 0 0 0 2px var(--surface2); }
 .dp-day.on { background: var(--primary); color: var(--primary-text); }
-.hmenu-subitem.hmenu-new { color: var(--primary); font-weight: 600; }
+.hmenu-subitem.hmenu-new { color: var(--primary); font-weight: 600; font-size: 13px; }
+.hmenu-group + .hmenu-group, .hmenu-group + .hmenu-item { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 4px; }
 .crash { display: flex; flex-direction: column; gap: 8px; text-align: center; padding: 32px 8px; }
 .crash small { word-break: break-word; margin-bottom: 8px; }
 .expense-main { cursor: pointer; }
@@ -437,3 +438,4 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .level-value { font-size: 32px; font-weight: 800; text-align: center; color: var(--primary); }
 .sheet input[type=range] { width: 100%; accent-color: var(--primary); padding: 0; margin: 8px 0; }
 .inline-form .btn.wide { margin-top: 0; flex: 1; }
+.hmenu-group + .hmenu-item { border-radius: 0 0 10px 10px; }
