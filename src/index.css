@@ -621,3 +621,11 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .gauge-bar { height: 8px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
 .gauge-bar span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width .4s; }
 .gauge-bar span.hot { background: var(--danger); }
+/* Pages légales (publiques) */
+.legal { max-width: 680px; margin: 0 auto; padding: 24px 20px 48px; line-height: 1.6; height: 100%; overflow-y: auto; box-sizing: border-box; }
+.legal-logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; color: var(--primary); }
+.legal-logo img { border-radius: 12px; }
+.legal h1 { font-size: 26px; margin: 18px 0 4px; }
+.legal h2 { font-size: 18px; margin: 24px 0 6px; }
+.legal ul { padding-left: 20px; }
+.legal-link { align-self: center; font-size: 13px; color: var(--muted); text-decoration: underline; }
