@@ -15,7 +15,7 @@ do $$
 declare f text;
 begin
   foreach f in array array['public.send_due_reminders()', 'public.check_usage()', 'public.usage_now()',
-                         'public.log_activity(uuid, text, uuid, text, text)'] loop
+                         'public.log_activity(uuid, text, uuid, text, text)', 'public.purge_media(uuid)'] loop
     if to_regprocedure(f) is not null then execute format('revoke execute on function %s from public, anon, authenticated', f); end if;
   end loop;
   if to_regclass('public.lists') is not null then
