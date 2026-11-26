@@ -30,6 +30,11 @@ const TEXT: Record<Kind, { title: string; intro: string; placeholder: string }> 
 /** Réglages, « Le dev » : café, bugs, idées */
 export function DevSection() {
   const [coffee, setCoffee] = useState(false)
+  const [owed, setOwed] = useState<number | null>(null)
+  const payCoffee = () => {
+    setCoffee(true); setOwed(null)
+    supabase.rpc('owe_beer').then(({ data, error }) => { if (!error) setOwed(data as number) })
+  }
   const [kind, setKind] = useState<Kind | null>(null)
   const [text, setText] = useState('')
 
@@ -42,7 +47,7 @@ export function DevSection() {
 
   return <>
     <SGroup title="Le dev">
-      <SRow icon={<IconCoffee size={18} />} label="Payer un café au dev" onClick={() => setCoffee(true)} />
+      <SRow icon={<IconCoffee size={18} />} label="Payer un café au dev" onClick={payCoffee} />
       <SRow icon={<IconBug size={18} />} label="Remonter un bug" onClick={() => setKind('bug')} />
       <SRow icon={<IconBulb size={18} />} label="Proposer une évolution" onClick={() => setKind('idea')} />
     </SGroup>
@@ -50,6 +55,7 @@ export function DevSection() {
     {coffee && <Popup onClose={() => setCoffee(false)}>
       <div className="popup-emoji">🤢☕️➡️🍺😄</div>
       <p>Bweerk, c'est dégueu le café ! Tu me paieras une bière à l'occas 🍻😉</p>
+      {owed !== null && <p className="muted small">Tu m'en dois {owed} 🍺</p>}
       <button className="btn primary wide" onClick={() => setCoffee(false)}>Ça marche 🍺</button>
     </Popup>}
     {kind && <Popup angry={kind === 'bug'} onClose={() => setKind(null)}>
@@ -98,4 +104,30 @@ export function AdminFeedback() {
       ))}
     </SGroup>
   </>
+}
+
+type Beer = { user_id: string; display_name: string; count: number; last_at: string }
+
+/** Réglages, admin seulement : combien de bières chacun me doit (clics sur « Payer un café au dev ») */
+export function AdminBeers() {
+  const me = useMe()
+  const [rows, setRows] = useState<Beer[] | null>(null)
+  useEffect(() => {
+    supabase.from('app_admins').select('user_id').eq('user_id', me).maybeSingle().then(({ data }) => {
+      if (data) supabase.rpc('beer_board').then(({ data: b, error }) => { if (!error) setRows(b as Beer[]) })
+    })
+  }, [me])
+  if (!rows) return null
+  const total = rows.reduce((n, r) => n + r.count, 0)
+  return (
+    <SGroup title={`Bières dues (${total} 🍺)`}>
+      {rows.length === 0 && <p className="muted small help">Personne ne t'en doit encore.</p>}
+      {rows.map((r) => (
+        <div key={r.user_id} className="beer-row">
+          <span>{r.display_name}</span>
+          <strong>{r.count} 🍺</strong>
+        </div>
+      ))}
+    </SGroup>
+  )
 }

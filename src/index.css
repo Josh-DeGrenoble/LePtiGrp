@@ -500,6 +500,8 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .delete-link { align-self: center; color: var(--danger); font-size: 14px; font-weight: 600; padding: 10px 16px; opacity: .85; }
 .settings-page .denied-guide { padding: 12px 14px; }
 .settings-page .feedback-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; position: relative; }
+.settings-page .beer-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; }
+.settings-page .beer-row + .beer-row { border-top: 1px solid var(--border); }
 .settings-page .feedback-row + .feedback-row::before { content: ''; position: absolute; top: 0; left: 14px; right: 0; border-top: 1px solid var(--border); }
 .sgroup-card > .muted.help { padding: 12px 14px; margin: 0; }
 .srow-icon.small { margin-top: 2px; }

@@ -8,7 +8,7 @@ import { Avatar } from '../components/Avatar'
 import { IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShare, IconShield, IconQr } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
-import { AdminFeedback, DevSection } from '../components/Feedback'
+import { AdminBeers, AdminFeedback, DevSection } from '../components/Feedback'
 import { AdminUsage } from '../components/AdminUsage'
 import { AdminCircles } from '../components/AdminCircles'
 import { AccountForm } from '../components/AccountForms'
@@ -135,6 +135,7 @@ export default function Settings() {
         <AdminUsage />
 
         <AdminCircles />
+        <AdminBeers />
         <AdminFeedback />
 
         <SGroup>
