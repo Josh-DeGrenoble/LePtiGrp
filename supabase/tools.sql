@@ -92,7 +92,7 @@ create table if not exists public.polls (
   conversation_id uuid references public.conversations on delete cascade,
   participants    uuid[] not null default array[auth.uid()],
   question        text not null check (char_length(question) between 1 and 200),
-  options         text[] not null check (cardinality(options) between 2 and 10),
+  options         text[] not null check (cardinality(options) between 2 and 31),
   multiple        boolean not null default false,  -- plusieurs réponses possibles
   created_at      timestamptz not null default now()
 );
@@ -104,6 +104,10 @@ create table if not exists public.poll_votes (
   option  smallint not null,
   primary key (poll_id, user_id, option)
 );
+
+-- Jusqu'à 31 réponses (sondage de dates sur un mois)
+alter table public.polls drop constraint if exists polls_options_check;
+alter table public.polls add constraint polls_options_check check (cardinality(options) between 2 and 31);
 
 -- Un sondage créé pour une conv apparaît aussi comme message votable dans le chat
 alter table public.messages add column if not exists poll_id uuid references public.polls on delete cascade;

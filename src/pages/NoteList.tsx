@@ -95,8 +95,8 @@ export default function NoteList() {
         <input type="checkbox" checked={i.checked} onChange={(e) => patch(i, { checked: e.target.checked, checked_by: e.target.checked ? me : null })} />
         <span><span className="note-text">{i.content}</span>{i.checked && i.checked_by && people.length > 1 && <small className="checked-by">✓ {nameOf.get(i.checked_by) ?? '?'}</small>}</span>
       </label>
-      {i.checked && <input className="note-qty" placeholder="Qté" defaultValue={i.quantity ?? ''} maxLength={20} aria-label="Quantité"
-        onBlur={(e) => { const q = e.target.value.trim() || null; if (q !== i.quantity) patch(i, { quantity: q }) }} />}
+      <input className="note-qty" placeholder="Qté" defaultValue={i.quantity ?? ''} maxLength={20} aria-label="Quantité"
+        onBlur={(e) => { const q = e.target.value.trim() || null; if (q !== i.quantity) patch(i, { quantity: q }) }} />
       <button className="icon-btn" onClick={() => remove(i)} aria-label="Supprimer"><IconClose /></button>
     </div>
   )

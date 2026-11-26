@@ -389,3 +389,15 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .poll-count { font-weight: 700; }
 .poll-who { grid-column: 1 / -1; font-size: 12px; opacity: .75; }
 .card .poll-option.on { border-color: var(--primary); }
+
+/* Calendrier (sondage de dates) */
+.dp-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 0; }
+.dp-head b { text-transform: capitalize; }
+.dp-head .icon-btn:disabled { opacity: .3; }
+.dp-next svg { transform: rotate(180deg); }
+.dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.dp-dow { font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 0; }
+.dp-day { aspect-ratio: 1; border-radius: 50%; font-weight: 600; transition: background .15s, color .15s; }
+.dp-day:disabled { opacity: .3; }
+.dp-day.today { box-shadow: inset 0 0 0 2px var(--surface2); }
+.dp-day.on { background: var(--primary); color: var(--primary-text); }
