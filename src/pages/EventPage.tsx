@@ -8,12 +8,14 @@ import { Sheet } from '../components/Sheet'
 import { Avatar } from '../components/Avatar'
 import { DatePicker } from '../components/DatePicker'
 import { TimePicker } from '../components/TimePicker'
+import { RepeatPicker } from '../components/RepeatPicker'
+import type { Repeat } from '../lib/supabase'
 import { ask, notify } from '../components/Dialog'
 import { IconCalendar, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type CalEvent, type EventReply } from '../lib/supabase'
 import { readCache, writeCache, useOnResume } from '../lib/network'
 import { useMe } from '../lib/auth'
-import { eventWhen, usePeople } from '../lib/tools'
+import { eventWhen, repeatLabel, usePeople } from '../lib/tools'
 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
@@ -27,7 +29,7 @@ export default function EventPage() {
   const [replies, setReplies] = useState<EventReply[]>(() => readCache<EventReply[]>(`event-replies:${id}`, []))
   const [missing, setMissing] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({ title: '', day: [] as Date[], time: '', place: '' })
+  const [form, setForm] = useState({ title: '', day: [] as Date[], time: '', place: '', repeat: null as Repeat | null, until: null as string | null })
   const people = usePeople(ev)
 
   const load = () => {
@@ -65,11 +67,11 @@ export default function EventPage() {
 
   const startEdit = () => {
     if (!ev) return
-    setForm({ title: ev.title, day: [new Date(`${ev.day}T00:00:00`)], time: ev.at_time?.slice(0, 5) ?? '', place: ev.place ?? '' })
+    setForm({ title: ev.title, day: [new Date(`${ev.day}T00:00:00`)], time: ev.at_time?.slice(0, 5) ?? '', place: ev.place ?? '', repeat: ev.repeat ?? null, until: ev.repeat_until ?? null })
     setEditing(true)
   }
   const save = async () => {
-    const patch = { title: form.title.trim(), day: ymd(form.day[0]), at_time: form.time || null, place: form.place.trim() || null }
+    const patch = { title: form.title.trim(), day: ymd(form.day[0]), at_time: form.time || null, place: form.place.trim() || null, repeat: form.repeat, repeat_until: form.repeat ? form.until : null }
     const { error } = await supabase.from('events').update(patch).eq('id', id)
     if (error) return notify(errMsg(error))
     setEv((e) => e && { ...e, ...patch }); setEditing(false)
@@ -95,6 +97,7 @@ export default function EventPage() {
           <span>
             <b>{ev.title}</b>
             <span className="muted">{eventWhen(ev.day, ev.at_time, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            {ev.repeat && <span className="muted">🔁 {repeatLabel(ev)}</span>}
             {ev.place && <span className="muted">📍 {ev.place}</span>}
           </span>
         </button>
@@ -128,6 +131,7 @@ export default function EventPage() {
         <LimitedInput placeholder="Nom" value={form.title} max={100} onChange={(e) => setForm({ ...form, title: e.target.value })} />
         <DatePicker value={form.day} onChange={(d) => setForm({ ...form, day: d })} max={1} single />
         <TimePicker value={form.time} onChange={(time) => setForm({ ...form, time })} />
+        <RepeatPicker repeat={form.repeat} until={form.until} onChange={(r) => setForm({ ...form, repeat: r.repeat, until: r.until })} />
         <LimitedInput placeholder="Lieu (facultatif)" value={form.place} max={100} onChange={(e) => setForm({ ...form, place: e.target.value })} />
         <button className="btn primary wide" disabled={!form.title.trim() || form.day.length !== 1} onClick={save}>Enregistrer</button>
       </Sheet>

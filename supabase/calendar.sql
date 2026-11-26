@@ -13,6 +13,9 @@ create table if not exists public.events (
   place           text check (char_length(place) <= 100), -- lieu (facultatif)
   created_at      timestamptz not null default now()
 );
+-- Récurrence : chaque jour / semaine / mois / année, jusqu'à une date (facultative)
+alter table public.events add column if not exists repeat text check (repeat in ('day', 'week', 'month', 'year'));
+alter table public.events add column if not exists repeat_until date;
 create index if not exists events_conv_idx on public.events (conversation_id);
 create index if not exists events_day_idx on public.events (day);
 
@@ -41,7 +44,7 @@ drop policy if exists "events delete" on public.events;
 create policy "events delete" on public.events for delete to authenticated using (public.tool_access(conversation_id, participants));
 grant select, insert, delete on public.events to authenticated;
 revoke update on public.events from authenticated;
-grant update (title, day, at_time, place) on public.events to authenticated;
+grant update (title, day, at_time, place, repeat, repeat_until) on public.events to authenticated;
 
 alter table public.event_replies enable row level security;
 drop policy if exists "replies read" on public.event_replies;
@@ -76,19 +79,26 @@ returns text language sql immutable as $$
          || coalesce(' à ' || replace(to_char(t, 'FMHH24"h"MI'), 'h00', 'h'), '')
 $$;
 
+create or replace function public.fmt_repeat(r text, u date)
+returns text language sql immutable as $$
+  select case r when 'day' then ' · 🔁 chaque jour' when 'week' then ' · 🔁 chaque semaine'
+                when 'month' then ' · 🔁 chaque mois' when 'year' then ' · 🔁 chaque année' else '' end
+         || case when r is not null and u is not null then ' jusqu''au ' || to_char(u, 'FMDD/MM/YYYY') else '' end
+$$;
+
 create or replace function public.activity_event()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if new.conversation_id is null then return null; end if;
   if tg_op = 'INSERT' then
-    perform log_activity(new.conversation_id, 'event', new.id, new.title, '📅 ' || fmt_day(new.day, new.at_time) || coalesce(' · ' || nullif(new.place, ''), ''));
-  elsif (new.day, new.at_time, new.title, new.place) is distinct from (old.day, old.at_time, old.title, old.place) then
-    perform log_activity(new.conversation_id, 'event', new.id, new.title, '✎ ' || fmt_day(new.day, new.at_time) || coalesce(' · ' || nullif(new.place, ''), ''));
+    perform log_activity(new.conversation_id, 'event', new.id, new.title, '📅 ' || fmt_day(new.day, new.at_time) || coalesce(' · ' || nullif(new.place, ''), '') || fmt_repeat(new.repeat, new.repeat_until));
+  elsif (new.day, new.at_time, new.title, new.place, new.repeat, new.repeat_until) is distinct from (old.day, old.at_time, old.title, old.place, old.repeat, old.repeat_until) then
+    perform log_activity(new.conversation_id, 'event', new.id, new.title, '✎ ' || fmt_day(new.day, new.at_time) || coalesce(' · ' || nullif(new.place, ''), '') || fmt_repeat(new.repeat, new.repeat_until));
   end if;
   return null;
 end $$;
 drop trigger if exists on_event_activity on public.events;
-create trigger on_event_activity after insert or update of title, day, at_time, place on public.events
+create trigger on_event_activity after insert or update of title, day, at_time, place, repeat, repeat_until on public.events
   for each row execute function public.activity_event();
 
 create or replace function public.activity_event_reply()

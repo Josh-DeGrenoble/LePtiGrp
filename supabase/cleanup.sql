@@ -52,3 +52,27 @@ end $$;
 drop trigger if exists on_dm_hidden on public.members;
 create trigger on_dm_hidden after update of hidden_at on public.members
   for each row execute function public.purge_hidden_dm();
+
+-- Conversation sans plus aucun membre (tout le monde est parti, comptes supprimés) : suppression totale
+create or replace function public.purge_empty_conv()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from conversations where id = old.conversation_id)
+     and not exists (select 1 from members where conversation_id = old.conversation_id) then
+    delete from conversations where id = old.conversation_id;
+    perform purge_media(old.conversation_id);
+  end if;
+  return null;
+end $$;
+revoke all on function public.purge_empty_conv() from public, anon, authenticated;
+drop trigger if exists on_member_gone on public.members;
+create trigger on_member_gone after delete on public.members
+  for each row execute function public.purge_empty_conv();
+
+-- Ménage des conversations déjà vides
+do $$ declare c uuid; begin
+  for c in select id from public.conversations x where not exists (select 1 from public.members m where m.conversation_id = x.id) loop
+    delete from public.conversations where id = c;
+    perform public.purge_media(c);
+  end loop;
+end $$;

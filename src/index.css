@@ -763,14 +763,13 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .event-head .muted:first-letter { text-transform: uppercase; }
 .event-head-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--surface2); display: flex; align-items: center; justify-content: center; color: var(--primary); flex: none; }
 .event-answer { display: flex; gap: 8px; margin: 12px 0 4px; }
-.timepicker { display: flex; flex-direction: column; gap: 10px; }
-.tp-row { display: flex; align-items: center; gap: 12px; }
-.tp-row > .muted { flex: 1; }
-.tp-value { padding: 8px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); font-weight: 600; color: var(--muted); }
-.tp-value.on { color: var(--text); }
-.tp-panel { display: flex; flex-direction: column; gap: 10px; }
-.tp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.tp-grid button { padding: 9px 0; border-radius: 10px; background: var(--bg); font-weight: 600; font-size: 15px; }
-.sheet .tp-grid button, .sheet .tp-value { background: var(--surface); }
-.tp-grid button.on { background: var(--primary); color: var(--primary-text); }
+.timepicker { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tp-fields { display: flex; align-items: center; gap: 6px; }
+.tp-fields input { width: 64px; text-align: center; font-size: 18px; font-weight: 600; padding: 10px 0; }
+.tp-fields.bad input { border-color: var(--danger); }
+.sheet .tp-fields input { background: var(--surface); }
 .event-extra { display: flex; flex-direction: column; gap: 8px; }
+.repeat-picker { display: flex; flex-direction: column; gap: 10px; }
+.repeat-chips { margin: 0; }
+.repeat-end .tp-row { display: flex; align-items: center; gap: 8px; }
+.repeat-end .tp-row > .muted { flex: 1; }

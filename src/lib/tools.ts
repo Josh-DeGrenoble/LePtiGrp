@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase, type Claim, type Profile, type Shared } from './supabase'
+import { supabase, type CalEvent, type Claim, type Profile, type Repeat, type Shared } from './supabase'
 import { readCache, writeCache } from './network'
 
 /** Les outils du menu ▽ : même logique de partage, de liste et de création */
@@ -26,6 +26,37 @@ export function itemStatus(quantity: string | null, claims: Claim[] = [], kind =
 export function eventWhen(day: string, at: string | null, opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' }) {
   const s = new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', opts)
   return s.charAt(0).toUpperCase() + s.slice(1) + (at ? ` à ${at.slice(0, 5).replace(':', 'h').replace(/h00$/, 'h')}` : '')
+}
+
+export const REPEATS: [Repeat, string][] = [['day', 'Chaque jour'], ['week', 'Chaque semaine'], ['month', 'Chaque mois'], ['year', 'Chaque année']]
+export const repeatLabel = (e: Pick<CalEvent, 'repeat' | 'repeat_until'>) => {
+  if (!e.repeat) return ''
+  const r = REPEATS.find(([k]) => k === e.repeat)![1]
+  return e.repeat_until ? `${r} jusqu'au ${new Date(`${e.repeat_until}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}` : r
+}
+const ymdOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+/** L'événement a-t-il lieu ce jour-là (AAAA-MM-JJ), récurrence comprise ? */
+export function occursOn(e: Pick<CalEvent, 'day' | 'repeat' | 'repeat_until'>, day: string) {
+  if (day < e.day || (e.repeat_until && day > e.repeat_until)) return false
+  if (!e.repeat) return day === e.day
+  const [a, b] = [new Date(`${e.day}T12:00:00`), new Date(`${day}T12:00:00`)]
+  switch (e.repeat) {
+    case 'day': return true
+    case 'week': return Math.round((+b - +a) / 864e5) % 7 === 0
+    case 'month': return a.getDate() === b.getDate()
+    case 'year': return a.getDate() === b.getDate() && a.getMonth() === b.getMonth()
+  }
+}
+/** Prochaine date (à partir de `from`, AAAA-MM-JJ) où l'événement a lieu, ou null */
+export function nextOccurrence(e: Pick<CalEvent, 'day' | 'repeat' | 'repeat_until'>, from: string) {
+  if (!e.repeat) return e.day >= from ? e.day : null
+  const d = new Date(`${(e.day > from ? e.day : from)}T12:00:00`)
+  for (let i = 0; i < 370; i++, d.setDate(d.getDate() + 1)) {
+    const k = ymdOf(d)
+    if (e.repeat_until && k > e.repeat_until) return null
+    if (occursOn(e, k)) return k
+  }
+  return null
 }
 
 export const euro = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })

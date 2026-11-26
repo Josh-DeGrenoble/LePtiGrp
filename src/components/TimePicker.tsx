@@ -1,36 +1,32 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i)
-const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
-const pad = (n: number) => String(n).padStart(2, '0')
+const clean = (s: string) => s.replace(/\D/g, '').slice(0, 2)
 
 /**
- * Choix d'une heure facultative (« HH:MM » ou '') sans le sélecteur natif d'Android,
- * dont les boutons sont coupés quand la police du téléphone est grande.
+ * Heure facultative (« HH:MM » ou '') tapée au clavier : deux petits champs heures et minutes.
+ * (Le sélecteur natif d'Android a ses boutons coupés quand la police du téléphone est grande.)
  */
 export function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [h, m] = value ? value.split(':').map(Number) : [null, null]
-  const label = value ? `${h}h${m ? pad(m) : ''}` : "Pas d'heure"
-  const setHour = (x: number) => onChange(`${pad(x)}:${pad(m ?? 0)}`)
-  const setMin = (x: number) => onChange(`${pad(h ?? 20)}:${pad(x)}`)
+  const [hh, setHh] = useState(() => value.slice(0, 2))
+  const [mm, setMm] = useState(() => value.slice(3, 5))
+  const min = useRef<HTMLInputElement>(null)
+
+  const emit = (h: string, m: string) => {
+    const H = Number(h), M = Number(m || 0)
+    onChange(h !== '' && H <= 23 && M <= 59 ? `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')}` : '')
+  }
+  const bad = (hh !== '' && Number(hh) > 23) || (mm !== '' && Number(mm) > 59)
 
   return (
     <div className="timepicker">
-      <div className="tp-row">
-        <span className="muted">Heure</span>
-        <button type="button" className={`tp-value${value ? ' on' : ''}`} onClick={() => setOpen(!open)}>{label}</button>
-        {value && <button type="button" className="link-btn" onClick={() => { onChange(''); setOpen(false) }}>Retirer</button>}
+      <span className="muted">Heure (facultatif)</span>
+      <div className={`tp-fields${bad ? ' bad' : ''}`}>
+        <input inputMode="numeric" placeholder="HH" value={hh} aria-label="Heures"
+          onChange={(e) => { const h = clean(e.target.value); setHh(h); emit(h, mm); if (h.length === 2) min.current?.focus() }} />
+        <b>:</b>
+        <input ref={min} inputMode="numeric" placeholder="MM" value={mm} aria-label="Minutes"
+          onChange={(e) => { const m = clean(e.target.value); setMm(m); emit(hh, m) }} />
       </div>
-      {open && <div className="tp-panel fade-in">
-        <div className="tp-grid">
-          {HOURS.map((x) => <button type="button" key={x} className={x === h ? 'on' : ''} onClick={() => setHour(x)}>{x}h</button>)}
-        </div>
-        <div className="tp-grid">
-          {MINUTES.map((x) => <button type="button" key={x} className={value && x === m ? 'on' : ''} onClick={() => setMin(x)}>:{pad(x)}</button>)}
-        </div>
-        <button type="button" className="btn primary wide" onClick={() => setOpen(false)}>OK</button>
-      </div>}
     </div>
   )
 }

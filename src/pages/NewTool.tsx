@@ -9,6 +9,8 @@ import { notify } from '../components/Dialog'
 import { IconClose } from '../components/Icons'
 import { DatePicker, dateLabel } from '../components/DatePicker'
 import { TimePicker } from '../components/TimePicker'
+import { RepeatPicker } from '../components/RepeatPicker'
+import type { Repeat } from '../lib/supabase'
 import { supabase, errMsg } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { TOOLS, createTool, type Share, type ToolKind } from '../lib/tools'
@@ -31,6 +33,7 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
   const [day, setDay] = useState<Date[]>(() => { const d = params.get('day'); return d ? [new Date(`${d}T00:00:00`)] : [] })
   const [time, setTime] = useState('')
   const [place, setPlace] = useState('')
+  const [rep, setRep] = useState<{ repeat: Repeat | null; until: string | null }>({ repeat: null, until: null })
 
   const filled = byDates ? dates.map(dateLabel) : options.map((o) => o.trim()).filter(Boolean)
   const valid = !!title.trim() && (share.mode !== 'conv' || !!share.conv) && (kind !== 'polls' || filled.length >= 2) && (kind !== 'calendar' || day.length === 1)
@@ -40,7 +43,7 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
     try {
       const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const fields = kind === 'polls' ? { question: title.trim(), options: filled, multiple }
-        : kind === 'calendar' ? { title: title.trim(), day: ymd(day[0]), at_time: time || null, place: place.trim() || null }
+        : kind === 'calendar' ? { title: title.trim(), day: ymd(day[0]), at_time: time || null, place: place.trim() || null, repeat: rep.repeat, repeat_until: rep.repeat ? rep.until : null }
         : { name: title.trim() }
       const item = await createTool(kind, fields, share, me)
       // Un sondage de conv apparaît aussi dans le chat, comme un message votable
@@ -72,6 +75,7 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
         <DatePicker value={day} onChange={setDay} max={1} single />
         <div className="card form event-extra">
           <TimePicker value={time} onChange={setTime} />
+          <RepeatPicker repeat={rep.repeat} until={rep.until} onChange={setRep} />
           <LimitedInput placeholder="Lieu (facultatif)" value={place} max={100} onChange={(e) => setPlace(e.target.value)} />
         </div>
       </>}

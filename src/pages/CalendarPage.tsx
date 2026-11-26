@@ -8,6 +8,7 @@ import { supabase, type CalEvent, type ConvSummary } from '../lib/supabase'
 import { readCache, useOnResume, writeCache } from '../lib/network'
 import { useMe } from '../lib/auth'
 import { cachedConversations, fetchConversations } from '../lib/myConversations'
+import { nextOccurrence, occursOn } from '../lib/tools'
 
 type Row = CalEvent & { event_replies: { user_id: string; going: boolean }[] }
 const DOW = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
@@ -40,21 +41,28 @@ export default function CalendarPage() {
 
   const convName = new Map(convs.map((c) => [c.id, c.name ?? 'Discussion']))
   const where = (e: Row) => e.conversation_id ? convName.get(e.conversation_id) ?? 'Conversation' : e.participants.length > 1 ? 'Avec des amis' : 'Perso'
-  const byDay = new Map<string, Row[]>()
-  for (const e of events) byDay.set(e.day, [...(byDay.get(e.day) ?? []), e])
 
   // grille du mois (semaines du lundi au dimanche)
   const first = (month.getDay() + 6) % 7
   const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
   const cells = [...Array(first).fill(null), ...Array.from({ length: count }, (_, i) => ymd(new Date(month.getFullYear(), month.getMonth(), i + 1)))]
   const shift = (n: number) => { setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1)); setPicked(null) }
+  // événements de chaque jour du mois affiché (récurrences comprises)
+  const byDay = new Map<string, Row[]>()
+  for (const d of cells) if (d) { const l = events.filter((e) => occursOn(e, d)); if (l.length) byDay.set(d, l) }
 
-  const shown = picked ? byDay.get(picked) ?? [] : events.filter((e) => (past ? e.day < today : e.day >= today))
-  const list = past && !picked ? [...shown].reverse() : shown
-  const groups = new Map<string, Row[]>()
-  for (const e of list) {
-    const k = new Date(`${e.day}T12:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-    groups.set(k, [...(groups.get(k) ?? []), e])
+  // chaque ligne = un événement à une date (la prochaine fois pour un événement récurrent)
+  type Occ = { e: Row; on: string }
+  const occs: Occ[] = picked ? events.filter((e) => occursOn(e, picked)).map((e) => ({ e, on: picked }))
+    : past ? events.filter((e) => e.day < today && (!e.repeat || !nextOccurrence(e, today)))
+        .map((e) => ({ e, on: e.repeat ? e.repeat_until ?? e.day : e.day })).sort((a, b) => b.on.localeCompare(a.on))
+    : events.map((e) => ({ e, on: nextOccurrence(e, today) })).filter((o): o is Occ => !!o.on)
+        .sort((a, b) => a.on.localeCompare(b.on) || (a.e.at_time ?? '').localeCompare(b.e.at_time ?? ''))
+  const list = occs
+  const groups = new Map<string, Occ[]>()
+  for (const o of list) {
+    const k = new Date(`${o.on}T12:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    groups.set(k, [...(groups.get(k) ?? []), o])
   }
   const open = (e: Row) => nav(`/calendar/${e.id}`, { state: { from: '/calendar', root: st?.root } })
 
@@ -92,16 +100,16 @@ export default function CalendarPage() {
         <div key={title} className="fade-in">
           {!picked && <div className="section-title cap">{title}</div>}
           <div className="list-card">
-            {rows.map((e) => {
+            {rows.map(({ e, on }) => {
               const mine = e.event_replies.find((r) => r.user_id === me)
               const yes = e.event_replies.filter((r) => r.going).length
-              const d = new Date(`${e.day}T12:00:00`)
+              const d = new Date(`${on}T12:00:00`)
               return (
-                <button key={e.id} className="settings-row event-row" onClick={() => open(e)}>
+                <button key={e.id + on} className="settings-row event-row" onClick={() => open(e)}>
                   <span className="event-date"><b>{d.getDate()}</b><small>{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</small></span>
                   <span className="event-main">
                     <span className="note-name">{e.title}</span>
-                    <small className="muted">{[hour(e.at_time), e.place, where(e)].filter(Boolean).join(' · ')}{yes ? ` · ${yes} ✓` : ''}</small>
+                    <small className="muted">{[e.repeat ? '🔁' : '', hour(e.at_time), e.place, where(e)].filter(Boolean).join(' · ')}{yes ? ` · ${yes} ✓` : ''}</small>
                   </span>
                   {e.participants.length > 1 || e.conversation_id
                     ? <span className={`event-me ${mine ? (mine.going ? 'yes' : 'no') : 'wait'}`}>{mine ? (mine.going ? '✓' : '✗') : '?'}</span>
