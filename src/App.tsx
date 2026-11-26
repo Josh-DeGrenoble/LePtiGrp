@@ -17,6 +17,7 @@ import NewGroup from './pages/NewGroup'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
 import GroupSettings from './pages/GroupSettings'
+import MediaGallery from './pages/MediaGallery'
 import NoteList from './pages/NoteList'
 import ToolIndex from './pages/ToolIndex'
 import NewTool from './pages/NewTool'
@@ -54,6 +55,7 @@ function Routed() {
       <Route path="/new" element={<NewGroup />} />
       <Route path="/c/:id" element={<Chat />} />
       <Route path="/c/:id/settings" element={<GroupSettings />} />
+      <Route path="/c/:id/media" element={<MediaGallery />} />
       <Route path="/notes" element={<ToolIndex key="notes" kind="notes" />} />
       <Route path="/notes/new" element={<NewTool key="notes" kind="notes" />} />
       <Route path="/notes/:id" element={<NoteList />} />

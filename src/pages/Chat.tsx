@@ -11,10 +11,13 @@ import { useConversation } from '../lib/conversation'
 import { hhmm, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar, colorOf } from '../components/Avatar'
-import { IconCheck, IconClose, IconFilter, IconList, IconPin, IconPoll, IconSend } from '../components/Icons'
+import { IconCheck, IconClose, IconFilter, IconList, IconPin, IconPoll, IconSend, IconCamera, IconImage } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
+import { Photo, Lightbox } from '../components/Photo'
+import { PhotoEditor } from '../components/PhotoEditor'
+import { uploadPhoto } from '../lib/media'
 import { useDecrypted, type Plain } from '../lib/e2ee'
 
 const PIN_DURATIONS: { label: string; ms: number | null }[] = [
@@ -243,14 +246,19 @@ const follows = (prev: Item, it: Item) =>
 function Line({ m, plain, mine, names, onMenu, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; last: boolean }) {
   const press = useLongPress(onMenu)
   const pinned = isPinned(m)
+  const [view, setView] = useState(false)
+  const photo = plain?.photo
   return (
-    <div className={`line${pinned ? ' pinned' : ''}`} {...press}>
-      <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
+    <div className={`line${pinned ? ' pinned' : ''}${photo ? ' has-photo' : ''}`} {...press}>
+      {photo && <><Photo photo={photo} onOpen={() => setView(true)} /><Lightbox photo={view ? photo : null} onClose={() => setView(false)} /></>}
+      {!(photo && !plain.text) && <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
         : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
         : plain.status === 'invalid' ? <i className="muted">⚠️ Message altéré ou signature invalide</i>
         : renderMentions(plain.text, names)}
         <span className="msg-meta">{hhmm(new Date(m.created_at))}
-          {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span></div>
+          {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span></div>}
+      {photo && !plain.text && <span className="msg-meta photo-meta">{hhmm(new Date(m.created_at))}
+        {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span>}
       {m.poll_id && <PollCard pollId={m.poll_id} compact />}
     </div>
   )
@@ -283,6 +291,17 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
     input.current?.focus()
   }
 
+  const [file, setFile] = useState<Blob | null>(null)
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFile(f) }
+  // Photo : chiffrée puis envoyée tout de suite dans Storage ; le message (avec sa clé) suit le chemin habituel
+  const sendPhoto = async (canvas: HTMLCanvasElement, caption: string) => {
+    const client_id = crypto.randomUUID()
+    const photo = await uploadPhoto(convId, client_id, canvas)
+    const mentions = others.filter((m) => caption.includes(`@${m.profiles!.display_name}`)).map((m) => m.user_id)
+    queueMessage({ conversation_id: convId, author_id: me, content: caption, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(caption), photo, client_id })
+    setFile(null)
+  }
+
   const send = async () => {
     const content = text.trim()
     if (!content) return
@@ -304,7 +323,14 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
           ))}
         </div>
       )}
+      {file && <PhotoEditor file={file} onCancel={() => setFile(null)} onSend={sendPhoto} />}
       <div className="composer">
+        {!text && <>
+          <label className="icon-btn composer-media" aria-label="Prendre une photo"><IconCamera />
+            <input type="file" accept="image/*" capture="environment" hidden onChange={pickFile} /></label>
+          <label className="icon-btn composer-media" aria-label="Choisir une photo"><IconImage />
+            <input type="file" accept="image/*" hidden onChange={pickFile} /></label>
+        </>}
         <textarea ref={input} rows={1} placeholder="Message… (@ pour mentionner)" value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); send() } }} />
@@ -325,7 +351,8 @@ function PendingLine({ p }: { p: Pending }) {
   }, [slow, p.created_at])
   return (
     <div className={`line new${p.failed ? ' failed' : slow ? ' slow' : ''}`}>
-      <div className="bubble-text">{p.content}</div>
+      {p.photo && <Photo photo={p.photo} />}
+      {p.content && <div className="bubble-text">{p.content}</div>}
       {p.failed ? <>
         <div className="line-status">⚠️ Non envoyé</div>
         <div className="pending-actions">

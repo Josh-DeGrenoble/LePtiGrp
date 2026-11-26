@@ -50,7 +50,7 @@ export default function Conversations() {
     const r = lastRows.get(c.id)
     if (!r || (!r.content && !r.ciphertext)) return null
     const p = plainOf(r)
-    return !p ? '🔒' : p.status === 'locked' ? '🔒 Message chiffré' : p.status === 'invalid' ? '⚠️ Message illisible' : p.text
+    return !p ? '🔒' : p.status === 'locked' ? '🔒 Message chiffré' : p.status === 'invalid' ? '⚠️ Message illisible' : (p.text || (p.photo ? '📷 Photo' : ''))
   }
   const [q, setQ] = useState('')
   const shown = convs.filter((c) => !q.trim() || (c.name ?? '').toLowerCase().includes(q.trim().toLowerCase()))
