@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../components/Layout'
 import { BackButton } from '../components/BackButton'
@@ -41,6 +41,7 @@ export default function NoteList() {
   const [qtyFor, setQtyFor] = useState<ListItem | null>(null)
   const [collapsed, setCollapsed] = useState<string[]>(() => readCache<string[]>(`collapsed:${id}`, []))
   const [ledger, setLedger] = useState<Ledger | null>(null)
+  const claimQueue = useRef(new Map<number, Promise<void>>())
   const [linking, setLinking] = useState(false)
   const [paying, setPaying] = useState(false)
   const people = usePeople(list)
@@ -121,9 +122,13 @@ export default function NoteList() {
     const { left } = itemStatus(item.quantity, others, item.qty_kind)
     const qty = left ? left : null
     setClaims(item, mine ? others : [...others, { item_id: item.id, user_id: me, qty }])
-    run(mine
+    // clics rapides : les envois d'un même élément partent l'un après l'autre, dans l'ordre des clics,
+    // et « je prends » ignore une prise déjà enregistrée (plus d'erreur list_claims_pkey)
+    const prev = claimQueue.current.get(item.id) ?? Promise.resolve()
+    const next = prev.then(() => run(mine
       ? supabase.from('list_claims').delete().eq('item_id', item.id).eq('user_id', me)
-      : supabase.from('list_claims').insert({ item_id: item.id, qty }))
+      : supabase.from('list_claims').upsert({ item_id: item.id, user_id: me, qty }, { onConflict: 'item_id,user_id', ignoreDuplicates: true })))
+    claimQueue.current.set(item.id, next)
   }
   const setMyQty = (item: ListItem, raw: string) => {
     const n = parseFloat(raw.replace(',', '.'))

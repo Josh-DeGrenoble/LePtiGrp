@@ -71,7 +71,9 @@ export default function Chat() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
         (p) => { setMessages((ms) => ms.some((m) => m.id === p.new.id) ? ms : [...ms, p.new as Message]); markRead() })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
-        (p) => setMessages((ms) => ms.map((m) => (m.id === p.new.id ? (p.new as Message) : m))))
+        // Les grosses colonnes inchangées (message chiffré d'une photo) ne sont pas renvoyées lors d'une modif
+        // (épinglage) : on garde celles qu'on a, sinon la photo disparaît jusqu'au rechargement
+        (p) => setMessages((ms) => ms.map((m) => (m.id === p.new.id ? keepBig(m, p.new as Message) : m))))
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' },
         (p) => setMessages((ms) => ms.filter((m) => m.id !== (p.old as { id: number }).id)))
       .subscribe()
@@ -240,6 +242,12 @@ export default function Chat() {
       </Sheet>
     </Screen>
   )
+}
+
+function keepBig(old: Message, upd: Message): Message {
+  const m = { ...old, ...upd }
+  for (const k of ['ciphertext', 'content', 'epoch', 'client_id'] as const) if (upd[k] == null && old[k] != null) (m as Record<string, unknown>)[k] = old[k]
+  return m
 }
 
 /** Enveloppe qui replie / déplie son contenu en fondu (filtre des messages épinglés) ; `line` : une ligne dans une bulle */
