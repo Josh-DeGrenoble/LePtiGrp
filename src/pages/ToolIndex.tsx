@@ -5,8 +5,9 @@ import { BackButton } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { ToolIcon } from '../components/ToolIcon'
 import { IconBack, IconPlus } from '../components/Icons'
-import { supabase, type ConvSummary } from '../lib/supabase'
-import { readCache, writeCache, useOnResume } from '../lib/network'
+import type { ConvSummary } from '../lib/supabase'
+import { useOnResume } from '../lib/network'
+import { cachedConversations, fetchConversations } from '../lib/myConversations'
 import { TOOLS, cachedTools, loadTools, type ToolItem, type ToolKind } from '../lib/tools'
 
 /** Page d'un outil (pense-bêtes, comptes, sondages) : tous mes éléments, rangés par partage */
@@ -15,11 +16,11 @@ export default function ToolIndex({ kind }: { kind: ToolKind }) {
   const st = useLocation().state as { from?: string; root?: string } | null
   const backTo = st?.from ?? '/'
   const [items, setItems] = useState<ToolItem[]>(() => cachedTools(kind))
-  const [convs, setConvs] = useState<ConvSummary[]>(() => readCache<ConvSummary[]>('convs', []))
+  const [convs, setConvs] = useState<ConvSummary[]>(cachedConversations)
 
   const load = () => {
     loadTools(kind).then(setItems).catch(() => {})
-    supabase.rpc('my_conversations').then(({ data }) => { if (data) { setConvs(data); writeCache('convs', data) } })
+    fetchConversations().then((d) => { if (d) setConvs(d) })
   }
   useEffect(load, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
   useOnResume(load)

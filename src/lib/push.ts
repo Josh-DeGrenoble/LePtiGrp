@@ -46,6 +46,12 @@ export async function disablePush() {
   await sub.unsubscribe()
 }
 
+/** À la déconnexion : ce téléphone ne reçoit plus les notifications du compte (l'abonnement reste pour le prochain) */
+export async function forgetPushDevice() {
+  const sub = await (await navigator.serviceWorker?.ready)?.pushManager.getSubscription()
+  if (sub) await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+}
+
 /** Au lancement : ré-enregistre l'abonnement (il peut changer, ou appartenir à un autre compte sur ce téléphone) */
 export async function syncPush() {
   if ((await pushState()) !== 'on') return

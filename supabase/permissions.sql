@@ -7,12 +7,18 @@
 alter table public.conversations
   add column if not exists permissions jsonb not null default '{}'::jsonb;
 
--- Reprise des anciennes options
-update public.conversations set permissions = jsonb_build_object(
-  'pin',    case when admins_manage_pins then 'admins' else 'super' end,
-  'invite', case when admins_manage_members then 'admins' else 'super' end,
-  'kick',   case when admins_manage_members then 'admins' else 'super' end)
-where permissions = '{}'::jsonb;
+-- Reprise des anciennes options (seulement au premier passage : les colonnes sont ensuite supprimées)
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'conversations' and column_name = 'admins_manage_pins') then
+    execute $q$update public.conversations set permissions = jsonb_build_object(
+      'pin',    case when admins_manage_pins then 'admins' else 'super' end,
+      'invite', case when admins_manage_members then 'admins' else 'super' end,
+      'kick',   case when admins_manage_members then 'admins' else 'super' end)
+    where permissions = '{}'::jsonb$q$;
+  end if;
+end $$;
 
 alter table public.conversations drop column if exists admins_manage_pins;
 alter table public.conversations drop column if exists admins_manage_members;
@@ -126,3 +132,18 @@ begin
 end $$;
 
 grant execute on all functions in schema public to authenticated;
+
+-- Fonctions internes (cron) et colonnes figées des outils : à refermer après le « grant » ci-dessus (voir security.sql)
+do $$
+declare f text;
+begin
+  foreach f in array array['public.send_due_reminders()', 'public.check_usage()', 'public.usage_now()'] loop
+    if to_regprocedure(f) is not null then execute format('revoke execute on function %s from public, anon, authenticated', f); end if;
+  end loop;
+  if to_regclass('public.lists') is not null then
+    revoke update on public.lists, public.ledgers, public.polls from authenticated;
+    grant update (name, categories) on public.lists to authenticated;
+    grant update (name) on public.ledgers to authenticated;
+    grant update (question) on public.polls to authenticated;
+  end if;
+end $$;

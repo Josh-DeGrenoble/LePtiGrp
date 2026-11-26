@@ -10,8 +10,10 @@ export default function AddFriend() {
   useEffect(() => {
     if (done.current) return
     done.current = true
-    supabase.rpc('add_friend_by_code', { code }).then(({ data, error }) =>
-      setState(error ? errMsg(error) : `${(data as { display_name: string }).display_name} est maintenant ton ami(e) !`))
+    supabase.rpc('add_friend_by_code', { code }).then(({ data, error }) => {
+      const friend = data as { id: string | null; display_name: string } | null
+      setState(error ? errMsg(error) : !friend?.id ? 'Code inconnu' : `${friend.display_name} est maintenant ton ami(e) !`)
+    })
   }, [code])
   return (
     <div className="login">

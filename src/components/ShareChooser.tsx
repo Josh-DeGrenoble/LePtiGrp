@@ -2,18 +2,18 @@ import { useConvSizes, isCrowd } from '../lib/convSizes'
 import { useEffect, useState } from 'react'
 import { Avatar } from './Avatar'
 import { FriendPicker } from './FriendPicker'
-import { supabase, type ConvSummary } from '../lib/supabase'
-import { readCache, writeCache } from '../lib/network'
+import type { ConvSummary } from '../lib/supabase'
+import { cachedConversations, fetchConversations } from '../lib/myConversations'
 import type { Share } from '../lib/tools'
 
 const MODES: { mode: Share['mode']; label: string }[] = [{ mode: 'me', label: 'Moi seul' }, { mode: 'conv', label: 'Une conv' }, { mode: 'free', label: 'Libre' }]
 
 /** Avec qui partager un outil : moi seul, les membres d'une conv, ou des amis choisis (filtre par tags) */
 export function ShareChooser({ value, onChange }: { value: Share; onChange: (s: Share) => void }) {
-  const [convs, setConvs] = useState<ConvSummary[]>(() => readCache<ConvSummary[]>('convs', []))
+  const [convs, setConvs] = useState<ConvSummary[]>(cachedConversations)
   const sizes = useConvSizes()
   useEffect(() => {
-    supabase.rpc('my_conversations').then(({ data }) => { if (data) { setConvs(data); writeCache('convs', data) } })
+    fetchConversations().then((d) => { if (d) setConvs(d) })
   }, [])
 
   return <>

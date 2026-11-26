@@ -2,7 +2,7 @@ import { BackButton } from '../components/BackButton'
 import { hasPassword } from './E2EESetup'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/auth'
+import { useAuth, signOut } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { IconBell, IconSend, IconLogout, IconLink, IconLock, IconMail, IconNext, IconShare, IconShield } from '../components/Icons'
@@ -109,7 +109,7 @@ export default function Settings() {
 
         <SGroup>
           <SRow icon={<IconLogout />} label="Se déconnecter" chevron={false}
-            onClick={async () => { if (await ask('Se déconnecter ?')) supabase.auth.signOut() }} />
+            onClick={async () => { if (await ask('Se déconnecter ?')) signOut() }} />
         </SGroup>
 
         <button className="delete-link" onClick={() => setDeleting(true)}>Supprimer mon compte</button>
