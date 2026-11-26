@@ -1,6 +1,6 @@
 import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, type Member, type Role } from '../lib/supabase'
 import { useMe } from '../lib/auth'
@@ -13,6 +13,7 @@ import { Sheet, SheetButton } from '../components/Sheet'
 import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
 import { NotifToggles, type NotifPrefs } from '../components/NotifToggles'
+import { cachedFriends, loadFriends } from '../lib/friends'
 import { PERMISSIONS, LEVEL_LABEL, levelOf, type Level } from '../lib/permissions'
 
 const ROLE_LABEL: Record<Role, string> = { super_admin: 'Super admin', admin: 'Admin', member: 'Membre' }
@@ -28,6 +29,9 @@ export default function GroupSettings() {
   const [toAdd, setToAdd] = useState<string[]>([])
   const [renaming, setRenaming] = useState(false)
   const [editPhoto, setEditPhoto] = useState(false)
+  const [friendIds, setFriendIds] = useState(() => cachedFriends().friends.map((f) => f.id))
+  const [copied, setCopied] = useState(false)
+  useEffect(() => { loadFriends().then((d) => setFriendIds(d.friends.map((f) => f.id))).catch(() => {}) }, [])
 
   if (!c.conv || !c.mine) return null
   const conv = c.conv
@@ -68,6 +72,21 @@ export default function GroupSettings() {
     }
   }
 
+  const other = c.other
+  const isFriend = !!other && friendIds.includes(other.id)
+  const copyCode = async () => {
+    if (!other) return
+    await navigator.clipboard?.writeText(other.friend_code)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
+  const unfriend = async () => {
+    if (!other || !(await ask(`Retirer ${other.display_name} de tes amis ?`))) return
+    const { error } = await supabase.rpc('remove_friend', { friend: other.id })
+    if (error) return notify(errMsg(error))
+    setFriendIds((ids) => ids.filter((x) => x !== other.id))
+    loadFriends().catch(() => {})
+  }
+
   const effectiveRole = (m: Member): Role => (m.role === 'member' && conv.everyone_admin ? 'admin' : m.role)
   // Super admin : tout le monde sauf soi ; sinon (droit "manage_admins") : pas les super admins
   const canSetRole = (m: Member) => conv.is_group && m.user_id !== me && c.can('manage_admins') && (isSuper || m.role !== 'super_admin')
@@ -93,6 +112,11 @@ export default function GroupSettings() {
       <button className="icon-btn star" onClick={toggleFav} aria-label="Favori"><IconStar size={24} filled={c.mine.is_favorite} /></button>
     </>}>
       <div className="settings-row disabled"><span>Médias</span><IconImages /></div>
+      {other && (
+        <button className="settings-row" onClick={copyCode}>
+          <span>Code ami</span><span className="friend-code">{copied ? 'Copié !' : other.friend_code}</span>
+        </button>
+      )}
 
       <div className="settings-block">
         <div className="section-title">Amis dans le groupe ({c.members.length})</div>
@@ -141,6 +165,11 @@ export default function GroupSettings() {
       {c.can('pin') && (
         <button className="settings-row" onClick={async () => (await ask('Désépingler tous les messages ?')) && call('unpin_all', { conv: id })}>
           <IconPin filled /><span>Désépingler tous les messages</span>
+        </button>
+      )}
+      {isFriend && (
+        <button className="settings-row danger" onClick={unfriend}>
+          <IconUserMinus /><span>Retirer des amis</span>
         </button>
       )}
       <button className="settings-row danger" onClick={leave}>

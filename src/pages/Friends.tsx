@@ -1,6 +1,6 @@
 import { BackButton } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
-import { ask, notify } from '../components/Dialog'
+import { notify } from '../components/Dialog'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase, errMsg, type Tag } from '../lib/supabase'
@@ -11,7 +11,7 @@ import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { TagChip } from '../components/TagChip'
 import { IconShare, IconTag, IconDown, IconSearch, IconUserPlus, IconClose } from '../components/Icons'
-import { Sheet, SheetButton } from '../components/Sheet'
+import { Sheet } from '../components/Sheet'
 import { ProfileEditor } from '../components/ProfileEditor'
 
 export default function Friends() {
@@ -77,13 +77,6 @@ export default function Friends() {
     if (error) return notify(errMsg(error))
     await supabase.from('friend_tags').insert({ tag_id: data.id, friend_id: editing.id })
     setNewTag(''); load()
-  }
-
-  const remove = async () => {
-    if (!editing || !(await ask(`Retirer ${editing.display_name} de tes amis ?`))) return
-    const { error } = await supabase.rpc('remove_friend', { friend: editing.id })
-    if (error) return notify(errMsg(error))
-    setEditing(null); load()
   }
 
   const shown = friends
@@ -172,8 +165,6 @@ export default function Friends() {
             <LimitedInput placeholder="Nouveau tag" value={newTag} max={30} onChange={(e) => setNewTag(e.target.value)} />
             <button className="btn" disabled={!newTag.trim()}>Créer</button>
           </form>
-          <div className="sheet-sep" />
-          <SheetButton danger onClick={remove}>Retirer des amis</SheetButton>
         </>}
       </Sheet>
     </Screen>
