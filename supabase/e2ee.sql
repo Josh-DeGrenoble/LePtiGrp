@@ -23,6 +23,22 @@ create policy "keys add" on public.user_keys for insert to authenticated with ch
 revoke update, delete on public.user_keys from authenticated;
 grant select, insert on public.user_keys to authenticated;
 
+-- ---------- Sauvegarde des clés du compte ------------------------------
+-- Secret du compte chiffré sur le téléphone par une clé tirée du mot de passe (Argon2id).
+-- Le serveur ne reçoit jamais le mot de passe lui-même : il ne peut pas ouvrir cette sauvegarde.
+create table if not exists public.key_backups (
+  user_id    uuid primary key default auth.uid() references public.profiles on delete cascade,
+  salt       text not null,
+  nonce      text not null,
+  box        text not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.key_backups enable row level security;
+drop policy if exists "backup own" on public.key_backups;
+create policy "backup own" on public.key_backups for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.key_backups to authenticated;
+
 -- ---------- Clés de conversation --------------------------------------
 -- Chaque « epoch » = une clé aléatoire, scellée pour chaque membre (keys = {user_id: {pk, k}}),
 -- signée par son créateur. Nouvelle epoch à chaque arrivée / départ d'un membre.

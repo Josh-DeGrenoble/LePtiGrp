@@ -3,6 +3,7 @@ import { supabase, errMsg } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Sheet } from './Sheet'
 import { notify } from './Dialog'
+import { changePassword, signIn } from '../lib/e2ee'
 
 type Kind = 'email' | 'password'
 
@@ -24,10 +25,12 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
     if (kind === 'password' && value !== confirm) return setError('Les deux mots de passe ne correspondent pas')
     setBusy(true)
     try {
-      const check = await supabase.auth.signInWithPassword({ email, password: current })
-      if (check.error) throw new Error('Mot de passe actuel incorrect')
-      const { error } = await supabase.auth.updateUser(kind === 'email' ? { email: value.trim() } : { password: value })
-      if (error) throw error
+      if (kind === 'password') await changePassword(email, current, value)
+      else {
+        await signIn(email, current).catch(() => { throw new Error('Mot de passe actuel incorrect') })
+        const { error } = await supabase.auth.updateUser({ email: value.trim() })
+        if (error) throw error
+      }
       notify(kind === 'email'
         ? `Un lien de confirmation a été envoyé à ${value.trim()}. Ton email changera une fois le lien validé.`
         : 'Mot de passe modifié.')
@@ -45,7 +48,7 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
           </label>
         </> : <>
           <label className="field-label">Nouveau mot de passe
-            <input type="password" placeholder="6 caractères minimum" value={value} minLength={6} onChange={(e) => setValue(e.target.value)} required autoComplete="new-password" autoFocus />
+            <input type="password" placeholder="8 caractères minimum" value={value} minLength={8} onChange={(e) => setValue(e.target.value)} required autoComplete="new-password" autoFocus />
           </label>
           <label className="field-label">Confirme le nouveau mot de passe
             <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />

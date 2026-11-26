@@ -9,7 +9,7 @@ import Tags from './pages/Tags'
 import { DialogHost } from './components/Dialog'
 import { NotifPrompt } from './components/NotifPrompt'
 import { useTrackHistory, navDirection } from './components/BackButton'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { startOutbox } from './lib/network'
 import { syncPush } from './lib/push'
 import NewGroup from './pages/NewGroup'
@@ -23,7 +23,7 @@ import LedgerPage from './pages/LedgerPage'
 import PollPage from './pages/PollPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { initE2EE, useE2EE } from './lib/e2ee'
-import E2EESetup from './pages/E2EESetup'
+import E2EESetup, { E2EEInfo, infoSeen } from './pages/E2EESetup'
 
 function Routed() {
   const { session, loading } = useAuth()
@@ -31,11 +31,13 @@ function Routed() {
   const { pathname } = useLocation()
   const uid = session?.user.id
   const { state: e2ee } = useE2EE()
+  const [infoDone, setInfoDone] = useState(false)
   useEffect(() => { if (uid) initE2EE(uid) }, [uid])
   useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush() } }, [uid, e2ee])
   if (loading) return <div className="splash">LePtiGrp</div>
   if (!session) return <Login />
-  if (e2ee !== 'ready') return <E2EESetup state={e2ee} uid={session.user.id} />
+  if (e2ee !== 'ready') return <E2EESetup state={e2ee} uid={session.user.id} email={session.user.email ?? ''} />
+  if (!infoDone && !infoSeen(session.user.id, session.user.user_metadata)) return <E2EEInfo uid={session.user.id} onDone={() => setInfoDone(true)} />
   return (<>
     <div key={pathname} className={`page page-${navDirection}`}>
     <ErrorBoundary>

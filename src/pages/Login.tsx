@@ -1,6 +1,7 @@
 import { LimitedInput } from '../components/LimitedInput'
 import { useState } from 'react'
-import { supabase, errMsg } from '../lib/supabase'
+import { errMsg } from '../lib/supabase'
+import { signIn, signUp } from '../lib/e2ee'
 
 export default function Login() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -16,15 +17,12 @@ export default function Login() {
     setError(''); setInfo(''); setBusy(true)
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
+        await signIn(email, password)
       } else {
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name } } })
-        if (error) throw error
-        if (!data.session) setInfo('Compte créé. Valide le lien reçu par mail, puis connecte-toi.')
+        if (!(await signUp(email, password, name))) setInfo('Compte créé. Valide le lien reçu par mail, puis connecte-toi.')
       }
     } catch (err) {
-      setError(errMsg(err) === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : errMsg(err))
+      setError(errMsg(err))
     } finally { setBusy(false) }
   }
 
@@ -36,11 +34,11 @@ export default function Login() {
           <LimitedInput placeholder="Ton prénom / pseudo" value={name} onChange={(e) => setName(e.target.value)} required max={30} />
         )}
         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-        <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
+        <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'signup' ? 8 : 6}
           autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
         {error && <p className="error">{error}</p>}
         {info && <p className="info">{info}</p>}
-        <button className="btn primary" disabled={busy}>{mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</button>
+        <button className="btn primary" disabled={busy}>{busy ? 'Connexion sécurisée…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</button>
       </form>
       <button className="link" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}>
         {mode === 'login' ? "Pas encore de compte ? S'inscrire" : 'Déjà un compte ? Se connecter'}
