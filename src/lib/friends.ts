@@ -28,7 +28,7 @@ export async function loadFriends(): Promise<{ friends: FriendWithTags[]; tags: 
 /** Dernière liste connue (affichage instantané avant le rechargement) */
 export const cachedFriends = () => readCache<{ friends: FriendWithTags[]; tags: Tag[] }>('friends', { friends: [], tags: [] })
 
-export const TAG_COLORS = ['#3b5b8c', '#f59e0b', '#10b981', '#ec4899', '#ef4444', '#14b8a6', '#8b5cf6', '#64748b']
+export const TAG_COLORS = ['#2563eb', '#f59e0b', '#10b981', '#ec4899', '#ef4444', '#14b8a6', '#8b5cf6', '#64748b']
 
 export function friendLink(code: string) {
   return `${window.location.origin}/add/${code}`
