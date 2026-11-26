@@ -35,12 +35,15 @@ La clé VAPID publique est aussi dans `.env` (`VITE_VAPID_PUBLIC_KEY`).
 
 1. SQL Editor : lancer [`supabase/e2ee.sql`](supabase/e2ee.sql) (relançable sans risque).
 2. Redéployer la fonction `push` (notifications sans texte en clair côté serveur).
-3. Dans l'appli, chacun crée sa phrase de récupération de 12 mots à la première ouverture.
 
-Fonctionnement : clés du compte dérivées de la phrase (libsodium : X25519 + Ed25519), une clé aléatoire par conversation
-(renouvelée à chaque arrivée ou départ d'un membre), scellée pour chaque membre ; messages chiffrés en XChaCha20-Poly1305 et signés.
-Le serveur ne stocke que des clés publiques. Phrase perdue = historique chiffré perdu. Les anciens messages restent en clair,
-marqués « non chiffré » (ligne facultative à la fin de `e2ee.sql` pour les supprimer). Les outils du menu ▽ ne sont pas encore chiffrés.
+Rien à faire pour les utilisateurs : les clés sont liées au compte.
+- À la connexion, un calcul Argon2id sur le téléphone transforme le mot de passe en deux moitiés : l'une est envoyée
+  à Supabase comme mot de passe (le vrai ne quitte jamais le téléphone), l'autre déverrouille la sauvegarde des clés (`key_backups`).
+- Clés du compte (libsodium : X25519 + Ed25519), une clé aléatoire par conversation (renouvelée à chaque arrivée ou départ),
+  scellée pour chaque membre ; messages chiffrés en XChaCha20-Poly1305 et signés.
+- Les comptes créés avant sont convertis automatiquement à leur prochaine connexion.
+- Mot de passe réinitialisé (oubli) = historique chiffré perdu. Le changement de mot de passe dans Paramètres, lui, garde tout.
+- Les anciens messages restent en clair, marqués « non chiffré ». Les outils du menu ▽ ne sont pas encore chiffrés.
 
 ## Hors-ligne
 

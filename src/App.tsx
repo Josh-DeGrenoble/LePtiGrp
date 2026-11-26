@@ -35,7 +35,7 @@ function Routed() {
   useEffect(() => { if (uid && e2ee === 'ready') { startOutbox(); syncPush() } }, [uid, e2ee])
   if (loading) return <div className="splash">LePtiGrp</div>
   if (!session) return <Login />
-  if (e2ee !== 'ready') return <E2EESetup state={e2ee} uid={session.user.id} />
+  if (e2ee !== 'ready') return <E2EESetup state={e2ee} uid={session.user.id} email={session.user.email ?? ''} />
   return (<>
     <div key={pathname} className={`page page-${navDirection}`}>
     <ErrorBoundary>

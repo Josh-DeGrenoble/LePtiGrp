@@ -1,19 +1,22 @@
-/** Chiffrement de bout en bout : liaison avec Supabase (clés publiques, epochs, messages) */
+/** Chiffrement de bout en bout : liaison avec Supabase (clés publiques, sauvegarde des clés, epochs, messages) */
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { supabase } from './supabase'
 import {
-  ready, b64, deriveIdentity, newEntropy, makeEpoch, epochSigOk, openEpoch, sealMessage, openMessage, sigOk, local,
-  type Identity, type EpochRow, type Pins,
+  ready, b64, deriveIdentity, randomEntropy, passwordKeys, sealBackup, openBackup, makeEpoch, epochSigOk, openEpoch,
+  sealMessage, openMessage, sigOk, local, type Identity, type EpochRow, type Pins, type Backup,
 } from './crypto/core'
 
-export { parsePhrase, phraseOf, safetyCode, newEntropy } from './crypto/core'
+export { parsePhrase, safetyCode } from './crypto/core'
 
 // ---------- État partagé ----------
 
-export type E2EEState = 'loading' | 'setup' | 'restore' | 'changed' | 'offline' | 'ready'
+/** password : il faut le mot de passe pour déverrouiller · reset : mot de passe réinitialisé, sauvegarde illisible
+ *  restore : ancien compte à phrase de 12 mots, sans sauvegarde */
+export type E2EEState = 'loading' | 'password' | 'reset' | 'restore' | 'offline' | 'ready'
 let me: Identity | null = null
 let state: E2EEState = 'loading'
 let pins: Pins = {}
+let kekRoot: Uint8Array | null = null   // tiré du mot de passe à la connexion, gardé en mémoire seulement
 let version = 0
 const listeners = new Set<() => void>()
 const emit = () => { version++; listeners.forEach((l) => l()) }
@@ -26,23 +29,98 @@ export const identity = () => me
 
 export type KeyRow = { user_id: string; sign_pk: string; box_pk: string; created_at: string }
 
-/** Au lancement : clé locale présente et toujours valable ? */
+// ---------- Connexion : le vrai mot de passe ne quitte jamais le téléphone ----------
+
+const isBadLogin = (e: { message?: string } | null) => !!e && /invalid login credentials/i.test(e.message ?? '')
+
+/** Connexion avec le mot de passe ; convertit au passage les comptes créés avant le chiffrement */
+export async function signIn(email: string, password: string) {
+  await ready()
+  const k = passwordKeys(password)
+  kekRoot = k.kekRoot
+  let { error } = await supabase.auth.signInWithPassword({ email, password: k.authPassword })
+  if (isBadLogin(error)) {
+    const legacy = await supabase.auth.signInWithPassword({ email, password })
+    if (!legacy.error) { error = (await supabase.auth.updateUser({ password: k.authPassword })).error }
+  }
+  if (error) { kekRoot = null; throw isBadLogin(error) ? new Error('Email ou mot de passe incorrect') : error }
+}
+
+export async function signUp(email: string, password: string, displayName: string) {
+  await ready()
+  const k = passwordKeys(password)
+  kekRoot = k.kekRoot
+  const { data, error } = await supabase.auth.signUp({ email, password: k.authPassword, options: { data: { display_name: displayName } } })
+  if (error) { kekRoot = null; throw error }
+  return !!data.session
+}
+
+/** Changement de mot de passe : la sauvegarde des clés est rechiffrée avec le nouveau */
+export async function changePassword(email: string, current: string, next: string) {
+  await ready()
+  const cur = passwordKeys(current)
+  const check = await supabase.auth.signInWithPassword({ email, password: cur.authPassword })
+  if (check.error) throw new Error('Mot de passe actuel incorrect')
+  const k = passwordKeys(next)
+  const { error } = await supabase.auth.updateUser({ password: k.authPassword })
+  if (error) throw error
+  kekRoot = k.kekRoot
+  if (me) await saveBackup(me)
+}
+
+/** Vérifie le mot de passe du compte connecté (écran de déverrouillage) */
+export async function unlock(uid: string, email: string, password: string) {
+  await signIn(email, password)
+  await initE2EE(uid)
+}
+
+// ---------- Clés du compte ----------
+
+async function saveBackup(id: Identity) {
+  if (!kekRoot) return
+  const { error } = await supabase.from('key_backups').upsert({ user_id: id.uid, ...sealBackup(id.entropy, kekRoot), updated_at: new Date().toISOString() })
+  if (error) throw error
+}
+
+/** Au lancement : clé locale valable ? sinon on la récupère depuis la sauvegarde avec le mot de passe */
 export async function initE2EE(uid: string) {
   await ready()
   state = 'loading'; emit()
   let id = await local.identity()
   if (id && id.uid !== uid) { await local.clear(); id = null }
   pins = await local.pins()
-  const { data, error } = await supabase.from('user_keys').select('*').eq('user_id', uid).order('created_at')
-  if (error) { me = id; state = id ? 'ready' : 'offline'; emit(); return }
-  const rows = data as KeyRow[]
+  const [keys, bak] = await Promise.all([
+    supabase.from('user_keys').select('*').eq('user_id', uid).order('created_at'),
+    supabase.from('key_backups').select('salt, nonce, box').eq('user_id', uid).maybeSingle(),
+  ])
+  if (keys.error || bak.error) { me = id; state = id ? 'ready' : 'offline'; emit(); return }
+  const rows = keys.data as KeyRow[]
   const latest = rows.at(-1)
-  if (!id) state = latest ? 'restore' : 'setup'
-  else if (!latest) { await publish(id); state = 'ready' }          // activation interrompue : on termine
-  else if (latest.sign_pk !== b64(id.signPk)) state = 'changed'     // phrase refaite sur un autre appareil
-  else state = 'ready'
-  me = state === 'ready' ? id : null
-  if (me) pinMine(rows)
+  const backup = bak.data as Backup | null
+  const current = (x: Identity) => !latest || latest.sign_pk === b64(x.signPk)
+
+  if (id && current(id)) {
+    if (!latest) await publish(id)
+    // Sauvegarde absente ou faite avec un ancien mot de passe : on la refait
+    if (kekRoot && (!backup || !openBackup(backup, kekRoot))) await saveBackup(id).catch(() => {})
+    return done(id, rows)
+  }
+  if (backup) {
+    if (!kekRoot) { state = 'password'; me = null; return emit() }
+    const e = openBackup(backup, kekRoot)
+    const fromBackup = e && deriveIdentity(uid, e)
+    if (!fromBackup || !current(fromBackup)) { state = 'reset'; me = null; return emit() }
+    await local.saveIdentity(fromBackup)
+    return done(fromBackup, rows)
+  }
+  if (latest) { state = 'restore'; me = null; return emit() }  // ancien compte à phrase, jamais sauvegardé
+  if (!kekRoot) { state = 'password'; me = null; return emit() }
+  return newKeys(uid)
+}
+
+function done(id: Identity, rows: KeyRow[]) {
+  me = id; state = 'ready'
+  pinMine(rows.length ? rows : [{ user_id: id.uid, sign_pk: b64(id.signPk), box_pk: b64(id.boxPk), created_at: '' }])
   emit()
 }
 
@@ -57,18 +135,17 @@ function pinMine(rows: KeyRow[]) {
   local.savePins(pins)
 }
 
-/** Première activation, ou nouvelle phrase après une perte (`entropy` = phrase notée par l'utilisateur) */
-export async function activate(uid: string, entropy: Uint8Array) {
+/** Nouvelles clés (premier lancement, ou après une réinitialisation du mot de passe) */
+export async function newKeys(uid: string) {
   await ready()
-  const id = deriveIdentity(uid, entropy)
+  const id = deriveIdentity(uid, randomEntropy())
   await publish(id)
+  await saveBackup(id)
   await local.saveIdentity(id)
-  me = id; state = 'ready'
-  pinMine([{ user_id: uid, sign_pk: b64(id.signPk), box_pk: b64(id.boxPk), created_at: '' }])
-  emit()
+  done(id, [])
 }
 
-/** Nouvel appareil : la phrase doit correspondre à la clé actuelle du compte */
+/** Ancien compte à phrase de 12 mots : la phrase doit correspondre à la clé actuelle, puis on sauvegarde */
 export async function restore(uid: string, entropy: Uint8Array) {
   await ready()
   const id = deriveIdentity(uid, entropy)
@@ -77,17 +154,13 @@ export async function restore(uid: string, entropy: Uint8Array) {
   const latest = (data as KeyRow[]).at(-1)
   if (!latest || latest.sign_pk !== b64(id.signPk)) throw new Error('Ce n\'est pas la bonne phrase pour ce compte.')
   await local.saveIdentity(id)
-  me = id; state = 'ready'
-  pinMine(data as KeyRow[])
-  emit()
+  await saveBackup(id).catch(() => {})
+  done(id, data as KeyRow[])
 }
 
-export const startOver = () => { state = 'setup'; emit() }
-export const genEntropy = newEntropy
-
-/** Déconnexion : on efface la clé de ce téléphone (il faudra ressaisir la phrase) */
+/** Déconnexion : on efface les clés de ce téléphone (elles reviennent au prochain login) */
 export async function forgetDevice() {
-  me = null; pins = {}; state = 'loading'; epochs.clear(); plainCache.clear(); keyCache.clear()
+  me = null; pins = {}; kekRoot = null; state = 'loading'; epochs.clear(); plainCache.clear(); keyCache.clear()
   await local.clear(); emit()
 }
 

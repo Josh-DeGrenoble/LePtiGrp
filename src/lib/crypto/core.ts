@@ -2,12 +2,14 @@
  * Chiffrement de bout en bout : primitives libsodium (auditées), sans dépendance à Supabase
  * (ce fichier est aussi utilisé par le service worker pour déchiffrer les notifications).
  *
- * - Phrase de récupération : 12 mots BIP39 (liste française) = 128 bits d'aléa.
+ * - Secret du compte : 128 bits d'aléa, sauvegardé sur le serveur chiffré par une clé tirée du mot de passe
+ *   (Argon2id). Le serveur ne reçoit jamais le mot de passe : seulement une autre moitié du calcul (voir passwordKeys).
+ * - (Ancien mode) phrase de récupération : 12 mots BIP39 (liste française) codant ce même secret.
  * - Clés du compte dérivées de la phrase : X25519 (réception des clés de conv) + Ed25519 (signature).
  * - Clé de conversation (« epoch ») : 32 octets aléatoires, scellée pour chaque membre (crypto_box_seal).
  * - Message : XChaCha20-Poly1305 avec la clé de l'epoch, signé Ed25519 par son auteur.
  */
-import sodium from 'libsodium-wrappers'
+import sodium from 'libsodium-wrappers-sumo'
 import { generateMnemonic, entropyToMnemonic, mnemonicToEntropy } from '@scure/bip39'
 import { wordlist } from '@scure/bip39/wordlists/french.js'
 import { createStore, get, set, del, clear } from 'idb-keyval'
@@ -39,6 +41,34 @@ export function parsePhrase(input: string): { entropy?: Uint8Array; error?: stri
   try { return { entropy: mnemonicToEntropy(words.join(' '), wordlist) } }
   catch { return { error: 'Phrase invalide : vérifie l\'ordre et l\'orthographe des mots.' } }
 }
+
+// ---------- Mot de passe ----------
+
+/**
+ * Un seul calcul Argon2id (lent exprès) donne 64 octets :
+ * - les 32 premiers deviennent le « mot de passe » envoyé à Supabase (le vrai n'en sort jamais) ;
+ * - les 32 suivants servent de base à la clé qui déverrouille la sauvegarde des clés.
+ * Le serveur ne connaît que la première moitié : pour lire la sauvegarde, il devrait retrouver le mot de passe.
+ */
+export function passwordKeys(password: string) {
+  const out = sodium.crypto_pwhash(64, utf8(password), sodium.crypto_generichash(16, utf8('LePtiGrp-password-v1'), null),
+    3, 64 * 1024 * 1024, sodium.crypto_pwhash_ALG_ARGON2ID13)
+  return { authPassword: b64(out.slice(0, 32)), kekRoot: out.slice(32) }
+}
+
+export type Backup = { salt: string; nonce: string; box: string }
+const kekOf = (kekRoot: Uint8Array, salt: Uint8Array) => sodium.crypto_generichash(32, salt, kekRoot)
+
+/** Chiffre le secret du compte pour la sauvegarde serveur */
+export function sealBackup(entropy: Uint8Array, kekRoot: Uint8Array): Backup {
+  const salt = sodium.randombytes_buf(16)
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
+  return { salt: b64(salt), nonce: b64(nonce), box: b64(sodium.crypto_secretbox_easy(entropy, nonce, kekOf(kekRoot, salt))) }
+}
+export function openBackup(b: Backup, kekRoot: Uint8Array): Uint8Array | null {
+  try { return sodium.crypto_secretbox_open_easy(unb64(b.box), unb64(b.nonce), kekOf(kekRoot, unb64(b.salt))) } catch { return null }
+}
+export const randomEntropy = () => sodium.randombytes_buf(16)
 
 // ---------- Clés du compte ----------
 
