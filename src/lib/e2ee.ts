@@ -12,7 +12,7 @@ export { parsePhrase, safetyCode } from './crypto/core'
 
 /** password : il faut le mot de passe pour déverrouiller · reset : mot de passe réinitialisé, sauvegarde illisible
  *  restore : ancien compte à phrase de 12 mots, sans sauvegarde */
-export type E2EEState = 'loading' | 'password' | 'reset' | 'restore' | 'offline' | 'ready'
+export type E2EEState = 'loading' | 'password' | 'create' | 'reset' | 'restore' | 'offline' | 'ready'
 let me: Identity | null = null
 let state: E2EEState = 'loading'
 let pins: Pins = {}
@@ -68,10 +68,40 @@ export async function changePassword(email: string, current: string, next: strin
   if (me) await saveBackup(me)
 }
 
-/** Vérifie le mot de passe du compte connecté (écran de déverrouillage) */
-export async function unlock(uid: string, email: string, password: string) {
-  await signIn(email, password)
+/** Écran de déverrouillage : le mot de passe est bon s'il ouvre la sauvegarde des clés */
+export async function unlock(uid: string, password: string) {
+  await ready()
+  const { data, error } = await supabase.from('key_backups').select('salt, nonce, box').eq('user_id', uid).maybeSingle()
+  if (error) throw error
+  const root = passwordKeys(password).kekRoot
+  if (!data || !openBackup(data as Backup, root)) throw new Error('Mot de passe incorrect')
+  kekRoot = root
   await initE2EE(uid)
+}
+
+/** Premières clés d'un compte sans mot de passe en mémoire (connexion Google, ou session rouverte).
+ *  `email` : compte à mot de passe, qu'on vérifie auprès de Supabase avant de s'en servir. */
+export async function createKeys(uid: string, password: string, email?: string) {
+  await ready()
+  if (email) await signIn(email, password)
+  else kekRoot = passwordKeys(password).kekRoot
+  await initE2EE(uid)
+}
+
+/** Mot de passe de chiffrement oublié : nouvelles clés protégées par un nouveau mot de passe (historique perdu) */
+export async function forgotKeys(uid: string, newPassword: string) {
+  await ready()
+  kekRoot = passwordKeys(newPassword).kekRoot
+  await newKeys(uid)
+}
+
+/** Compte Google : changement du mot de passe de chiffrement (rien à changer côté Supabase) */
+export async function changeSecret(uid: string, current: string, next: string) {
+  await ready()
+  const { data } = await supabase.from('key_backups').select('salt, nonce, box').eq('user_id', uid).maybeSingle()
+  if (!data || !openBackup(data as Backup, passwordKeys(current).kekRoot)) throw new Error('Mot de passe de chiffrement actuel incorrect')
+  kekRoot = passwordKeys(next).kekRoot
+  if (me) await saveBackup(me)
 }
 
 // ---------- Clés du compte ----------
@@ -114,7 +144,7 @@ export async function initE2EE(uid: string) {
     return done(fromBackup, rows)
   }
   if (latest) { state = 'restore'; me = null; return emit() }  // ancien compte à phrase, jamais sauvegardé
-  if (!kekRoot) { state = 'password'; me = null; return emit() }
+  if (!kekRoot) { state = 'create'; me = null; return emit() }
   return newKeys(uid)
 }
 
