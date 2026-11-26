@@ -20,7 +20,7 @@ async function show(r: Local) {
   if (!reg || Notification.permission !== 'granted') return
   const tag = `reminder-${r.client_id}`
   if ((await reg.getNotifications({ tag })).length) return  // le push du serveur est déjà arrivé
-  await reg.showNotification('⏰ Rappel', { body: r.message, tag, data: { url: r.conversation_id ? `/c/${r.conversation_id}` : '/' }, icon: '/icon-v3-192.png', badge: '/icon-v3-192.png' })
+  await reg.showNotification('⏰ Rappel', { body: r.message, tag, data: { url: r.conversation_id ? `/c/${r.conversation_id}` : '/' }, icon: '/icon-v3-192.png', badge: '/badge-v1.png' })
 }
 
 /** (Re)programme les minuteries locales des rappels à venir */
