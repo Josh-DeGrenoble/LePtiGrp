@@ -4,7 +4,7 @@
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 webpush.setVapidDetails(
   Deno.env.get('VAPID_SUBJECT') ?? 'https://le-pti-grp.vercel.app',
   Deno.env.get('VAPID_PUBLIC_KEY')!,

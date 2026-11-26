@@ -5,6 +5,15 @@ grant select, insert, update, delete on all tables in schema public to authentic
 grant usage, select on all sequences in schema public to authenticated;
 grant execute on all functions in schema public to authenticated;
 
+-- La fonction « push » (clé service_role) doit pouvoir tout lire/écrire : sans ça, « permission denied »
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant execute on all functions in schema public to service_role;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to service_role;
+alter default privileges in schema public grant execute on functions to service_role;
+
 -- Colonnes modifiables uniquement
 revoke update on public.profiles, public.members from authenticated;
 grant update (display_name, avatar_url) on public.profiles to authenticated;

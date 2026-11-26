@@ -120,3 +120,12 @@ end $$;
 drop trigger if exists on_member_hidden_at on public.members;
 create trigger on_member_hidden_at before update of hidden_at on public.members
   for each row execute function public.hidden_at_now();
+
+-- La fonction « push » (clé service_role) doit pouvoir tout lire/écrire : sans ça, « permission denied »
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant execute on all functions in schema public to service_role;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to service_role;
+alter default privileges in schema public grant execute on functions to service_role;
