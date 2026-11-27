@@ -117,6 +117,12 @@ export function AdminBeers() {
       if (data) supabase.rpc('beer_board').then(({ data: b, error }) => { if (!error) setRows(b as Beer[]) })
     })
   }, [me])
+  // une bière payée : une de moins (la personne disparaît de la liste à 0)
+  const paid = async (r: Beer) => {
+    setRows((xs) => xs && xs.map((x) => x.user_id === r.user_id ? { ...x, count: x.count - 1 } : x).filter((x) => x.count > 0))
+    const { error } = await supabase.rpc('beer_paid', { who: r.user_id })
+    if (error) notify(errMsg(error))
+  }
   if (!rows) return null
   const total = rows.reduce((n, r) => n + r.count, 0)
   return (
@@ -126,6 +132,7 @@ export function AdminBeers() {
         <div key={r.user_id} className="beer-row">
           <span>{r.display_name}</span>
           <strong>{r.count} 🍺</strong>
+          <button className="beer-minus" onClick={() => paid(r)} aria-label={`${r.display_name} m'a payé une bière`}>−1</button>
         </div>
       ))}
     </SGroup>

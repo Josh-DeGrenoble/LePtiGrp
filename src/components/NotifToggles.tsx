@@ -9,9 +9,12 @@ export type NotifPrefs = { notify_all: boolean; notify_mentions: boolean; notify
 export function NotifToggles({ prefs, onChange }: { prefs: NotifPrefs; onChange: (patch: Partial<NotifPrefs>) => void }) {
   return <>
     <Toggle label="Tous les messages" checked={prefs.notify_all} onChange={(v) => onChange({ notify_all: v })} />
-    <Toggle label="Quand on me mentionne" checked={prefs.notify_all || prefs.notify_mentions} disabled={prefs.notify_all}
-      onChange={(v) => onChange({ notify_mentions: v })} />
-    <Toggle label="Quand un message est épinglé" checked={prefs.notify_pins} onChange={(v) => onChange({ notify_pins: v })} />
+    {/* sinon : seulement quand on me mentionne et/ou quand un message est épinglé */}
+    {!prefs.notify_all && <div className="notif-chips fade-in">
+      <span className="muted small">Seulement :</span>
+      <button className={`pref-chip${prefs.notify_mentions ? ' on' : ''}`} aria-pressed={prefs.notify_mentions} onClick={() => onChange({ notify_mentions: !prefs.notify_mentions })}>Mentions</button>
+      <button className={`pref-chip${prefs.notify_pins ? ' on' : ''}`} aria-pressed={prefs.notify_pins} onClick={() => onChange({ notify_pins: !prefs.notify_pins })}>Épinglés</button>
+    </div>}
   </>
 }
 

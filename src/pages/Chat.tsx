@@ -392,7 +392,7 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
           <label className="icon-btn composer-media" aria-label="Choisir une photo"><IconImage />
             <input type="file" accept="image/*" hidden onChange={pickFile} /></label>
         </>}
-        <textarea ref={input} rows={1} placeholder="Message… (@ pour mentionner)" value={text}
+        <textarea ref={input} rows={1} placeholder="Message…" value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); send() } }} />
         <button className="send" onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={send} disabled={!text.trim()} aria-label="Envoyer"><IconSend /></button>

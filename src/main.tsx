@@ -5,6 +5,8 @@ import '@fontsource/sora/latin-700.css'
 import './index.css'
 import App from './App.tsx'
 import { trackViewport } from './lib/viewport'
+import { applyTextScale } from './lib/textScale'
+applyTextScale()
 
 trackViewport()
 

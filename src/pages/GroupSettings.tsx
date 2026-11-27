@@ -18,6 +18,7 @@ import { ask, notify } from '../components/Dialog'
 import { AvatarChooser } from '../components/AvatarChooser'
 import { NotifToggles, ActivityToggles, type NotifPrefs, type ActivityPrefs } from '../components/NotifToggles'
 import { cachedFriends, loadFriends } from '../lib/friends'
+import { LinkedTools } from '../components/LinkedTools'
 import { PERMISSIONS, LEVEL_LABEL, levelOf, type Level } from '../lib/permissions'
 
 const ROLE_LABEL: Record<Role, string> = { super_admin: 'Super admin', admin: 'Admin', member: 'Membre' }
@@ -141,6 +142,8 @@ export default function GroupSettings() {
           right={<span className="friend-code">{copied ? 'Copié !' : other.friend_code}</span>} />}
       </SGroup>
 
+      <LinkedTools convId={id} />
+
       <SGroup title={conv.is_group ? `Membres (${c.members.length})` : 'Membres'}>
         {c.members.map((m) => {
           const r = effectiveRole(m)
@@ -163,12 +166,12 @@ export default function GroupSettings() {
       <SGroup title="Mes notifications">
         <NotifToggles prefs={c.mine} onChange={setNotif} />
       </SGroup>
-      <SGroup title="Modifs des outils" note="Pense-bêtes, sondages et comptes de cette conversation : afficher leurs modifs dans le chat, et/ou en être notifié.">
+      <SGroup title="Modifs des outils" note="Afficher dans le chat et/ou être notifié des modifs des outils de cette conversation.">
         <ActivityToggles prefs={c.mine} onChange={setNotif} />
       </SGroup>
 
       {conv.is_group && (
-        <SGroup title="Droits" note={!isSuper ? 'Seul un super admin peut modifier les droits.' : undefined}>
+        <SGroup title="Droits" note={`« Gérer » un outil : le créer, le modifier, le supprimer. Cocher, voter et répondre restent ouverts à tous.${!isSuper ? ' Seul un super admin peut modifier les droits.' : ''}`}>
           <Check label="Tout le monde admin" checked={conv.everyone_admin} disabled={!isSuper} onChange={(v) => updateSettings(v)} />
           {PERMISSIONS.map((p) => (
             <div key={p.action} className={`perm-row${isSuper ? '' : ' disabled'}`}>

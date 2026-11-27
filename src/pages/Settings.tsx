@@ -5,23 +5,22 @@ import { supabase } from '../lib/supabase'
 import { useAuth, signOut } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShare, IconShield, IconQr } from '../components/Icons'
+import { IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShield } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
-import { AdminBeers, AdminFeedback, DevSection } from '../components/Feedback'
-import { AdminUsage } from '../components/AdminUsage'
-import { AdminCircles } from '../components/AdminCircles'
+import { DevSection } from '../components/Feedback'
 import { AccountForm } from '../components/AccountForms'
 import { ask, notify } from '../components/Dialog'
 import { Sheet } from '../components/Sheet'
-import { QrSheet } from '../components/Qr'
-import { friendLink } from '../lib/friends'
 import { ToolPrefsGrid, ALL_TOOLS } from '../components/NotifToggles'
 import type { ToolKey } from '../lib/supabase'
 import { pushState, enablePush, disablePush, isIos, testPush, type PushState } from '../lib/push'
 import { useOnResume } from '../lib/network'
 import { errMsg } from '../lib/supabase'
 import { identity } from '../lib/e2ee'
+import { useIsAdmin } from '../lib/admin'
+import { TEXT_SCALES, getTextScale, setTextScale } from '../lib/textScale'
+import { Link } from 'react-router-dom'
 
 /** Réglages par défaut de l'activité des outils (enregistrés sur le profil) */
 function ActivityDefaults() {
@@ -36,7 +35,7 @@ function ActivityDefaults() {
     if (error) notify(errMsg(error))
     refreshProfile()
   }
-  return <SGroup title="Modifs des outils" note="Pour les outils rattachés à une conversation : afficher leurs modifs dans le chat, et/ou en être notifié. Réglage par défaut, chaque conversation peut avoir le sien.">
+  return <SGroup title="Modifs des outils" note="Tes préférences par défaut. Chaque conversation peut avoir les siennes.">
     <ToolPrefsGrid show={show} notify={notif} onChange={save} />
   </SGroup>
 }
@@ -44,11 +43,9 @@ function ActivityDefaults() {
 export default function Settings() {
   const { session, profile } = useAuth()
   const [editProfile, setEditProfile] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const isAdmin = useIsAdmin()
   const [account, setAccount] = useState<'email' | 'password' | null>(null)
   const [deleting, setDeleting] = useState(false)
-  // Un seul lien : celui d'ami. Il ouvre l'appli (inscription si besoin) et ajoute en ami directement.
-  const appUrl = profile ? friendLink(profile.friend_code) : window.location.origin
   const [push, setPush] = useState<PushState | null>(null)
   useEffect(() => { pushState().then(setPush) }, [])
   // Au retour des réglages du téléphone : si l'autorisation a été donnée, on active tout de suite
@@ -66,19 +63,11 @@ export default function Settings() {
     setPush(await pushState())
   }
 
-  const copy = async () => {
-    await navigator.clipboard.writeText(appUrl)
-    setCopied(true); setTimeout(() => setCopied(false), 2000)
-  }
-  const share = () => navigator.share
-    ? navigator.share({ title: 'LePtiGrp', text: `Rejoins-moi sur LePtiGrp ! Mon code ami : ${profile?.friend_code ?? ''}`, url: appUrl }).catch(() => {})
-    : copy()
-  const [qr, setQr] = useState(false)
 
   return (
     <Screen header={<>
       <BackButton to="/" />
-      <h1>Paramètres</h1><span className="icon-btn" />
+      <h1>Paramètres</h1>{isAdmin ? <Link to="/admin" className="icon-btn" aria-label="Admin"><IconShield size={22} /></Link> : <span className="icon-btn" />}
     </>}>
       <div className="settings-page">
         {profile && (
@@ -93,7 +82,7 @@ export default function Settings() {
         )}
 
         <SGroup title="Notifications" note={push === 'on' || push === 'off' ? 'Le détail (tous les messages, mentions, épinglés) se règle dans chaque conversation.' : undefined}>
-          {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (voir « Inviter des amis »), puis ouvre-la depuis l'icône.</p>
+          {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (Safari, Partager, « Sur l'écran d'accueil »), puis ouvre-la depuis l'icône.</p>
             : push === 'unsupported' ? <p className="muted small help">Ce navigateur ne gère pas les notifications.</p>
             : push === 'denied' ? <DeniedGuide onCheck={recheck} />
             : <label className="srow toggle-row">
@@ -108,15 +97,7 @@ export default function Settings() {
 
         {profile && <ActivityDefaults />}
 
-        <SGroup title="Inviter des amis" note={<details>
-          <summary>Installer sur le téléphone</summary>
-          <p><b>Android</b> : ouvrir le lien dans Chrome, menu ⋮, « Installer l'application ».<br />
-            <b>iPhone</b> : ouvrir le lien dans Safari, Partager, « Sur l'écran d'accueil ».</p>
-        </details>}>
-          <SRow icon={<IconShare size={18} />} label="Partager mon lien" sub={copied ? 'Lien copié ✓' : "Installe l'appli et t'ajoute en ami"} onClick={share}
-            right={<button className="srow-btn icon" onClick={(e) => { e.stopPropagation(); setQr(true) }} aria-label="QR code et scanner"><IconQr size={20} /></button>} />
-        </SGroup>
-        <QrSheet open={qr} onClose={() => setQr(false)} url={appUrl} title="Inviter des amis" caption={`Fais-le scanner : ouvre l'appli et t'ajoute en ami. Code : ${profile?.friend_code ?? ''}`} />
+        <TextSize />
 
         <SGroup title="Compte">
           {session && hasPassword(session.user) ? <>
@@ -132,12 +113,6 @@ export default function Settings() {
 
         <Encryption />
 
-        <AdminUsage />
-
-        <AdminCircles />
-        <AdminBeers />
-        <AdminFeedback />
-
         <SGroup>
           <SRow icon={<IconLogout />} label="Se déconnecter" chevron={false}
             onClick={async () => { if (await ask('Se déconnecter ?')) signOut() }} />
@@ -151,6 +126,20 @@ export default function Settings() {
       <ProfileEditor open={editProfile} onClose={() => setEditProfile(false)} />
     </Screen>
   )
+}
+
+/** Taille du texte des conversations (sur cet appareil) */
+function TextSize() {
+  const [v, setV] = useState(getTextScale)
+  return <SGroup title="Taille du texte" note="Pour les messages et la liste des conversations, sur cet appareil.">
+    <div className="ts-chips">
+      {TEXT_SCALES.map((x) => (
+        <button key={x} className={`pref-chip${v === x ? ' on' : ''}`} onClick={() => { setV(x); setTextScale(x) }}>
+          {x === 1 ? 'Normal' : `×${String(x).replace('.', ',')}`}
+        </button>
+      ))}
+    </div>
+  </SGroup>
 }
 
 /** Le navigateur ne peut plus redemander l'autorisation : on explique où la rendre, selon le téléphone */

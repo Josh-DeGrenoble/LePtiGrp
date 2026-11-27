@@ -500,7 +500,9 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .delete-link { align-self: center; color: var(--danger); font-size: 14px; font-weight: 600; padding: 10px 16px; opacity: .85; }
 .settings-page .denied-guide { padding: 12px 14px; }
 .settings-page .feedback-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; position: relative; }
-.settings-page .beer-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; }
+.settings-page .beer-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+.beer-row > span { flex: 1; }
+.beer-minus { padding: 6px 12px; border-radius: 10px; background: var(--surface2); font-weight: 700; }
 .settings-page .beer-row + .beer-row { border-top: 1px solid var(--border); }
 .settings-page .feedback-row + .feedback-row::before { content: ''; position: absolute; top: 0; left: 14px; right: 0; border-top: 1px solid var(--border); }
 .sgroup-card > .muted.help { padding: 12px 14px; margin: 0; }
@@ -580,6 +582,8 @@ button.srow:active, label.srow:active { background: var(--surface2); }
 .composer-wrap { background: var(--bg); }
 .composer { padding: 8px 10px; align-items: flex-end; }
 .composer textarea { background: var(--surface); border: 0; border-radius: 22px; padding: 11px 16px; min-height: 44px; }
+.composer textarea { min-width: 0; flex: 1; }
+.composer textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .composer .send { width: 44px; height: 44px; box-shadow: 0 2px 6px #2563eb55; }
 .composer .send:disabled { box-shadow: none; }
 .bubble.pinned .bubble-name { color: var(--pinned-text) !important; }
@@ -773,3 +777,16 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .repeat-chips { margin: 0; }
 .repeat-end .tp-row { display: flex; align-items: center; gap: 8px; }
 .repeat-end .tp-row > .muted { flex: 1; }
+.notif-chips { display: flex; align-items: center; gap: 8px; padding: 10px 14px; }
+.notif-chips > span { flex: 1; }
+
+/* Taille du texte (Paramètres > Affichage) : --ts = 1, 1.5, 2 ou 3, pour le chat et la liste des convs */
+.bubble-text { font-size: calc(16px * var(--ts, 1)); }
+.bubble-name, .bubble-head { font-size: calc(13px * var(--ts, 1)); }
+.msg-meta { font-size: calc(11px * var(--ts, 1)); }
+.composer textarea { font-size: calc(16px * var(--ts, 1)); }
+.conv-name { font-size: calc(16px * var(--ts, 1)); }
+.conv-last { font-size: calc(14px * var(--ts, 1)); }
+.conv-date { font-size: calc(12px * var(--ts, 1)); }
+.ts-chips { display: flex; gap: 8px; padding: 12px 14px; }
+.ts-chips .pref-chip { flex: 1; }

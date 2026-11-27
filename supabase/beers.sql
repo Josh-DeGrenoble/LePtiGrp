@@ -30,3 +30,16 @@ begin
 end $$;
 revoke all on function public.beer_board() from public, anon;
 grant execute on function public.beer_board() to authenticated;
+
+-- Admin : une bière payée = une de moins (la ligne disparaît à 0) ; renvoie le nouveau total
+create or replace function public.beer_paid(who uuid)
+returns int language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if not is_app_admin() then raise exception 'Réservé aux admins'; end if;
+  update beers set count = count - 1 where user_id = who returning count into n;
+  if n is not null and n <= 0 then delete from beers where user_id = who; n := 0; end if;
+  return coalesce(n, 0);
+end $$;
+revoke all on function public.beer_paid(uuid) from public, anon;
+grant execute on function public.beer_paid(uuid) to authenticated;
