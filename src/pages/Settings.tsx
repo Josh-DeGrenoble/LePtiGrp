@@ -82,19 +82,7 @@ export default function Settings() {
           </button>
         )}
 
-        {/* Ordre : compte et sécurité, notifications, outils, apparence, puis aide/dev et sortie */}
-        <SGroup title="Compte">
-          {session && hasPassword(session.user) ? <>
-            <SRow icon={<IconMail size={18} />} label="Email" sub={session.user.email} onClick={() => setAccount('email')} />
-            <SRow icon={<IconLock />} label="Mot de passe" onClick={() => setAccount('password')} />
-          </> : <>
-            <SRow icon={<IconMail size={18} />} label="Compte Google" sub={session?.user.email} />
-            <SRow icon={<IconLock />} label="Mot de passe de chiffrement" onClick={() => setAccount('password')} />
-          </>}
-        </SGroup>
-
-        <Encryption />
-
+        {/* Ordre : notifications, outils, apparence, aide/dev, puis chiffrement et compte (avec la déconnexion) à la fin */}
         <SGroup title="Notifications" note={push === 'on' || push === 'off' ? 'Le détail (tous les messages, mentions, épinglés) se règle dans chaque conversation.' : undefined}>
           {push === 'needs-install' ? <p className="muted small help">Sur iPhone, installe d'abord l'appli sur l'écran d'accueil (Safari, Partager, « Sur l'écran d'accueil »), puis ouvre-la depuis l'icône.</p>
             : push === 'unsupported' ? <p className="muted small help">Ce navigateur ne gère pas les notifications.</p>
@@ -117,7 +105,16 @@ export default function Settings() {
 
         <DevSection />
 
-        <SGroup>
+        <Encryption />
+
+        <SGroup title="Compte">
+          {session && hasPassword(session.user) ? <>
+            <SRow icon={<IconMail size={18} />} label="Email" sub={session.user.email} onClick={() => setAccount('email')} />
+            <SRow icon={<IconLock />} label="Mot de passe" onClick={() => setAccount('password')} />
+          </> : <>
+            <SRow icon={<IconMail size={18} />} label="Compte Google" sub={session?.user.email} />
+            <SRow icon={<IconLock />} label="Mot de passe de chiffrement" onClick={() => setAccount('password')} />
+          </>}
           <SRow icon={<IconLogout />} label="Se déconnecter" chevron={false}
             onClick={async () => { if (await ask('Se déconnecter ?')) signOut() }} />
         </SGroup>
