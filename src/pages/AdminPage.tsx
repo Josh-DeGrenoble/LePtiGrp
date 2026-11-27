@@ -1,6 +1,7 @@
 import { Screen } from '../components/Layout'
 import { BackButton } from '../components/BackButton'
 import { AdminUsage } from '../components/AdminUsage'
+import { AdminStats } from '../components/AdminStats'
 import { AdminCircles } from '../components/Circles'
 import { AdminBeers, AdminFeedback } from '../components/Feedback'
 import { useIsAdmin } from '../lib/admin'
@@ -12,6 +13,7 @@ export default function AdminPage() {
     <Screen header={<><BackButton to="/settings" /><h1>Admin</h1><span className="icon-btn" /></>}>
       <div className="settings-page">
         {!admin && <p className="empty">Réservé aux admins de l'appli.</p>}
+        {admin && <AdminStats />}
         <AdminUsage />
         <AdminCircles />
         <AdminBeers />

@@ -112,6 +112,10 @@ do $$ begin
   if to_regprocedure('public.purge_media(uuid)') is not null then
     revoke execute on function public.purge_media(uuid) from public, anon, authenticated;
   end if;
+  -- stats.sql : interne (exécute un filtre SQL), seulement via app_stats()
+  if to_regprocedure('public.stat_count(text, text)') is not null then
+    revoke execute on function public.stat_count(text, text) from public, anon, authenticated;
+  end if;
   -- circles.sql : interne (sinon n'importe qui pouvait s'ajouter à un cercle)
   if to_regprocedure('public.circle_enroll(uuid, uuid)') is not null then
     revoke execute on function public.circle_enroll(uuid, uuid) from public, anon, authenticated;
