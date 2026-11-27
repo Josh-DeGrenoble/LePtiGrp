@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Screen } from '../components/Layout'
-import { BackButton } from '../components/BackButton'
+import { BackButton, goBack } from '../components/BackButton'
 import { LimitedInput } from '../components/LimitedInput'
 import { ShareChooser } from '../components/ShareChooser'
 import { Toggle } from '../components/Sheet'
@@ -17,7 +17,8 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
   const me = useMe()
   const nav = useNavigate()
   const [params] = useSearchParams()
-  const backTo = (useLocation().state as { from?: string } | null)?.from ?? `/${kind}`
+  const st = useLocation().state as { from?: string; root?: string } | null
+  const backTo = st?.from ?? `/${kind}`
   const t = TOOLS[kind]
   const [title, setTitle] = useState(params.get('q') ?? '')
   const [share, setShare] = useState<Share>(() => ({ mode: params.get('conv') ? 'conv' : 'me', conv: params.get('conv'), ids: [] }))
@@ -40,9 +41,9 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
       if (kind === 'polls' && item.conversation_id) {
         const { error } = await supabase.from('messages').insert({ conversation_id: item.conversation_id, content: `📊 Sondage : ${title.trim()}`, poll_id: item.id })
         if (error) throw error
-        return nav(`/c/${item.conversation_id}`, { replace: true })
+        return goBack(nav, `/c/${item.conversation_id}`)
       }
-      nav(`/${kind}/${item.id}`, { replace: true, state: { from: backTo } })
+      nav(`/${kind}/${item.id}`, { replace: true, state: { from: backTo, root: st?.root } })
     } catch (e) { notify(errMsg(e)) } finally { setBusy(false) }
   }
 

@@ -297,7 +297,7 @@ export default function Chat() {
             {newDay && <div className="day-sep"><span>{day}</span></div>}
             <Fold hidden={!keep(first)}>
               <Activity m={first.m} who={first.author === me ? 'Toi' : name}
-                onOpen={() => first.m!.tool && first.m!.tool_id && nav(`/${TOOL_PATH[first.m!.tool]}/${first.m!.tool_id}`, { state: { from: `/c/${id}` } })} />
+                onOpen={() => first.m!.tool && first.m!.tool_id && nav(`/${TOOL_PATH[first.m!.tool]}/${first.m!.tool_id}`, { state: { from: `/c/${id}`, root: `/c/${id}` } })} />
             </Fold>
           </div>
           return <div key={first.key} className={`msg-block${arrive}`}>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../components/Layout'
-import { BackButton } from '../components/BackButton'
+import { BackButton, goBack, toolBack } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { Sheet } from '../components/Sheet'
 import { Avatar } from '../components/Avatar'
@@ -23,8 +23,9 @@ export default function EventPage() {
   const { id = '' } = useParams()
   const me = useMe()
   const nav = useNavigate()
-  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/calendar'
+  const from = (useLocation().state as { from?: string } | null)?.from
   const [ev, setEv] = useState<CalEvent | null>(() => readCache<CalEvent | null>(`event:${id}`, null))
+  const backTo = toolBack(from, ev?.conversation_id)
   const [replies, setReplies] = useState<EventReply[]>(() => readCache<EventReply[]>(`event-replies:${id}`, []))
   const [missing, setMissing] = useState(false)
   const online = useOnline()
@@ -82,7 +83,7 @@ export default function EventPage() {
     const { error } = await dbWrite({ table: 'events', op: 'delete', match: { id } })
     if (error) return notify(errMsg(error))
     forgetTool('calendar', id)
-    nav(backTo, { replace: true })
+    goBack(nav, backTo)
   }
 
   const shared = !!ev && (!!ev.conversation_id || ev.participants.length > 1)

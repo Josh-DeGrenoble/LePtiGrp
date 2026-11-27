@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
 import { Screen } from '../components/Layout'
-import { BackButton } from '../components/BackButton'
+import { BackButton, goBack } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { IconBack, IconPlus, IconUser, IconUsers, IconUserPlus, IconCalendar } from '../components/Icons'
 import { Sheet } from '../components/Sheet'
@@ -45,7 +45,7 @@ export default function CalendarPage() {
     setShare({ mode: conv ? 'conv' : 'me', conv, ids: [] })
   }
   useEffect(() => { if (isNew) startNew(params.get('day') ?? today, params.get('q') ?? '', params.get('conv')) }, [isNew]) // eslint-disable-line react-hooks/exhaustive-deps
-  const closeNew = () => { setForm(null); if (isNew) nav('/calendar', { replace: true, state: st }) }
+  const closeNew = () => { setForm(null); if (isNew) { if (st?.from) goBack(nav, st.from); else nav('/calendar', { replace: true, state: st }) } }
   const create = async () => {
     if (!form?.day) return
     setBusy(true)
@@ -55,7 +55,7 @@ export default function CalendarPage() {
         repeat: form.repeat, repeat_until: form.repeat ? form.until : null,
       }, share, me)
       setForm(null)
-      nav(`/calendar/${item.id}`, { replace: isNew, state: { from: '/calendar', root: st?.root } })
+      nav(`/calendar/${item.id}`, { replace: isNew, state: { from: isNew ? st?.from ?? '/calendar' : '/calendar', root: st?.root } })
     } catch (e) { notify(errMsg(e)) } finally { setBusy(false) }
   }
 

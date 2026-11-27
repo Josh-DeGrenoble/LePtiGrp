@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../components/Layout'
-import { BackButton } from '../components/BackButton'
+import { BackButton, goBack, toolBack } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { LimitedInput } from '../components/LimitedInput'
 import { Sheet } from '../components/Sheet'
@@ -82,11 +82,12 @@ export default function LedgerPage() {
   const { id = '' } = useParams()
   const me = useMe()
   const nav = useNavigate()
-  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/accounts'
+  const from = (useLocation().state as { from?: string } | null)?.from
   const [ledger, setLedger] = useState<Ledger | null>(() => {
     const c = cachedTools('accounts').find((l) => l.id === id)
     return c ? { ...c, name: c.title } : null
   })
+  const backTo = toolBack(from, ledger?.conversation_id)
   const [expenses, setExpenses] = useState<Expense[]>(() => readCache<Expense[]>(`expenses:${id}`, []))
   const [missing, setMissing] = useState(false)
   const online = useOnline()
@@ -129,7 +130,7 @@ export default function LedgerPage() {
     const { error } = await dbWrite({ table: 'ledgers', op: 'delete', match: { id } })
     if (error) return notify(errMsg(error))
     forgetTool('accounts', id)
-    nav(backTo, { replace: true })
+    goBack(nav, backTo)
   }
 
   if (!online && ledger && isShared(ledger)) return <Screen header={<><BackButton to={backTo} /><h1>Comptes</h1><span className="icon-btn" /></>}><OfflineLocked /></Screen>
