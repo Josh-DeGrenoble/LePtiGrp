@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase, errMsg, type ConvSummary } from '../lib/supabase'
 import { useMe } from '../lib/auth'
-import { shortDate } from '../lib/format'
+import { norm, shortDate } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { IconGear, IconPlus, IconUser, IconStar, IconSearch } from '../components/Icons'
@@ -58,7 +58,7 @@ export default function Conversations() {
     return !p ? '🔒' : p.status === 'locked' ? '🔒 Message chiffré' : p.status === 'invalid' ? '⚠️ Message illisible' : (p.text || (p.photo ? '📷 Photo' : ''))
   }
   const [q, setQ] = useState('')
-  const shown = convs.filter((c) => !q.trim() || (c.name ?? '').toLowerCase().includes(q.trim().toLowerCase()))
+  const shown = convs.filter((c) => !q.trim() || norm(c.name ?? '').includes(norm(q.trim())))
   const favs = shown.filter((c) => c.is_favorite)
   const others = shown.filter((c) => !c.is_favorite)
   const row = (c: ConvSummary) => <ConvRow key={c.id} c={c} last={lastText(c)} me={me} onMenu={() => setSelected(c)} crowd={isCrowd(sizes, c)} />
@@ -113,7 +113,11 @@ export default function Conversations() {
           <div className="sheet-section">Modifs des outils</div>
           <ActivityToggles prefs={selected} onChange={updateMember} />
           <div className="sheet-sep" />
-          <SheetButton danger onClick={async () => { await updateMember({ hidden_at: new Date().toISOString() }); setSelected(null) }}>
+          <SheetButton danger onClick={async () => {
+            if (!(await ask(selected.is_group ? 'Supprimer la conversation ? Elle disparaît de ta liste (tu restes dans le groupe) et revient au prochain message, sans l\'historique.'
+              : 'Supprimer la conversation ? Elle disparaît de ta liste. Si l\'autre la supprime aussi, elle est effacée pour de bon, photos comprises.'))) return
+            await updateMember({ hidden_at: new Date().toISOString() }); setSelected(null)
+          }}>
             Supprimer la conversation
           </SheetButton>
           {selected.is_group && <SheetButton danger onClick={leave}>Quitter le groupe</SheetButton>}

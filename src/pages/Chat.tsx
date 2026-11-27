@@ -161,7 +161,10 @@ export default function Chat() {
 
   // Activité des outils (par outil) : réglage de la conv, sinon celui par défaut (Paramètres). Le filtre « Activité » la montre toujours.
   const showTools = c.mine?.show_tools ?? profile?.show_tools_default ?? []
-  const shown = filter.kinds.includes('activity') ? messages : messages.filter((m) => m.kind !== 'activity' || (!!m.tool && showTools.includes(m.tool)))
+  // conversation supprimée puis revenue (nouveau message) : l'ancien historique reste effacé pour moi
+  const hiddenAt = c.mine?.hidden_at ?? null
+  const visible = hiddenAt ? messages.filter((m) => m.created_at > hiddenAt) : messages
+  const shown = filter.kinds.includes('activity') ? visible : visible.filter((m) => m.kind !== 'activity' || (!!m.tool && showTools.includes(m.tool)))
   const names = new Map(c.members.map((m) => [m.user_id, m.profiles?.display_name ?? '?']))
   // Messages + envois en cours, puis regroupés : même auteur à moins de 5 min = une seule bulle.
   // Clé = client_id quand il existe : l'envoi en cours devient le message reçu sans rien redessiner.
@@ -268,15 +271,15 @@ export default function Chat() {
       </div>
 
       {/* Visionneuse : toutes les photos de la conv, de la plus ancienne à la plus récente (balayer pour passer de l'une à l'autre) */}
-      <Lightbox photo={viewPhoto} photos={viewPhoto ? messages.map((m) => plainOf(m)?.photo).filter((p): p is PhotoRef => !!p) : undefined}
+      <Lightbox photo={viewPhoto} photos={viewPhoto ? visible.map((m) => plainOf(m)?.photo).filter((p): p is PhotoRef => !!p) : undefined}
         onClose={() => setViewPhoto(null)} />
       <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filtrer les messages">
         <div className="filter-sheet">
           <div className="filter-chips">
-            {([[null, 'Tous', null, messages.length],
-              ['pinned', 'Épinglés', <IconPin size={15} />, messages.filter((m) => isPinned(m)).length],
-              ['polls', 'Sondages', <IconPoll size={15} />, messages.filter((m) => m.poll_id).length],
-              ['activity', 'Activité', <IconBell size={15} />, messages.filter((m) => m.kind === 'activity').length]] as [Kind | null, string, React.ReactNode, number][])
+            {([[null, 'Tous', null, visible.length],
+              ['pinned', 'Épinglés', <IconPin size={15} />, visible.filter((m) => isPinned(m)).length],
+              ['polls', 'Sondages', <IconPoll size={15} />, visible.filter((m) => m.poll_id).length],
+              ['activity', 'Activité', <IconBell size={15} />, visible.filter((m) => m.kind === 'activity').length]] as [Kind | null, string, React.ReactNode, number][])
               .map(([k, label, icon, n]) => (
                 <button key={String(k)} className={`fchip${(k ? filter.kinds.includes(k) : !active) ? ' on' : ''}`}
                   onClick={() => setFilter(k ? { ...filter, kinds: flip(filter.kinds, k) } : NO_FILTER)} aria-pressed={k ? filter.kinds.includes(k) : !active}>
@@ -291,7 +294,7 @@ export default function Chat() {
               return <button key={m.user_id} className={`srow${on ? ' on' : ''}`} onClick={() => setFilter({ ...filter, authors: flip(filter.authors, m.user_id) })} aria-pressed={on}>
                 <Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={28} />
                 <span className="srow-text">{m.user_id === me ? 'Moi' : m.profiles!.display_name}</span>
-                <span className="filter-right"><small>{messages.filter((x) => x.author_id === m.user_id && x.kind !== 'activity').length}</small>
+                <span className="filter-right"><small>{visible.filter((x) => x.author_id === m.user_id && x.kind !== 'activity').length}</small>
                   <span className="round-check">{on && <IconCheck size={14} />}</span></span>
               </button>
             })}

@@ -36,6 +36,8 @@ export type Member = {
   notify_all: boolean; notify_mentions: boolean; notify_pins: boolean; joined_at: string
   /** vide = réglage par défaut du profil */
   show_tools?: ToolKey[] | null; notify_tools?: ToolKey[] | null
+  /** « Supprimer la conversation » : les messages d'avant ne sont plus montrés */
+  hidden_at?: string | null
   profiles?: Profile
 }
 

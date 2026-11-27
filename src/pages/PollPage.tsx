@@ -11,7 +11,7 @@ import { ask, notify } from '../components/Dialog'
 import { IconCalendar, IconClose, IconLock, IconPencil, IconPlus, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type Poll, type Vote } from '../lib/supabase'
 import { OfflineLocked } from '../components/OfflineLocked'
-import { isShared } from '../lib/tools'
+import { forgetTool, isShared } from '../lib/tools'
 import { readCache, useOnline } from '../lib/network'
 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -86,6 +86,7 @@ export default function PollPage() {
     if (!(await ask('Supprimer ce sondage et tous ses votes ?'))) return
     const { error } = await supabase.from('polls').delete().eq('id', id)
     if (error) return notify(errMsg(error))
+    forgetTool('polls', id)
     nav(backTo, { replace: true })
   }
   // créer l'événement : la date choisie, liée à la conv du sondage

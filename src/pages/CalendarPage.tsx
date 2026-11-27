@@ -43,7 +43,7 @@ export default function CalendarPage() {
     setForm({ title: q, day: day ? new Date(`${day}T00:00:00`) : null, time: '', place: '', repeat: null, until: null })
     setShare({ mode: conv ? 'conv' : 'me', conv, ids: [] })
   }
-  useEffect(() => { if (isNew) startNew(params.get('day'), params.get('q') ?? '', params.get('conv')) }, [isNew]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isNew) startNew(params.get('day') ?? today, params.get('q') ?? '', params.get('conv')) }, [isNew]) // eslint-disable-line react-hooks/exhaustive-deps
   const closeNew = () => { setForm(null); if (isNew) nav('/calendar', { replace: true, state: st }) }
   const create = async () => {
     if (!form?.day) return
