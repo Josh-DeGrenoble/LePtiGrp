@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth, signOut } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShield, IconCrown } from '../components/Icons'
+import { IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShield, IconCrown, IconCheck } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { DevSection } from '../components/Feedback'
@@ -20,6 +20,7 @@ import { errMsg } from '../lib/supabase'
 import { identity } from '../lib/e2ee'
 import { useIsAdmin } from '../lib/admin'
 import { TEXT_SCALES, getTextScale, setTextScale } from '../lib/textScale'
+import { ACCENTS, getAccent, setAccent } from '../lib/accent'
 import { Link } from 'react-router-dom'
 
 /** Réglages par défaut de l'activité des outils (enregistrés sur le profil) */
@@ -97,6 +98,8 @@ export default function Settings() {
 
         {profile && <ActivityDefaults />}
 
+        <AccentColor />
+
         <TextSize />
 
         <SGroup title="Compte">
@@ -126,6 +129,19 @@ export default function Settings() {
       <ProfileEditor open={editProfile} onClose={() => setEditProfile(false)} />
     </Screen>
   )
+}
+
+/** Couleur principale de l'appli (sur cet appareil), parmi celles des tags */
+function AccentColor() {
+  const [v, setV] = useState(getAccent)
+  return <SGroup title="Couleur de l'appli" note="Boutons, bulles de tes messages, liens… Sur cet appareil.">
+    <div className="accent-chips">
+      {ACCENTS.map((c) => (
+        <button key={c} className={`accent-dot${v === c ? ' on' : ''}`} style={{ background: c }} aria-label={`Couleur ${c}`} aria-pressed={v === c}
+          onClick={() => { setV(c); setAccent(c) }}>{v === c && <IconCheck size={18} />}</button>
+      ))}
+    </div>
+  </SGroup>
 }
 
 /** Taille du texte des conversations (sur cet appareil) */
