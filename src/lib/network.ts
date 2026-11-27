@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { supabase, type Message } from './supabase'
 import { encryptMessage, forgetDevice } from './e2ee'
-import type { PhotoRef } from './crypto/core'
+import type { PhotoRef, ReplyRef } from './crypto/core'
 
 // ---------- État de la connexion ----------
 
@@ -33,7 +33,7 @@ export function writeCache(key: string, value: unknown) {
 // ---------- File d'attente des messages (envoi hors-ligne) ----------
 
 export type Pending = Pick<Message, 'conversation_id' | 'author_id' | 'mentions' | 'mention_all' | 'created_at'>
-  & { content: string; client_id: string; failed?: string; photo?: PhotoRef }
+  & { content: string; client_id: string; failed?: string; photo?: PhotoRef; reply?: ReplyRef }
 
 const KEY = 'outbox'
 const listeners = new Set<() => void>()
@@ -69,7 +69,7 @@ export async function flushOutbox() {
   flushing = true
   try {
     for (const p of outbox.filter((x) => !x.failed)) {
-      const { failed: _f, created_at: _c, photo, ...row } = p
+      const { failed: _f, created_at: _c, photo, reply: _r, ...row } = p
       // Chiffré juste avant l'envoi, avec la clé à jour de la conversation
       let error: { message: string } | null
       try {

@@ -7,6 +7,8 @@ import { Screen } from '../components/Layout'
 import { BackButton } from '../components/BackButton'
 import { Photo, Lightbox } from '../components/Photo'
 import type { PhotoRef } from '../lib/media'
+import { EmptyState } from '../components/EmptyState'
+import { IconImage } from '../components/Icons'
 
 /** Toutes les photos d'une conversation (déchiffrées sur le téléphone) */
 export default function MediaGallery() {
@@ -24,7 +26,7 @@ export default function MediaGallery() {
 
   return (
     <Screen header={<><BackButton to={`/c/${id}/settings`} /><h1>Médias</h1><span className="icon-btn" /></>}>
-      {loaded && !photos.length && <p className="empty">Aucune photo dans cette conversation pour l'instant.</p>}
+      {loaded && !photos.length && <EmptyState icon={<IconImage size={34} />} title="Aucune photo" text="Les photos envoyées dans cette conversation apparaîtront ici." />}
       <div className="media-grid">
         {photos.map((p) => <Photo key={p.path} photo={p} square onOpen={() => setView(p)} />)}
       </div>

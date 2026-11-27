@@ -2,7 +2,7 @@ import { HeaderMenu } from '../components/HeaderMenu'
 import { PollCard } from '../components/PollCard'
 import { BackButton } from '../components/BackButton'
 import { ask, notify } from '../components/Dialog'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase, errMsg, isPinned, type Member, type Message } from '../lib/supabase'
 import { useAuth, useMe } from '../lib/auth'
@@ -11,14 +11,15 @@ import { useConversation } from '../lib/conversation'
 import { eventLabel, hhmm, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar, colorOf } from '../components/Avatar'
-import { IconCheck, IconClose, IconFilter, IconPin, IconPoll, IconBell, IconSend, IconCamera, IconImage, IconCopy, IconTrash, IconMore } from '../components/Icons'
+import { IconCheck, IconClose, IconFilter, IconPin, IconPoll, IconBell, IconSend, IconCamera, IconImage, IconCopy, IconTrash, IconMore, IconReply, IconChat, IconArrowDown } from '../components/Icons'
 import { ToolIcon } from '../components/ToolIcon'
 import { Sheet, SheetButton } from '../components/Sheet'
-import { useLongPress } from '../components/useLongPress'
+import { useLongPress, swallowNextClick } from '../components/useLongPress'
 import { Photo, Lightbox } from '../components/Photo'
 import { PhotoEditor } from '../components/PhotoEditor'
 import { uploadPhoto, type PhotoRef } from '../lib/media'
-import { useDecrypted, type Plain } from '../lib/e2ee'
+import { useDecrypted, type Plain, type ReplyRef } from '../lib/e2ee'
+import { EmptyState } from '../components/EmptyState'
 
 const PIN_DURATIONS: { label: string; ms: number | null }[] = [
   { label: '1 heure', ms: 3600e3 },
@@ -74,6 +75,31 @@ export default function Chat() {
   const [, tick] = useState(0)
   const bottom = useRef<HTMLDivElement>(null)
   const plainOf = useDecrypted(messages)
+  const [loaded, setLoaded] = useState(() => messages.length > 0)
+  // réponse en cours (glisser un message vers la droite)
+  const [reply, setReply] = useState<ReplyRef | null>(null)
+  useEffect(() => setReply(null), [id])
+  // Bas du fil : on suit les nouveaux messages seulement si on y est ; sinon bouton ↓ avec le nombre de nouveaux
+  const [atBottom, setAtBottom] = useState(true)
+  const atBottomRef = useRef(true)
+  const seen = useRef(new Set<number>())
+  const msgsRef = useRef(messages); msgsRef.current = messages
+  const markSeen = () => { seen.current = new Set(msgsRef.current.map((m) => m.id)) }
+  useEffect(() => {
+    const el = bottom.current?.closest('.content') as HTMLElement | null
+    if (!el) return
+    const on = () => {
+      const b = el.scrollHeight - el.scrollTop - el.clientHeight < 150
+      atBottomRef.current = b; setAtBottom(b)
+      if (b) markSeen()
+    }
+    el.addEventListener('scroll', on, { passive: true })
+    // zone qui rétrécit (clavier, citation de réponse) ou contenu qui grandit (photo chargée) : on reste en bas si on y était
+    const ro = new ResizeObserver(() => { if (atBottomRef.current) bottom.current?.scrollIntoView({ block: 'end' }) })
+    ro.observe(el); if (el.firstElementChild) ro.observe(el.firstElementChild)
+    return () => { el.removeEventListener('scroll', on); ro.disconnect() }
+  }, [])
+  const toBottom = () => bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
 
   const markRead = useCallback(() => {
     supabase.from('members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', id).eq('user_id', me).then()
@@ -85,7 +111,7 @@ export default function Chat() {
       .order('created_at', { ascending: false }).limit(300)
     if (error) return
     const ms = (data as Message[]).reverse()
-    setMessages(ms); writeCache(`msgs:${id}`, ms.slice(-100))
+    setMessages(ms); writeCache(`msgs:${id}`, ms.slice(-100)); setLoaded(true)
     markRead()
   }, [id, markRead])
   useOnResume(load)
@@ -138,10 +164,17 @@ export default function Chat() {
   const waiting = pending.filter((p) => !sentIds.has(p.client_id))
   // Bas de la conversation : d'un coup à l'ouverture, en douceur quand un message arrive
   const opened = useRef(false)
+  const openedAt = useRef(Date.now())
+  const lastWaiting = useRef(waiting.length)
   useLayoutEffect(() => {
-    bottom.current?.scrollIntoView(opened.current ? { behavior: 'smooth', block: 'end' } : undefined)
-    opened.current = true
-  }, [messages.length, waiting.length])
+    const sending = waiting.length > lastWaiting.current
+    lastWaiting.current = waiting.length
+    if (!opened.current || !messages.length) bottom.current?.scrollIntoView()
+    else if (atBottomRef.current || sending) bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    else return
+    opened.current = messages.length > 0
+    markSeen()
+  }, [messages.length, waiting.length]) // eslint-disable-line react-hooks/exhaustive-deps
   // Filtre épinglés : les autres messages se replient (CSS) ; on suit le bas pendant l'animation
   useEffect(() => {
     const end = Date.now() + 400
@@ -152,7 +185,7 @@ export default function Chat() {
   }, [filter.kinds.join(), filter.authors.join()]) // eslint-disable-line react-hooks/exhaustive-deps
   // Clavier ouvert / fermé : on garde les derniers messages visibles, comme WhatsApp
   useEffect(() => {
-    const keep = () => bottom.current?.scrollIntoView({ block: 'end' })
+    const keep = () => { if (atBottomRef.current) bottom.current?.scrollIntoView({ block: 'end' }) }
     window.addEventListener('app-resize', keep)
     return () => window.removeEventListener('app-resize', keep)
   }, [])
@@ -183,6 +216,25 @@ export default function Chat() {
   const selPlain = selected && plainOf(selected)
   // nouveaux messages des autres arrivés depuis l'activation du filtre et masqués par lui
   const hiddenNew = active ? shown.filter((m) => m.author_id !== me && Date.parse(m.created_at) > since && !keepMsg(m)).length : 0
+  const unseen = atBottom ? 0 : shown.filter((m) => m.author_id !== me && m.kind !== 'activity' && !seen.current.has(m.id)).length
+  const recent = (iso: string) => Date.parse(iso) > openedAt.current
+  // Glisser vers la droite : on répond au message touché (ou au dernier de la bulle)
+  const startReply = (g: Item[], target: HTMLElement) => {
+    const mid = Number(target.closest<HTMLElement>('[data-mid]')?.dataset.mid)
+    const m = g.find((it) => it.m?.id === mid)?.m ?? [...g].reverse().find((it) => it.m && keep(it))?.m
+    if (!m) return
+    const pl = plainOf(m)
+    const x = pl?.text ? pl.text.slice(0, 140) : pl?.photo ? '📷 Photo' : m.poll_id ? '📊 Sondage' : '…'
+    setReply({ c: m.client_id ?? `m${m.id}`, a: m.author_id, x })
+  }
+  // toucher la citation : on remonte au message d'origine (s'il est chargé)
+  const jump = (key: string) => {
+    const el = document.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)
+    if (!el) return notify('Message trop ancien : il n\'est plus affiché.')
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash')
+  }
+  const whoName = (uid: string | null) => uid === me ? 'Toi' : names.get(uid ?? '') ?? 'Ancien membre'
   const kindLabel = { pinned: <><IconPin size={14} filled /> Épinglés</>, polls: <><IconPoll size={14} /> Sondages</>, activity: <><IconBell size={14} /> Activité</> }
 
   const act = async (fn: () => PromiseLike<{ error: unknown }>) => {
@@ -210,9 +262,14 @@ export default function Chat() {
       <button className={`icon-btn chat-filter${active ? ' on' : ''}`} onClick={() => setFilterOpen(true)}
         aria-label={hiddenNew ? `Filtrer les messages (${hiddenNew} nouveaux masqués)` : 'Filtrer les messages'}><IconFilter filled={active} />
         {hiddenNew > 0 && <span className="filter-dot fade-in">{hiddenNew > 3 ? '+' : hiddenNew}</span>}</button>
-    </>} footer={!active && c.mine && (c.can('write')
-      ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
-      : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
+    </>} footer={!active && c.mine && <div className="chat-foot">
+      {!atBottom && <button className="scroll-down pop-in" onClick={toBottom} aria-label={unseen ? `${unseen} nouveaux messages` : 'Aller en bas'}>
+        <IconArrowDown />{unseen > 0 && <span className="scroll-badge">{unseen > 99 ? '99+' : unseen}</span>}</button>}
+      {c.can('write')
+        ? <Composer key={id} convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')}
+            reply={reply} replyName={reply ? whoName(reply.a) : ''} onCancelReply={() => setReply(null)} />
+        : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>}
+    </div>}>
       <div className="messages">
         {active && <div className="filter-chips-bar fade-in">
           {filter.kinds.map((k) => <span key={k} className="filter-chip">{kindLabel[k]}
@@ -223,6 +280,10 @@ export default function Chat() {
           {filter.kinds.length + filter.authors.length > 1 && <button className="filter-clear" onClick={() => setFilter(NO_FILTER)}>Tout effacer</button>}
         </div>}
         {active && !items.some(keep) && <p className="empty fade-in">Aucun message.</p>}
+        {!loaded && !items.length && <ChatSkeleton />}
+        {loaded && !active && !items.length && <EmptyState icon={<IconChat size={34} />} title="Aucun message pour l'instant"
+          text={c.conv?.is_group ? 'Lance la discussion avec le groupe.' : 'Lance la discussion !'}
+          action={c.mine && c.can('write') ? <button className="btn primary" onClick={() => queueMessage({ conversation_id: id, author_id: me, content: 'Salut ! 👋', mentions: [], mention_all: false })}>Dire bonjour 👋</button> : undefined} />}
         {groups.map((g, gi) => {
           const first = g[0]
           const mine = first.author === me
@@ -231,16 +292,18 @@ export default function Chat() {
           const showWho = !mine && !!c.conv?.is_group
           const day = dayLabel(first.created_at)
           const newDay = !active && (gi === 0 || dayLabel(groups[gi - 1][0].created_at) !== day)
-          if (first.m?.kind === 'activity') return <div key={first.key} className="msg-block">
+          const arrive = !mine && recent(first.created_at) ? ' arrive' : ''
+          if (first.m?.kind === 'activity') return <div key={first.key} className={`msg-block${arrive}`}>
             {newDay && <div className="day-sep"><span>{day}</span></div>}
             <Fold hidden={!keep(first)}>
               <Activity m={first.m} who={first.author === me ? 'Toi' : name}
                 onOpen={() => first.m!.tool && first.m!.tool_id && nav(`/${TOOL_PATH[first.m!.tool]}/${first.m!.tool_id}`, { state: { from: `/c/${id}` } })} />
             </Fold>
           </div>
-          return <div key={first.key} className="msg-block">
+          return <div key={first.key} className={`msg-block${arrive}`}>
             {newDay && <div className="day-sep"><span>{day}</span></div>}
             <Fold hidden={!g.some(keep)}>
+              <SwipeRow disabled={!c.mine || !c.can('write') || active || g.every((it) => !it.m)} onSwipe={(t) => startReply(g, t)}>
               <div className={`msg-row${mine ? ' mine' : ''}`}>
                 {showWho && <span className="msg-avatar"><Avatar name={name} url={c.members.find((m) => m.user_id === first.author)?.profiles?.avatar_url} size={30} /></span>}
                 <div onPointerDown={(e) => { bubbleTap.current = (e.target as HTMLElement).closest('.fold.line, button, a') ? null : { x: e.clientX, y: e.clientY, t: Date.now() } }}
@@ -252,14 +315,16 @@ export default function Chat() {
                   }}
                   className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}${g.every(pinnedLine) ? ' pinned' : ''}${!mine && g.some((it) => { const pl = it.m && plainOf(it.m); return !!pl && (pl.mention_all || pl.mentions.includes(me)) }) ? ' mentioned' : ''}`}>
                   {showWho && <div className="bubble-name" style={{ color: colorOf(name) }}>{name}</div>}
-                  {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)}>
+                  {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)} dataKey={it.key} mid={it.m?.id} arrive={j > 0 && !mine && recent(it.created_at)}>
                     {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} last={j === g.length - 1} onPhoto={setViewPhoto}
+                        replyName={whoName} onJump={jump}
                         onMenu={() => setSelected(it.m!)} onTap={() => setQuick((q) => q?.id === it.m!.id ? null : it.m!)}
                         reactions={reactsOf(it.m.id)} me={me} onReact={(e) => react(it.m!, e)} />
-                      : <PendingLine p={it.p!} />}
+                      : <PendingLine p={it.p!} replyName={whoName} />}
                   </Fold>)}
                 </div>
               </div>
+              </SwipeRow>
               {quick && g.some((it) => it.m?.id === quick.id) && <QuickBar mine={mine} indent={showWho}
                 picked={reactions.find((r) => r.message_id === quick.id && r.user_id === me)?.emoji}
                 pinned={isPinned(quick)} canPin={c.can('pin')}
@@ -342,8 +407,62 @@ function keepBig(old: Message, upd: Message): Message {
 }
 
 /** Enveloppe qui replie / déplie son contenu en fondu (filtre des messages épinglés) ; `line` : une ligne dans une bulle */
-function Fold({ hidden, line, children }: { hidden: boolean; line?: boolean; children: React.ReactNode }) {
-  return <div className={`fold${hidden ? ' out' : ''}${line ? ' line' : ''}`} aria-hidden={hidden}><div className="fold-in">{children}</div></div>
+function Fold({ hidden, line, children, dataKey, mid, arrive }: { hidden: boolean; line?: boolean; children: React.ReactNode; dataKey?: string; mid?: number; arrive?: boolean }) {
+  return <div className={`fold${hidden ? ' out' : ''}${line ? ' line' : ''}${arrive ? ' arrive' : ''}`} aria-hidden={hidden} data-key={dataKey} data-mid={mid}><div className="fold-in">{children}</div></div>
+}
+
+/** Glisser une bulle vers la droite pour y répondre. Le défilement vertical, le toucher (smileys) et l'appui long (menu)
+ *  restent gérés ailleurs : le glisser ne démarre qu'après 12 px nettement horizontaux. */
+function SwipeRow({ onSwipe, disabled, children }: { onSwipe: (target: HTMLElement) => void; disabled?: boolean; children: ReactNode }) {
+  const [dx, setDx] = useState(0)
+  const st = useRef<{ x: number; y: number; on: boolean; t: HTMLElement; dx: number; id: number } | null>(null)
+  const TRIGGER = 56
+  const end = (ok: boolean) => {
+    const s = st.current; st.current = null
+    if (!s?.on) return
+    swallowNextClick()  // pas de clic (photo, lien) au relâchement
+    if (ok && s.dx >= TRIGGER) onSwipe(s.t)
+    setDx(0)
+  }
+  const p = Math.min(1, dx / TRIGGER)
+  return (
+    <div className={`swipe-row${dx ? ' dragging' : ''}`}
+      onPointerDown={(e) => {
+        if (disabled || e.button > 0 || (e.target as HTMLElement).closest('input, .poll, .react-chips, .quick-bar')) return
+        st.current = { x: e.clientX, y: e.clientY, on: false, t: e.target as HTMLElement, dx: 0, id: e.pointerId }
+      }}
+      onPointerMove={(e) => {
+        const s = st.current
+        if (!s || e.pointerId !== s.id) return
+        const ddx = e.clientX - s.x, ddy = e.clientY - s.y
+        if (!s.on) {
+          if (ddx > 12 && ddx > Math.abs(ddy) * 2) { s.on = true; try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* rien */ } }
+          else if (Math.abs(ddy) > 10 || ddx < -10) { st.current = null; return }
+          else return
+        }
+        // au-delà du seuil, la bulle résiste (comme un élastique)
+        s.dx = Math.max(0, ddx < TRIGGER ? ddx : TRIGGER + (ddx - TRIGGER) * 0.25)
+        setDx(Math.min(s.dx, TRIGGER + 30))
+      }}
+      onPointerUp={() => end(true)} onPointerCancel={() => end(false)}>
+      <span className={`swipe-icon${p >= 1 ? ' ready' : ''}`} style={{ opacity: p, transform: `translateY(-50%) scale(${0.5 + 0.5 * p})` }} aria-hidden><IconReply /></span>
+      <div className="swipe-body" style={dx ? { transform: `translateX(${dx}px)` } : undefined}>{children}</div>
+    </div>
+  )
+}
+
+/** Citation du message auquel on répond (dans la bulle, ou au-dessus de la zone de saisie) */
+function Quote({ r, name, onClick }: { r: ReplyRef; name: string; onClick?: () => void }) {
+  return <button type="button" className="reply-quote" onClick={onClick} style={{ ['--q' as string]: name === 'Toi' ? 'var(--primary)' : colorOf(name) }}>
+    <b>{name}</b><span>{r.x}</span>
+  </button>
+}
+
+/** Chargement : quelques bulles grises qui pulsent */
+function ChatSkeleton() {
+  return <div className="skeleton-chat" aria-label="Chargement…">
+    {[62, 40, 75, 34, 55, 48].map((w, i) => <div key={i} className={`sk-bubble${i % 3 === 1 ? ' mine' : ''}`} style={{ width: `${w}%`, animationDelay: `${i * 80}ms` }} />)}
+  </div>
 }
 
 /** Séparateur de jour : « Aujourd'hui », « Hier », « lundi 24 novembre » */
@@ -384,9 +503,10 @@ function QuickBar({ mine, indent, picked, pinned, canPin, onReact, onPin, onMore
 }
 
 /** Une ligne d'une bulle = un message (appui long : épingler, supprimer…) ; petite coche quand il est arrivé */
-function Line({ m, plain, mine, names, onMenu, onPhoto, last, onTap, reactions, me, onReact }: {
+function Line({ m, plain, mine, names, onMenu, onPhoto, last, onTap, reactions, me, onReact, replyName, onJump }: {
   m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; onPhoto: (p: PhotoRef) => void; last: boolean
   onTap: () => void; reactions: Reaction[]; me: string; onReact: (emoji: string) => void
+  replyName: (uid: string | null) => string; onJump: (key: string) => void
 }) {
   // appui court = réagir / épingler (sauf sur une photo, un sondage, un lien ou un bouton) ; appui long = toutes les options
   const press = useLongPress(onMenu, (e) => { if (!(e.target as HTMLElement).closest('button, a, input, .poll, .photo, .react-chips')) onTap() })
@@ -396,6 +516,7 @@ function Line({ m, plain, mine, names, onMenu, onPhoto, last, onTap, reactions, 
   const photo = plain?.photo
   return (
     <div className={`line${pinned ? ' pinned' : ''}${photo ? ' has-photo' : ''}`} {...press}>
+      {plain?.reply && <Quote r={plain.reply} name={replyName(plain.reply.a)} onClick={() => onJump(plain.reply!.c)} />}
       {photo && <Photo photo={photo} onOpen={() => onPhoto(photo)} />}
       {!(photo && !plain.text) && <div className="bubble-text">{!plain ? <i className="muted">🔒 Déchiffrement…</i>
         : plain.status === 'locked' ? <i className="muted">🔒 Message illisible : envoyé avant ton arrivée ou avec une ancienne phrase</i>
@@ -447,9 +568,18 @@ function renderMentions(text: string, names: Map<string, string>) {
 }
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-function Composer({ convId, members, me, canMentionAll }: { convId: string; members: Member[]; me: string; canMentionAll: boolean }) {
-  const [text, setText] = useState('')
+function Composer({ convId, members, me, canMentionAll, reply, replyName, onCancelReply }: {
+  convId: string; members: Member[]; me: string; canMentionAll: boolean
+  reply: ReplyRef | null; replyName: string; onCancelReply: () => void
+}) {
+  // Brouillon gardé par conversation (survit à une mise à jour de l'appli ou à un changement de page)
+  const [text, setText] = useState(() => readCache<string>(`draft:${convId}`, ''))
+  useEffect(() => {
+    const t = setTimeout(() => { try { if (text) writeCache(`draft:${convId}`, text); else localStorage.removeItem(`cache:draft:${convId}`) } catch { /* rien */ } }, 300)
+    return () => clearTimeout(t)
+  }, [text, convId])
   const input = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => { if (reply) input.current?.focus() }, [reply])
   const others = useMemo(() => members.filter((m) => m.user_id !== me && m.profiles), [members, me])
 
   // Suggestions quand le mot en cours commence par @
@@ -472,8 +602,8 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
     const client_id = crypto.randomUUID()
     const photo = await uploadPhoto(convId, client_id, canvas)
     const mentions = others.filter((m) => caption.includes(`@${m.profiles!.display_name}`)).map((m) => m.user_id)
-    queueMessage({ conversation_id: convId, author_id: me, content: caption, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(caption), photo, client_id })
-    setFile(null)
+    queueMessage({ conversation_id: convId, author_id: me, content: caption, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(caption), photo, client_id, ...(reply ? { reply } : {}) })
+    setFile(null); onCancelReply()
   }
 
   const send = async () => {
@@ -481,8 +611,9 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
     if (!content) return
     const mentions = others.filter((m) => content.includes(`@${m.profiles!.display_name}`)).map((m) => m.user_id)
     // Le message part dans la file d'attente : envoyé tout de suite, ou au retour du réseau
-    queueMessage({ conversation_id: convId, author_id: me, content, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(content) })
-    setText('')
+    queueMessage({ conversation_id: convId, author_id: me, content, mentions, mention_all: canMentionAll && /(^|\s)@tous\b/.test(content), ...(reply ? { reply } : {}) })
+    setText(''); onCancelReply()
+    try { localStorage.removeItem(`cache:draft:${convId}`) } catch { /* rien */ }
     input.current?.focus()
   }
 
@@ -497,6 +628,10 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
           ))}
         </div>
       )}
+      {reply && <div className="reply-bar pop-in">
+        <IconReply size={18} /><Quote r={reply} name={replyName} />
+        <button className="icon-btn" onClick={onCancelReply} aria-label="Annuler la réponse"><IconClose size={18} /></button>
+      </div>}
       {file && <PhotoEditor file={file} onCancel={() => setFile(null)} onSend={sendPhoto} />}
       <div className="composer">
         {!text && <>
@@ -516,7 +651,7 @@ function Composer({ convId, members, me, canMentionAll }: { convId: string; memb
 
 /** Message en cours d'envoi : affiché tout de suite comme les autres (fondu doux). L'état « en attente de réseau »
  *  n'apparaît que hors ligne ou si l'envoi traîne plus de 2 secondes ; en cas d'échec, Réessayer / Supprimer. */
-function PendingLine({ p }: { p: Pending }) {
+function PendingLine({ p, replyName }: { p: Pending; replyName: (uid: string | null) => string }) {
   const [slow, setSlow] = useState(() => !navigator.onLine || Date.now() - Date.parse(p.created_at) > 2000)
   useEffect(() => {
     if (slow) return
@@ -525,6 +660,7 @@ function PendingLine({ p }: { p: Pending }) {
   }, [slow, p.created_at])
   return (
     <div className={`line new${p.failed ? ' failed' : slow ? ' slow' : ''}`}>
+      {p.reply && <Quote r={p.reply} name={replyName(p.reply.a)} />}
       {p.photo && <Photo photo={p.photo} />}
       {/* même mise en page que le message envoyé (heure + coche grisée) : rien ne bouge quand il arrive */}
       {p.content && <div className="bubble-text">{p.content}<span className="msg-meta">{hhmm(new Date(p.created_at))}<span className="tick wait" aria-label="Envoi…">✓</span></span></div>}

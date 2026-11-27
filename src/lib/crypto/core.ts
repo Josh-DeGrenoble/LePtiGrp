@@ -125,7 +125,9 @@ export function openEpoch(me: Identity, r: EpochRow): Uint8Array | null {
 
 /** Photo jointe : chemin du fichier chiffré dans Storage, sa clé (32 octets, base64), taille, miniature floue */
 export type PhotoRef = { path: string; k: string; w: number; h: number; th: string }
-export type Body = { u: string; t: string; m: string[]; a: boolean; p?: PhotoRef }
+/** r : réponse à un message (client_id, auteur, extrait) */
+export type ReplyRef = { c: string; a: string | null; x: string }
+export type Body = { u: string; t: string; m: string[]; a: boolean; p?: PhotoRef; r?: ReplyRef }
 
 // ---------- Fichiers (photos) ----------
 
@@ -167,7 +169,8 @@ export function openMessage(key: Uint8Array, conv: string, epoch: number, client
     const body = JSON.parse(b) as Body
     if (typeof body.t !== 'string' || typeof body.u !== 'string') return null
     const p = body.p && typeof body.p.path === 'string' && typeof body.p.k === 'string' ? body.p : undefined
-    return { body: { ...body, m: Array.isArray(body.m) ? body.m : [], a: !!body.a, p }, sig: s, signed: `${ad}|${b}` }
+    const r = body.r && typeof body.r.c === 'string' && typeof body.r.x === 'string' ? { c: body.r.c, a: typeof body.r.a === 'string' ? body.r.a : null, x: body.r.x.slice(0, 200) } : undefined
+    return { body: { ...body, m: Array.isArray(body.m) ? body.m : [], a: !!body.a, p, r }, sig: s, signed: `${ad}|${b}` }
   } catch { return null }
 }
 
