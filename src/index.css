@@ -422,6 +422,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .drag-handle { width: 30px; height: 40px; display: grid; place-items: center; font-size: 20px; color: var(--muted); cursor: grab; touch-action: none; user-select: none; flex: none; }
 .qty-pill { font-size: 13px; font-weight: 700; padding: 6px 10px; border-radius: 99px; background: var(--surface); color: var(--muted); flex: none; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .qty-pill.set { background: var(--mention); color: var(--primary); }
+.edit-item > input.qty-input, .edit-add input.qty-input { flex: none; width: 92px; padding: 8px 6px; text-align: center; }
 .edit-add { display: flex; align-items: center; gap: 8px; padding: 4px 0 4px 8px; color: var(--muted); }
 .edit-add input { background: transparent; border-style: dashed; padding: 8px 10px; }
 .edit-newcat { display: flex; gap: 8px; margin-top: 20px; }

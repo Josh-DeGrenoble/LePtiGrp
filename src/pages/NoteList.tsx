@@ -5,7 +5,6 @@ import { BackButton } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { LimitedInput } from '../components/LimitedInput'
 import { NoteEditor, type EditorActions } from '../components/NoteEditor'
-import { QtySheet } from '../components/QtySheet'
 import { ask, notify } from '../components/Dialog'
 import { IconBack, IconMoney, IconNext, IconPencil, IconTrash, IconCheck } from '../components/Icons'
 import { Sheet, SheetButton } from '../components/Sheet'
@@ -38,7 +37,6 @@ export default function NoteList() {
   const [items, setItems] = useState<ListItem[]>(() => normalize(readCache<ListItem[]>(`items:${id}`, [])))
   const [missing, setMissing] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [qtyFor, setQtyFor] = useState<ListItem | null>(null)
   const [collapsed, setCollapsed] = useState<string[]>(() => readCache<string[]>(`collapsed:${id}`, []))
   const [ledger, setLedger] = useState<Ledger | null>(null)
   const claimQueue = useRef(new Map<number, Promise<void>>())
@@ -85,9 +83,9 @@ export default function NoteList() {
 
   const act: EditorActions = {
     update: updateItem,
-    add: async (content, cat) => {
+    add: async (content, cat, quantity) => {
       const last = sections(list, items).find((s) => s.cat === cat)?.items.at(-1)
-      const { data, error } = await supabase.from('list_items').insert({ list_id: id, content, category: cat, position: between(last) }).select('*, list_claims(*)').single()
+      const { data, error } = await supabase.from('list_items').insert({ list_id: id, content, quantity, category: cat, position: between(last) }).select('*, list_claims(*)').single()
       if (error) return notify(errMsg(error))
       setItems((its) => (its.some((i) => i.id === data.id) ? its : [...its, ...normalize([data])]))
     },
@@ -95,7 +93,6 @@ export default function NoteList() {
       setItems((its) => its.filter((i) => i.id !== item.id))
       run(supabase.from('list_items').delete().eq('id', item.id))
     },
-    qty: setQtyFor,
     addCategory: (name) => { if (!cats().includes(name)) setCategories([...cats(), name]) },
     renameCategory: async (from, to) => {
       if (cats().includes(to)) return notify('Cette catégorie existe déjà.')
@@ -185,11 +182,16 @@ export default function NoteList() {
           {!take && i.level !== null && <span className="level-tag" title="Restant"><span style={{ width: `${i.level}%` }} />{i.level} %</span>}
         </label>
         {i.list_claims.length > 0 && <div className="claims">
-          {i.list_claims.map((c) => c.user_id === me && take
-            ? <label key={c.user_id} className="claim mine">Moi ×
-                <input inputMode="decimal" placeholder="?" defaultValue={c.qty ?? ''} key={c.qty ?? ''} aria-label="Combien j'en prends"
-                  onBlur={(e) => setMyQty(i, e.target.value)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} /></label>
-            : <span key={c.user_id} className={`claim${c.user_id === me ? ' mine' : ''}`}>{nameOf.get(c.user_id) ?? '?'}{c.qty !== null && take && ` × ${fmt(Number(c.qty))}`}</span>)}
+          {i.list_claims.map((c) => {
+            // quantité chiffrée (« 4 kg ») : chacun dit combien il prend, par défaut ce qui restait ;
+            // sinon (« beaucoup », rien) : juste le nom, d'autres peuvent cocher aussi
+            const shown = c.qty ?? (st.want !== null ? Math.max(0, st.want - i.list_claims.filter((o) => o.user_id !== c.user_id).reduce((n, o) => n + Number(o.qty ?? 0), 0)) : null)
+            return c.user_id === me && take && st.want !== null
+              ? <label key={c.user_id} className="claim mine">Moi ×
+                  <input inputMode="decimal" placeholder="?" defaultValue={shown ?? ''} key={shown ?? ''} aria-label="Combien j'en prends"
+                    onBlur={(e) => setMyQty(i, e.target.value)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} /></label>
+              : <span key={c.user_id} className={`claim${c.user_id === me ? ' mine' : ''}`}>{nameOf.get(c.user_id) ?? '?'}{shown !== null && take && st.want !== null && ` × ${fmt(Number(shown))}`}</span>
+          })}
           {st.want !== null && <span className={`claim-status${st.done ? ' ok' : ''}`}>
             {st.done ? `${fmt(st.got || st.want)}/${fmt(st.want)} ✓` : `reste ${fmt(st.left!)}`}
           </span>}
@@ -223,7 +225,7 @@ export default function NoteList() {
               ? <button className="btn small" onClick={() => setLinking(true)}>Changer</button>
               : <button className="btn primary small" disabled={!ledgerPeople.length} onClick={() => setPaying(true)}>J'ai payé</button>}
           </div>
-        : (editing || items.length > 0) && <button className="ledger-link add" onClick={() => setLinking(true)}>
+        : editing && <button className="ledger-link add" onClick={() => setLinking(true)}>
             <IconMoney size={18} /> Lier à un compte <small>pour noter ce que tu as payé</small>
           </button>)}
       {linking && <LedgerPicker current={ledgerId} conv={list?.conversation_id ?? null} onPick={linkLedger} onClose={() => setLinking(false)} />}
@@ -249,7 +251,6 @@ export default function NoteList() {
           </div>
         })}
       </>}
-      {qtyFor && <QtySheet item={qtyFor} onClose={() => setQtyFor(null)} onSave={(q) => { updateItem(qtyFor, q); setQtyFor(null) }} />}
     </Screen>
   )
 }

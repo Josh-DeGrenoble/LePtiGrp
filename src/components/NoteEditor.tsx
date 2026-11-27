@@ -1,16 +1,15 @@
 import { useRef, useState } from 'react'
 import { LimitedInput } from './LimitedInput'
 import { IconClose, IconPlus, IconTrash } from './Icons'
-import { between, qtyLabel, sections } from '../lib/notes'
+import { between, sections } from '../lib/notes'
 import type { List, ListItem } from '../lib/supabase'
 
 type Row = { key: string; cat: string | null; item?: ListItem }
 
 export type EditorActions = {
   update: (item: ListItem, changes: Partial<ListItem>) => void
-  add: (content: string, cat: string | null) => void
+  add: (content: string, cat: string | null, quantity: string | null) => void
   remove: (item: ListItem) => void
-  qty: (item: ListItem) => void
   addCategory: (name: string) => void
   renameCategory: (from: string, to: string) => void
   removeCategory: (cat: string) => void
@@ -86,10 +85,12 @@ export function NoteEditor({ list, items, act }: { list: List | null; items: Lis
         return <div key={r.key}>
           <div ref={ref} className={`edit-item${drag?.id === i.id ? ' dragging' : ''}`}>
             <span className="drag-handle" onPointerDown={(e) => start(e, i)} aria-label="Déplacer">⠿</span>
-            <LimitedInput max={100} defaultValue={i.content} key={i.content} aria-label="Élément"
+            <LimitedInput max={30} defaultValue={i.content} key={i.content} aria-label="Élément"
               onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== i.content) act.update(i, { content: v }) }}
               onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
-            <button className={`qty-pill${qtyLabel(i) ? ' set' : ''}`} onClick={() => act.qty(i)}>{qtyLabel(i) ?? 'Qté'}</button>
+            <input className="qty-input" maxLength={8} placeholder="Qté" defaultValue={i.qty_kind === 'left' ? '' : i.quantity ?? ''} key={`q${i.quantity}`} aria-label="Quantité"
+              onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== i.quantity || i.qty_kind === 'left') act.update(i, { quantity: v, qty_kind: 'take', level: null }) }}
+              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
             <button className="icon-btn" onClick={() => act.remove(i)} aria-label="Supprimer"><IconClose /></button>
           </div>
           {isLast && <AddItem cat={r.cat} onAdd={act.add} />}
@@ -100,13 +101,27 @@ export function NoteEditor({ list, items, act }: { list: List | null; items: Lis
   )
 }
 
-function AddItem({ cat, onAdd }: { cat: string | null; onAdd: (c: string, cat: string | null) => void }) {
+/**
+ * Ajout d'un élément, avec sa quantité déjà là : on tape le nom, on touche « Qté » (le clavier reste ouvert),
+ * Entrée ajoute et ramène sur le nom pour le suivant.
+ */
+function AddItem({ cat, onAdd }: { cat: string | null; onAdd: (c: string, cat: string | null, q: string | null) => void }) {
   const [v, setV] = useState('')
+  const [q, setQ] = useState('')
   const input = useRef<HTMLInputElement>(null)
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!v.trim()) return input.current?.focus()
+    onAdd(v.trim(), cat, q.trim() || null); setV(''); setQ('')
+    input.current?.focus()
+  }
   return (
-    <form className="edit-add" onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAdd(v.trim(), cat); setV(''); input.current?.focus() } }}>
+    <form className="edit-add" onSubmit={submit}>
       <IconPlus size={18} />
-      <LimitedInput ref={input} max={100} placeholder={cat ? `Ajouter dans ${cat}…` : 'Ajouter un élément…'} value={v} onChange={(e) => setV(e.target.value)} />
+      <LimitedInput ref={input} max={30} enterKeyHint="done" placeholder={cat ? `Ajouter dans ${cat}…` : 'Ajouter un élément…'} value={v} onChange={(e) => setV(e.target.value)} />
+      <input className="qty-input" maxLength={8} enterKeyHint="done" placeholder="Qté" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Quantité"
+        onKeyDown={(e) => { if (e.key === 'Enter') submit(e) }} />
+      <button type="submit" hidden />
     </form>
   )
 }
