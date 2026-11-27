@@ -131,7 +131,7 @@ export default function Settings() {
 /** Taille du texte des conversations (sur cet appareil) */
 function TextSize() {
   const [v, setV] = useState(getTextScale)
-  return <SGroup title="Taille du texte" note="Pour les messages et la liste des conversations, sur cet appareil.">
+  return <SGroup title="Mode Lucas" note="Pour les messages et la liste des conversations, sur cet appareil.">
     <div className="ts-chips">
       {TEXT_SCALES.map((x) => (
         <button key={x} className={`pref-chip${v === x ? ' on' : ''}`} onClick={() => { setV(x); setTextScale(x) }}>
