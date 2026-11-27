@@ -429,7 +429,7 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); 
 .level-value { font-size: 32px; font-weight: 800; text-align: center; color: var(--primary); }
 .sheet input[type=range] { width: 100%; accent-color: var(--primary); padding: 0; margin: 8px 0; }
 .inline-form .btn.wide { margin-top: 0; flex: 1; }
-.hmenu-group + .hmenu-item { border-radius: 0 0 10px 10px; }
+.hmenu-group + .hmenu-item { border-radius: 0 0 10px 10px; padding-top: 15px; }
 
 /* ---------- Chiffrement de bout en bout ---------- */
 .login.e2ee { justify-content: flex-start; padding-top: max(24px, env(safe-area-inset-top)); }
@@ -791,3 +791,12 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .conv-date { font-size: calc(12px * var(--ts, 1)); }
 .ts-chips { display: flex; gap: 8px; padding: 12px 14px; }
 .ts-chips .pref-chip { flex: 1; }
+.expenses-head { display: flex; justify-content: space-between; align-items: center; }
+.expenses-head .link-btn.on { background: var(--mention); padding: 2px 10px; border-radius: 99px; }
+.repeat-select { flex: none; width: auto; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; }
+.chip.all { font-weight: 700; }
+.poll-closed { color: var(--danger); }
+.poll-option.closed { cursor: default; }
+.add-option { display: inline-flex; align-items: center; gap: 4px; padding: 6px 0; }
+.sheet .inline-form input[type=datetime-local] { flex: 1; min-width: 0; }
+.repeat-select { max-width: 40%; }

@@ -6,7 +6,7 @@ import { usePeople } from '../lib/tools'
 import { notify } from './Dialog'
 
 /** Sondage votable (page Sondage et message dans le chat), résultats en direct */
-export function PollCard({ pollId, compact }: { pollId: string; compact?: boolean }) {
+export function PollCard({ pollId, compact, version = 0 }: { pollId: string; compact?: boolean; version?: number }) {
   const me = useMe()
   const [poll, setPoll] = useState<Poll | null>(() => readCache<Poll | null>(`poll:${pollId}`, null))
   const [votes, setVotes] = useState<Vote[]>(() => readCache<Vote[]>(`votes:${pollId}`, []))
@@ -25,15 +25,19 @@ export function PollCard({ pollId, compact }: { pollId: string; compact?: boolea
     load()
     const ch = supabase.channel(`poll-${pollId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'poll_votes', filter: `poll_id=eq.${pollId}` }, load)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'polls', filter: `id=eq.${pollId}` }, load)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [pollId])
+  }, [pollId, version])
 
   if (!poll) return <div className="poll muted small">Sondage indisponible</div>
 
+  const closed = !!poll.closes_at && Date.parse(poll.closes_at) <= Date.now()
+  const closesLabel = poll.closes_at && new Date(poll.closes_at).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   const mine = votes.filter((v) => v.user_id === me).map((v) => v.option)
   const voters = new Set(votes.map((v) => v.user_id)).size
   const vote = async (option: number) => {
+    if (closed) return notify('Ce sondage est clôturé.')
     const had = mine.includes(option)
     // choix unique : voter ailleurs remplace mon vote
     const drop = had ? [option] : poll.multiple ? [] : mine
@@ -46,12 +50,13 @@ export function PollCard({ pollId, compact }: { pollId: string; compact?: boolea
   return (
     <div className={`poll${compact ? ' compact' : ''}`} onClick={(e) => e.stopPropagation()}>
       {!compact && <div className="poll-question">{poll.question}</div>}
-      <div className="poll-meta">{poll.multiple ? 'Plusieurs réponses possibles' : 'Une seule réponse'} · {voters} votant{voters > 1 ? 's' : ''}</div>
+      <div className="poll-meta">{poll.multiple ? 'Plusieurs réponses possibles' : 'Une seule réponse'} · {voters} votant{voters > 1 ? 's' : ''}
+        {closed ? <b className="poll-closed"> · 🔒 Clôturé</b> : closesLabel && <span> · clôture {closesLabel}</span>}</div>
       {poll.options.map((o, i) => {
         const who = votes.filter((v) => v.option === i).map((v) => v.user_id)
         const pct = voters ? Math.round((who.length / voters) * 100) : 0
         return (
-          <button key={i} className={`poll-option${mine.includes(i) ? ' on' : ''}`} onClick={() => vote(i)}>
+          <button key={i} className={`poll-option${mine.includes(i) ? ' on' : ''}${closed ? ' closed' : ''}`} onClick={() => vote(i)}>
             <span className="poll-bar" style={{ width: `${pct}%` }} />
             <span className="poll-label"><span className="poll-check" />{o}</span>
             <span className="poll-count">{who.length}</span>

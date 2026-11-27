@@ -13,17 +13,46 @@ import { readCache, writeCache, useOnResume } from '../lib/network'
 import { useMe } from '../lib/auth'
 import { cachedTools, euro, useGhosts, usePeople } from '../lib/tools'
 
-/** Soldes en centimes : ce que chacun a payé moins sa part */
+/** Dates où une dépense a eu lieu jusqu'à maintenant (une seule, ou chaque semaine / mois / an jusqu'à son arrêt) */
+export function occurrences(e: Expense): Date[] {
+  const start = new Date(e.spent_at ?? e.created_at)
+  if (!e.repeat) return [start]
+  const end = Math.min(Date.now(), e.repeat_until ? Date.parse(e.repeat_until) : Infinity)
+  const out: Date[] = []
+  for (let k = 0; k < 600; k++) {
+    const d = new Date(start)
+    if (e.repeat === 'week') d.setDate(d.getDate() + 7 * k)
+    else if (e.repeat === 'month') d.setMonth(d.getMonth() + k)
+    else d.setFullYear(d.getFullYear() + k)
+    if (+d > end) break
+    out.push(d)
+  }
+  return out
+}
+
+/** Soldes en centimes : ce que chacun a payé moins sa part (une dépense récurrente compte autant de fois qu'elle a eu lieu) */
 function balances(expenses: Expense[]) {
   const b = new Map<string, number>()
   const add = (id: string, c: number) => b.set(id, (b.get(id) ?? 0) + c)
   for (const e of expenses) {
+    const times = occurrences(e).length
     const cents = Math.round(Number(e.amount) * 100)
-    add(e.paid_by, cents)
+    add(e.paid_by, cents * times)
     const part = Math.floor(cents / e.split.length)
-    e.split.forEach((id, i) => add(id, -(part + (i < cents % e.split.length ? 1 : 0))))
+    e.split.forEach((id, i) => add(id, -(part + (i < cents % e.split.length ? 1 : 0)) * times))
   }
   return b
+}
+
+const REPEAT_LABEL = { week: 'chaque semaine', month: 'chaque mois', year: 'chaque année' } as const
+type Period = 'all' | 'month' | 'last' | 'year'
+const PERIODS: [Period, string][] = [['all', 'Tout'], ['month', 'Ce mois-ci'], ['last', 'Le mois dernier'], ['year', 'Cette année']]
+function inPeriod(d: Date, p: Period) {
+  const n = new Date()
+  if (p === 'all') return true
+  if (p === 'year') return d.getFullYear() === n.getFullYear()
+  const m = p === 'month' ? n : new Date(n.getFullYear(), n.getMonth() - 1, 1)
+  return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth()
 }
 
 /** Remboursements simplifiés : le plus gros débiteur rembourse le plus gros créancier, et ainsi de suite */
@@ -55,6 +84,8 @@ export default function LedgerPage() {
   const [missing, setMissing] = useState(false)
   // dépense ouverte dans la fenêtre : 'new' pour en ajouter une
   const [editing, setEditing] = useState<Expense | 'new' | null>(null)
+  const [filter, setFilter] = useState<{ period: Period; payer: string | null; concerned: string | null }>({ period: 'all', payer: null, concerned: null })
+  const [filtering, setFiltering] = useState(false)
   const people = usePeople(ledger)
   const ghosts = useGhosts(people, expenses.flatMap((e) => [e.paid_by, ...e.split]))
   const everyone = [...people, ...ghosts]
@@ -96,7 +127,14 @@ export default function LedgerPage() {
 
   const bal = balances(expenses)
   const transfers = settle(bal)
-  const total = expenses.reduce((s, e) => s + Number(e.amount), 0)
+  const total = expenses.reduce((s, e) => s + Number(e.amount) * occurrences(e).length, 0)
+  // filtre de la liste des dépenses (les soldes restent ceux de tout le compte)
+  const filtered = filter.period === 'all' && !filter.payer && !filter.concerned
+  const shown = expenses.map((e) => ({ e, n: occurrences(e).filter((d) => inPeriod(d, filter.period)).length }))
+    .filter(({ e, n }) => n > 0 && (!filter.payer || e.paid_by === filter.payer) && (!filter.concerned || e.split.includes(filter.concerned)))
+  const shownTotal = shown.reduce((s, { e, n }) => s + Number(e.amount) * n, 0)
+  // moi en premier dans les choix du filtre
+  const choices = [...everyone].sort((a, b) => Number(b.id === me) - Number(a.id === me))
 
   return (
     <Screen header={<><BackButton to={backTo} /><h1>{ledger?.name ?? '…'}</h1><HeaderMenu convId={ledger?.conversation_id ?? undefined} /></>}
@@ -124,13 +162,18 @@ export default function LedgerPage() {
         ))}</div>}
 
       {expenses.length > 0 && <>
-        <div className="section-title">Dépenses</div>
+        <div className="section-title expenses-head">
+          <span>Dépenses{!filtered && ` · ${shown.length} · ${euro(shownTotal)}`}</span>
+          <button className={`link-btn${filtered ? '' : ' on'}`} onClick={() => setFiltering(true)}>{filtered ? 'Filtrer' : 'Filtre actif'}</button>
+        </div>
+        {!filtered && shown.length === 0 && <p className="muted small share-hint">Aucune dépense pour ce filtre.</p>}
         <div className="list-card">
-          {expenses.map((e) => (
+          {shown.map(({ e }) => (
             <div key={e.id} className="settings-row expense">
               <div className="expense-main" onClick={() => setEditing(e)}>
                 <div className="expense-label">{e.label}</div>
-                <small>{nameOf(e.paid_by)} a payé · {e.split.length === people.length ? 'pour tous' : `pour ${e.split.map(nameOf).join(', ')}`} · {when(e.spent_at ?? e.created_at)}</small>
+                <small>{nameOf(e.paid_by)} a payé · {e.split.length === people.length ? 'pour tous' : `pour ${e.split.map(nameOf).join(', ')}`} · {when(e.spent_at ?? e.created_at)}
+                  {e.repeat && ` · 🔁 ${REPEAT_LABEL[e.repeat]}${e.repeat_until ? ' (arrêtée)' : ''} · ${occurrences(e).length} fois`}</small>
               </div>
               <b>{euro(Number(e.amount))}</b>
               <button className="icon-btn" onClick={() => remove(e)} aria-label="Supprimer"><IconClose /></button>
@@ -139,6 +182,25 @@ export default function LedgerPage() {
         </div>
       </>}
       {ledger && <button className="settings-row danger note-delete" onClick={destroy}><IconTrash /><span>Supprimer les comptes</span></button>}
+
+      <Sheet open={filtering} onClose={() => setFiltering(false)} title="Filtrer les dépenses">
+        <div className="sheet-section">Quand</div>
+        <div className="chip-row">{PERIODS.map(([k, l]) => <button key={k} className={`chip quick${filter.period === k ? ' on' : ''}`} onClick={() => setFilter({ ...filter, period: k })}>{l}</button>)}</div>
+        <div className="sheet-section">Payé par</div>
+        <div className="chip-row">
+          <button className={`chip quick${!filter.payer ? ' on' : ''}`} onClick={() => setFilter({ ...filter, payer: null })}>Tout le monde</button>
+          {choices.map((p) => <button key={p.id} className={`chip quick${filter.payer === p.id ? ' on' : ''}`} onClick={() => setFilter({ ...filter, payer: p.id })}>{nameOf(p.id)}</button>)}
+        </div>
+        <div className="sheet-section">Qui est concerné</div>
+        <div className="chip-row">
+          <button className={`chip quick${!filter.concerned ? ' on' : ''}`} onClick={() => setFilter({ ...filter, concerned: null })}>Tout le monde</button>
+          {choices.map((p) => <button key={p.id} className={`chip quick${filter.concerned === p.id ? ' on' : ''}`} onClick={() => setFilter({ ...filter, concerned: p.id })}>{nameOf(p.id)}</button>)}
+        </div>
+        <div className="inline-form">
+          <button className="btn" onClick={() => { setFilter({ period: 'all', payer: null, concerned: null }); setFiltering(false) }}>Effacer</button>
+          <button className="btn primary wide" onClick={() => setFiltering(false)}>Voir {shown.length} dépense{shown.length > 1 ? 's' : ''}</button>
+        </div>
+      </Sheet>
 
       {editing && <ExpenseSheet expense={editing === 'new' ? null : editing} onClose={() => setEditing(null)} ledgerId={id}
         people={people.map((p) => ({ id: p.id, name: nameOf(p.id) }))} me={me}
@@ -161,13 +223,15 @@ export function ExpenseSheet({ expense, onClose, ledgerId, people, me, onSaved, 
   const [paidBy, setPaidBy] = useState(expense?.paid_by ?? me)
   const [split, setSplit] = useState<string[] | null>(expense?.split ?? null)  // null = tout le monde
   const [at, setAt] = useState(() => localInput(expense ? new Date(expense.spent_at ?? expense.created_at) : new Date()))
+  const [repeat, setRepeat] = useState<Expense['repeat']>(expense?.repeat ?? null)
   const forWhom = split ?? people.map((p) => p.id)
   const value = Number(amount.replace(',', '.'))
   const valid = !!label.trim() && value > 0 && forWhom.length > 0 && !!at
 
   const toggle = (id: string) => setSplit(forWhom.includes(id) ? forWhom.filter((x) => x !== id) : [...forWhom, id])
   const save = async () => {
-    const fields = { label: label.trim(), amount: Math.round(value * 100) / 100, paid_by: paidBy, split: forWhom, spent_at: new Date(at).toISOString() }
+    const fields = { label: label.trim(), amount: Math.round(value * 100) / 100, paid_by: paidBy, split: forWhom, spent_at: new Date(at).toISOString(),
+      ...((repeat || expense?.repeat) && { repeat: repeat ?? null, repeat_until: repeat ? expense?.repeat_until ?? null : null }) }
     const { data, error } = expense
       ? await supabase.from('expenses').update(fields).eq('id', expense.id).select().single()
       : await supabase.from('expenses').insert({ ledger_id: ledgerId, ...fields }).select().single()
@@ -181,13 +245,25 @@ export function ExpenseSheet({ expense, onClose, ledgerId, people, me, onSaved, 
         <LimitedInput max={60} placeholder="Quoi ? (ex. : Courses)" value={label} onChange={(e) => setLabel(e.target.value)} />
         <input className="amount-input" inputMode="decimal" placeholder="0,00 €" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ''))} aria-label="Montant" />
       </div>
-      <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} aria-label="Date et heure" />
+      <div className="inline-form">
+        <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} aria-label="Date et heure" />
+        <select className="repeat-select" value={repeat ?? ''} onChange={(e) => setRepeat((e.target.value || null) as Expense['repeat'])} aria-label="Récurrence">
+          <option value="">Une fois</option><option value="week">Par semaine</option><option value="month">Par mois</option><option value="year">Par an</option>
+        </select>
+      </div>
+      {expense?.repeat && !expense.repeat_until && <button className="link-btn" onClick={async () => {
+        const { data, error } = await supabase.from('expenses').update({ repeat_until: new Date().toISOString() }).eq('id', expense.id).select().single()
+        if (error) return notify(errMsg(error))
+        onSaved(data); onClose()
+      }}>Arrêter la récurrence (garder ce qui a déjà eu lieu)</button>}
       <div className="sheet-section">Payé par</div>
       <div className="chip-row">
         {people.map((p) => <button key={p.id} className={`chip quick${paidBy === p.id ? ' on' : ''}`} onClick={() => setPaidBy(p.id)}>{p.name}</button>)}
       </div>
       <div className="sheet-section">Pour qui {value > 0 && forWhom.length > 0 && <span className="muted">· {euro(value / forWhom.length)} chacun</span>}</div>
       <div className="chip-row">
+        <button className={`chip quick all${forWhom.length === people.length ? ' on' : ''}`}
+          onClick={() => setSplit(forWhom.length === people.length ? [] : people.map((p) => p.id))}>Tous</button>
         {people.map((p) => <button key={p.id} className={`chip quick${forWhom.includes(p.id) ? ' on' : ''}`} onClick={() => toggle(p.id)}>{p.name}</button>)}
       </div>
       <button className="btn primary wide" disabled={!valid} onClick={save}>{expense ? 'Enregistrer' : 'Ajouter'}</button>

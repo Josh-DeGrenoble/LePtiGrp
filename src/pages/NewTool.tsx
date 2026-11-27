@@ -42,7 +42,7 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
     setBusy(true)
     try {
       const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      const fields = kind === 'polls' ? { question: title.trim(), options: filled, multiple }
+      const fields = kind === 'polls' ? { question: title.trim(), options: filled, multiple, ...(byDates && { dates: dates.map(ymd) }) }
         : kind === 'calendar' ? { title: title.trim(), day: ymd(day[0]), at_time: time || null, place: place.trim() || null, repeat: rep.repeat, repeat_until: rep.repeat ? rep.until : null }
         : { name: title.trim() }
       const item = await createTool(kind, fields, share, me)
