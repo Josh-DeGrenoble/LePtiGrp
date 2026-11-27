@@ -10,6 +10,7 @@ export type EventFields = { title: string; day: Date | null; time: string; place
 const DOW = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const monday = (d: Date) => { const x = startOfDay(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x }
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const same = (a: Date | null, b: Date) => !!a && +startOfDay(a) === +b
 
 /**
@@ -61,7 +62,7 @@ export function EventForm({ value, onChange, autoFocus }: { value: EventFields; 
       </div>
       {value.repeat && <label className="inline-form event-until">
         <span className="muted small">Jusqu'au (facultatif)</span>
-        <input type="date" value={value.until ?? ''} onChange={(e) => set({ until: e.target.value || null })} />
+        <input type="date" value={value.until ?? ''} min={value.day ? ymd(value.day) : undefined} onChange={(e) => set({ until: e.target.value || null })} />
       </label>}
       <LimitedInput placeholder="Lieu (facultatif)" value={value.place} max={100} onChange={(e) => set({ place: e.target.value })} />
     </div>

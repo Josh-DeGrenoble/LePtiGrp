@@ -58,7 +58,9 @@ export async function addReminder(r: Omit<Local, 'client_id'>) {
 export async function cancelReminder(r: Local) {
   writeCache(QUEUE, readCache<Local[]>(QUEUE, []).filter((x) => x.client_id !== r.client_id))
   arm(localReminders().filter((x) => x.client_id !== r.client_id))
+  // rappel envoyé au serveur depuis l'ouverture de la fenêtre : pas encore d'id ici, on le retrouve par client_id
   if (r.id) await supabase.from('reminders').delete().eq('id', r.id)
+  else await supabase.from('reminders').delete().eq('client_id', r.client_id)
 }
 
 /** À la déconnexion : plus de rappels locaux de ce compte */

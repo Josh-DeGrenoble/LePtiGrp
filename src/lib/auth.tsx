@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js'
 import { supabase, type Profile } from './supabase'
 import { clearCache } from './network'
+import { resetWrites } from './offlineDb'
 import { forgetPushDevice } from './push'
 import { stopReminders } from './reminders'
 
@@ -32,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === 'SIGNED_OUT') { clearCache(); stopReminders() }
+      if (event === 'SIGNED_OUT') { clearCache(); resetWrites(); stopReminders() }
       setSession(s)
       setTimeout(() => loadProfile(s?.user.id), 0)
     })

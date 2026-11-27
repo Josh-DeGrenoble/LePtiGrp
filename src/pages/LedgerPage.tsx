@@ -25,8 +25,12 @@ export function occurrences(e: Expense): Date[] {
   for (let k = 0; k < 600; k++) {
     const d = new Date(start)
     if (e.repeat === 'week') d.setDate(d.getDate() + 7 * k)
-    else if (e.repeat === 'month') d.setMonth(d.getMonth() + k)
-    else d.setFullYear(d.getFullYear() + k)
+    else {
+      // 31 janv. + 1 mois = 28/29 févr. (pas 3 mars) ; 29 févr. + 1 an = 28 févr.
+      const months = e.repeat === 'month' ? k : 12 * k
+      d.setDate(1); d.setMonth(d.getMonth() + months)
+      d.setDate(Math.min(start.getDate(), new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()))
+    }
     if (+d > end) break
     out.push(d)
   }
@@ -180,7 +184,7 @@ export default function LedgerPage() {
             <div key={e.id} className="settings-row expense">
               <div className="expense-main" onClick={() => setEditing(e)}>
                 <div className="expense-label">{e.label}</div>
-                <small>{nameOf(e.paid_by)} a payé · {e.split.length === people.length ? 'pour tous' : `pour ${e.split.map(nameOf).join(', ')}`} · {when(e.spent_at ?? e.created_at)}
+                <small>{nameOf(e.paid_by)} a payé · {e.split.length === people.length && people.every((p) => e.split.includes(p.id)) ? 'pour tous' : `pour ${e.split.map(nameOf).join(', ')}`} · {when(e.spent_at ?? e.created_at)}
                   {e.repeat && ` · 🔁 ${REPEAT_LABEL[e.repeat]}${e.repeat_until ? ' (arrêtée)' : ''} · ${occurrences(e).length} fois`}</small>
               </div>
               <b>{euro(Number(e.amount))}</b>

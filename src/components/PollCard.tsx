@@ -13,6 +13,7 @@ export function PollCard({ pollId, compact, version = 0 }: { pollId: string; com
   const people = usePeople(poll)
   const nameOf = (uid: string) => (uid === me ? 'moi' : people.find((p) => p.id === uid)?.display_name ?? '?')
 
+  const [reload, setReload] = useState(0)
   useEffect(() => {
     const load = async () => {
       const [{ data: p }, { data: v }] = await Promise.all([
@@ -28,7 +29,7 @@ export function PollCard({ pollId, compact, version = 0 }: { pollId: string; com
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'polls', filter: `id=eq.${pollId}` }, load)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [pollId, version])
+  }, [pollId, version, reload])
 
   if (!poll) return <div className="poll muted small">Sondage indisponible</div>
 
@@ -44,7 +45,8 @@ export function PollCard({ pollId, compact, version = 0 }: { pollId: string; com
     setVotes((vs) => [...vs.filter((v) => !(v.user_id === me && drop.includes(v.option))), ...(had ? [] : [{ poll_id: pollId, user_id: me, option }])])
     const r1 = drop.length ? await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('user_id', me).in('option', drop) : { error: null }
     const r2 = had ? { error: null } : await supabase.from('poll_votes').insert({ poll_id: pollId, option })
-    if (r1.error || r2.error) notify(errMsg(r1.error ?? r2.error))
+    // refus (sondage clôturé entre-temps…) : on remet les vrais votes
+    if (r1.error || r2.error) { notify(errMsg(r1.error ?? r2.error)); setReload((n) => n + 1) }
   }
 
   return (

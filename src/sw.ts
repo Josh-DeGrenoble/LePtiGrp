@@ -52,6 +52,8 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     const win = wins[0]
-    if (win) { await win.focus(); await win.navigate(url) } else await self.clients.openWindow(url)
+    // navigate() échoue sur une fenêtre pas encore contrôlée par ce service worker : on ouvre alors l'appli à la bonne page
+    if (win) { try { await win.focus(); await win.navigate(url); return } catch { /* on ouvre ci-dessous */ } }
+    await self.clients.openWindow(url)
   })())
 })

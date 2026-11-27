@@ -74,6 +74,8 @@ export function flushWrites(): Promise<void> {
 }
 
 export const pendingWrites = () => queue.length
+/** À la déconnexion : les écritures en attente de ce compte ne doivent pas partir sous le compte suivant */
+export function resetWrites() { queue = []; ids = {}; save() }
 export const tempId = () => -Date.now() - Math.floor(Math.random() * 1000)
 
 window.addEventListener('online', () => { flushWrites() })
