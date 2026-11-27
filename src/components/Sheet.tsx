@@ -13,6 +13,13 @@ export function Sheet({ open, onClose, title, children, tall, form, autoFocus }:
   const [dy, setDy] = useState(0)
   const start = useRef<number | null>(null)
   const box = useRef<HTMLDivElement>(null)
+  // le doigt qui a ouvert la fenêtre (appui long) se relève dessus : on ignore les touches des 350 premières ms
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    if (!open) { setReady(false); return }
+    const t = setTimeout(() => setReady(true), 350)
+    return () => clearTimeout(t)
+  }, [open])
   useEffect(() => {
     if (open && autoFocus) box.current?.querySelector<HTMLElement>(TYPABLE)?.focus({ preventScroll: true })
   }, [open, autoFocus])
@@ -34,7 +41,7 @@ export function Sheet({ open, onClose, title, children, tall, form, autoFocus }:
   }
 
   return (
-    <div className={`sheet-backdrop${form ? ' top' : ''}`} onClick={onClose}>
+    <div className={`sheet-backdrop${form ? ' top' : ''}`} onClick={onClose} style={ready ? undefined : { pointerEvents: 'none' }}>
       <div ref={box} className={`sheet${tall ? ' tall' : ''}${form ? ' form' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog"
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}
         style={dy ? { transform: `translateY(${dir * dy}px)`, transition: 'none' } : undefined}>

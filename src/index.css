@@ -909,3 +909,12 @@ input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-sele
 /* Appli en jaune : les épinglés passent en violet doux pour rester distincts */
 :root[data-accent="amber"] { --pinned: #ddd6fe; --pinned-text: #2e1065; }
 @media (prefers-color-scheme: dark) { :root[data-accent="amber"] { --pinned: #6d5bd0; --pinned-text: #f5f3ff; } }
+
+/* Appui court sur un message : smileys + épingler sous la bulle */
+.quick-bar { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 6px 0 4px; animation: lineIn .18s ease-out; }
+.quick-bar.indent { padding-left: 38px; }
+.quick-bar.mine { align-items: flex-end; }
+.quick-emojis { display: flex; gap: 2px; padding: 4px 6px; border-radius: 99px; background: var(--bubble); box-shadow: var(--shadow); max-width: 100%; overflow-x: auto; }
+.quick-emojis .react-pick { font-size: 24px; width: 38px; height: 38px; }
+.quick-emojis .react-pick.more { color: var(--muted); }
+.quick-pin { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: var(--bubble); box-shadow: var(--shadow); font-size: 14px; font-weight: 600; color: var(--primary); }
