@@ -129,7 +129,7 @@ export default function EventPage() {
         <button className="settings-row danger note-delete" onClick={destroy}><IconTrash /><span>Supprimer l'événement</span></button>
       </>}
 
-      <Sheet open={editing} onClose={() => setEditing(false)} title="Modifier l'événement" tall>
+      <Sheet open={editing} onClose={() => setEditing(false)} title="Modifier l'événement" form>
         <EventForm value={form} onChange={setForm} />
         <button className="btn primary wide" disabled={!form.title.trim() || !form.day} onClick={save}>Enregistrer</button>
       </Sheet>

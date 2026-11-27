@@ -41,7 +41,7 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
   }
 
   return (
-    <Sheet open={!!kind} onClose={close} title={kind === 'email' ? "Changer d'email" : google ? 'Mot de passe de chiffrement' : 'Changer de mot de passe'}>
+    <Sheet open={!!kind} onClose={close} form autoFocus title={kind === 'email' ? "Changer d'email" : google ? 'Mot de passe de chiffrement' : 'Changer de mot de passe'}>
       <form className="form" onSubmit={submit}>
         {kind === 'email' ? <>
           <p className="muted small">Email actuel : {email}</p>

@@ -250,7 +250,7 @@ export function ExpenseSheet({ expense, onClose, ledgerId, people, me, onSaved, 
   }
 
   return (
-    <Sheet open onClose={onClose} title={expense ? 'Modifier la dépense' : 'Nouvelle dépense'}>
+    <Sheet open onClose={onClose} title={expense ? 'Modifier la dépense' : 'Nouvelle dépense'} form autoFocus={!expense}>
       <div className="inline-form">
         <LimitedInput max={60} placeholder="Quoi ? (ex. : Courses)" value={label} onChange={(e) => setLabel(e.target.value)} />
         <input className="amount-input" inputMode="decimal" placeholder="0,00 €" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ''))} aria-label="Montant" />
