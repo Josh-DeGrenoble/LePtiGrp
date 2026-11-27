@@ -202,7 +202,7 @@ export default function Chat() {
     </>} footer={!active && c.mine && (c.can('write')
       ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
       : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
-      <div className="messages">
+      <div className="messages" onClick={(e) => { if (quick && !(e.target as HTMLElement).closest('.quick-bar, .line')) setQuick(null) }}>
         {active && <div className="filter-chips-bar fade-in">
           {filter.kinds.map((k) => <span key={k} className="filter-chip">{kindLabel[k]}
             <button onClick={() => setFilter({ ...filter, kinds: flip(filter.kinds, k) })} aria-label="Retirer ce critère"><IconClose size={14} /></button></span>)}
@@ -236,12 +236,16 @@ export default function Chat() {
                   {showWho && <div className="bubble-name" style={{ color: colorOf(name) }}>{name}</div>}
                   {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)}>
                     {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} last={j === g.length - 1} onPhoto={setViewPhoto}
-                        onMenu={() => setSelected(it.m!)} onTap={() => setQuick(it.m!)}
+                        onMenu={() => setSelected(it.m!)} onTap={() => setQuick((q) => q?.id === it.m!.id ? null : it.m!)}
                         reactions={reactsOf(it.m.id)} me={me} onReact={(e) => react(it.m!, e)} />
                       : <PendingLine p={it.p!} />}
                   </Fold>)}
                 </div>
               </div>
+              {quick && g.some((it) => it.m?.id === quick.id) && <QuickBar mine={mine} indent={showWho}
+                picked={reactions.find((r) => r.message_id === quick.id && r.user_id === me)?.emoji}
+                pinned={isPinned(quick)} canPin={c.can('pin')}
+                onReact={(e) => react(quick, e)} onPin={() => quickPin(quick)} onMore={() => { const m = quick; setQuick(null); setSelected(m) }} />}
             </Fold>
           </div>
         })}
@@ -281,18 +285,6 @@ export default function Chat() {
           <button className="btn primary wide" onClick={() => setFilterOpen(false)}>
             {active ? `Voir ${items.filter(keep).length} message${items.filter(keep).length > 1 ? 's' : ''}` : 'Fermer'}</button>
         </div>
-      </Sheet>
-
-      <Sheet open={!!quick} onClose={() => setQuick(null)}>
-        {quick && <>
-          <div className="react-bar">
-            {EMOJIS.map((e) => <button key={e} className={`react-pick${reactions.some((r) => r.message_id === quick.id && r.user_id === me && r.emoji === e) ? ' on' : ''}`}
-              onClick={() => react(quick, e)} aria-label={`Réagir ${e}`}>{e}</button>)}
-          </div>
-          {c.can('pin') && <SheetButton icon={<IconPin size={20} filled={isPinned(quick)} />} onClick={() => quickPin(quick)}>
-            {isPinned(quick) ? 'Désépingler' : 'Épingler'}</SheetButton>}
-          <SheetButton icon={<IconSmile />} onClick={() => { const m = quick; setQuick(null); setSelected(m) }}>Plus d'options</SheetButton>
-        </>}
       </Sheet>
 
       <Sheet open={!!selected} onClose={() => { setSelected(null); setPinDate('') }} title="Message">
@@ -349,6 +341,29 @@ type Item = { key: string; m?: Message; p?: Pending; author: string | null; crea
 /** Même auteur, à moins de 5 minutes d'écart : même bulle */
 const follows = (prev: Item, it: Item) =>
   !!it.author && prev.author === it.author && Date.parse(it.created_at) - Date.parse(prev.created_at) < 5 * 60_000
+
+/** Appui court sur un message : rangée de smileys + épingler, juste sous la bulle (les touches des 350 premières ms sont ignorées) */
+function QuickBar({ mine, indent, picked, pinned, canPin, onReact, onPin, onMore }: {
+  mine: boolean; indent: boolean; picked?: string; pinned: boolean; canPin: boolean
+  onReact: (e: string) => void; onPin: () => void; onMore: () => void
+}) {
+  const [ready, setReady] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })  // message en bas de l'écran : la rangée reste visible
+    const t = setTimeout(() => setReady(true), 350)
+    return () => clearTimeout(t)
+  }, [])
+  return (
+    <div ref={ref} className={`quick-bar${mine ? ' mine' : ''}${indent ? ' indent' : ''}`} style={ready ? undefined : { pointerEvents: 'none' }}>
+      <div className="quick-emojis">
+        {EMOJIS.map((e) => <button key={e} className={`react-pick${picked === e ? ' on' : ''}`} onClick={() => onReact(e)} aria-label={`Réagir ${e}`}>{e}</button>)}
+        <button className="react-pick more" onClick={onMore} aria-label="Plus d'options"><IconSmile size={20} /></button>
+      </div>
+      {canPin && <button className="quick-pin" onClick={onPin}><IconPin size={16} filled={pinned} /> {pinned ? 'Désépingler' : 'Épingler'}</button>}
+    </div>
+  )
+}
 
 /** Une ligne d'une bulle = un message (appui long : épingler, supprimer…) ; petite coche quand il est arrivé */
 function Line({ m, plain, mine, names, onMenu, onPhoto, last, onTap, reactions, me, onReact }: {
