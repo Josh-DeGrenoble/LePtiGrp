@@ -11,9 +11,11 @@ import { loadFriends, cachedFriends, friendLink, TAG_COLORS, type FriendWithTags
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { TagChip } from '../components/TagChip'
-import { IconShare, IconTag, IconSearch, IconUserPlus, IconClose, IconQr, IconScan } from '../components/Icons'
+import { IconShare, IconTag, IconSearch, IconUserPlus, IconClose, IconQr, IconScan, IconPlus } from '../components/Icons'
 import { Sheet } from '../components/Sheet'
 import { QrSheet, QrScanner } from '../components/Qr'
+import { useCircles, CircleSheets, CircleRow, type Circle } from '../components/Circles'
+import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
 
 export default function Friends() {
@@ -31,6 +33,9 @@ export default function Friends() {
   const [editProfile, setEditProfile] = useState(false)
   const [qr, setQr] = useState(false)
   const [scan, setScan] = useState(false)
+  const { circles, load: loadCircles } = useCircles()
+  const [circle, setCircle] = useState<Circle | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const load = useCallback(async () => {
     let r
@@ -49,14 +54,6 @@ export default function Friends() {
     if (!friend?.id) return setMsg('Code inconnu')
     setMsg(`${friend.display_name} ajouté(e) !`)
     setCode(''); setAdding(false); load()
-  }
-
-  const share = async () => {
-    if (!profile) return
-    const url = friendLink(profile.friend_code)
-    const text = `Ajoute-moi sur LePtiGrp ! Code : ${profile.friend_code}`
-    if (navigator.share) { try { await navigator.share({ title: 'LePtiGrp', text, url }) } catch { /* annulé */ } }
-    else { await navigator.clipboard.writeText(url); setMsg('Lien copié !') }
   }
 
   // Avatar : paramètres de la conv avec l'ami ; le reste de la ligne : la conv
@@ -107,7 +104,7 @@ export default function Friends() {
             <div className="me-code">Mon code : <b>{profile.friend_code}</b></div>
           </div>
           <button className="icon-btn" onClick={() => setQr(true)} aria-label="Mon QR code"><IconQr size={22} /></button>
-          <button className="icon-btn" onClick={share} aria-label="Partager mon lien"><IconShare /></button>
+          <button className="icon-btn" onClick={() => setQr(true)} aria-label="Inviter"><IconShare /></button>
         </div>
       )}
 
@@ -127,8 +124,15 @@ export default function Friends() {
           : <button type="button" className="btn" onClick={() => { setAdding(true); setMsg('') }}>Nouvel ami</button>}
       </form>
       {msg && <p className="info center">{msg}</p>}
-      {profile && <QrSheet open={qr} onClose={() => setQr(false)} url={friendLink(profile.friend_code)} title="Mon QR code"
-        caption={`Fais-le scanner pour t'ajouter en ami. Code : ${profile.friend_code}`} />}
+      {profile && <QrSheet open={qr} onClose={() => setQr(false)} url={friendLink(profile.friend_code)} title="Mon invitation"
+        text={`Ajoute-moi sur LePtiGrp ! Code : ${profile.friend_code}`}
+        caption={`Fais-le scanner pour t'ajouter en ami. Code : ${profile.friend_code}`}>
+        <SGroup title="Ou partager un cercle d'amis" note="Qui ouvre le lien d'un cercle devient ami avec tout le cercle. Chaque membre peut le modifier, pour tout le monde.">
+          {(circles ?? []).map((c) => <CircleRow key={c.id} c={c} onClick={() => { setQr(false); setCircle(c) }} />)}
+          <SRow icon={<IconPlus size={18} />} label="Créer un cercle" chevron={false} onClick={() => { setQr(false); setCreating(true) }} />
+        </SGroup>
+      </QrSheet>}
+      <CircleSheets open={circle} setOpen={setCircle} creating={creating} setCreating={setCreating} reload={loadCircles} />
       <QrScanner open={scan} onClose={() => setScan(false)} />
 
       {tags.length > 0 && (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, errMsg } from '../lib/supabase'
-import { useMe } from '../lib/auth'
 import { circleLink } from '../lib/friends'
+import { shareLink } from '../lib/share'
 import { SGroup, SRow } from './SettingsRow'
 import { Sheet, SheetButton } from './Sheet'
 import { LimitedInput } from './LimitedInput'
@@ -12,14 +12,24 @@ import { Avatar } from './Avatar'
 import { norm } from '../lib/format'
 
 type Person = { id: string; display_name: string; avatar_url: string | null; in_circle: boolean }
-type Circle = { id: string; token: string; name: string; active: boolean; created_at: string; members: number }
+export type Circle = { id: string; token: string; name: string; active: boolean; created_at: string; members: number }
 
-/** Réglages, admin seulement : liens « cercle d'amis » (chacun qui ouvre le lien devient ami avec tous les autres) */
-export function AdminCircles() {
-  const me = useMe()
+/** Mes cercles d'amis (tous pour l'admin) */
+export function useCircles() {
   const [circles, setCircles] = useState<Circle[] | null>(null)
-  const [open, setOpen] = useState<Circle | null>(null)
-  const [creating, setCreating] = useState(false)
+  const load = () => supabase.rpc('list_circles').then(({ data, error }) => { if (!error) setCircles(data as Circle[]) })
+  useEffect(() => { load() }, [])
+  return { circles, load }
+}
+
+/**
+ * Fenêtres d'un cercle : son QR et son lien, ses membres (ajouter / retirer), désactiver, supprimer ; et la création.
+ * Créateur et membres peuvent tout faire : une modif vaut pour tout le monde.
+ */
+export function CircleSheets({ open, setOpen, creating, setCreating, reload }: {
+  open: Circle | null; setOpen: (c: Circle | null) => void; creating: boolean; setCreating: (v: boolean) => void; reload: () => void
+}) {
+  const load = reload
   const [name, setName] = useState('')
   const [copied, setCopied] = useState(false)
   const [managing, setManaging] = useState<Circle | null>(null)
@@ -45,10 +55,6 @@ export function AdminCircles() {
     load()
   }
 
-  const load = () => supabase.rpc('list_circles').then(({ data, error }) => { if (!error) setCircles(data as Circle[]) })
-  useEffect(() => {
-    supabase.from('app_admins').select('user_id').eq('user_id', me).maybeSingle().then(({ data }) => { if (data) load() })
-  }, [me]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const run = async (fn: string, args: Record<string, unknown>) => {
     const { error } = await supabase.rpc(fn, args)
@@ -59,27 +65,26 @@ export function AdminCircles() {
     const { data, error } = await supabase.rpc('create_circle', { circle_name: name.trim() })
     if (error) return notify(errMsg(error))
     setCreating(false); setName(''); await load()
-    setOpen({ ...(data as Circle), members: 0 })
+    setOpen({ ...(data as Circle), members: 1 })
   }
   const share = async (c: Circle) => {
-    const url = circleLink(c.token)
-    if (navigator.share) { try { await navigator.share({ title: 'LePtiGrp', text: `Rejoins « ${c.name} » sur LePtiGrp : tu seras ami avec tout le groupe !`, url }) } catch { /* annulé */ } }
-    else { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+    const r = await shareLink({ text: `Rejoins « ${c.name} » sur LePtiGrp : tu seras ami avec tout le groupe !`, url: circleLink(c.token) })
+    if (r === 'copied') { setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  }
+  const rename = async (c: Circle) => {
+    const v = window.prompt('Nouveau nom du cercle', c.name)?.trim()
+    if (!v || v === c.name) return
+    const { error } = await supabase.rpc('rename_circle', { circle: c.id, circle_name: v })
+    if (error) return notify(errMsg(error))
+    setOpen({ ...c, name: v }); load()
   }
 
-  if (!circles) return null
   return <>
-    <SGroup title="Cercles d'amis" note="Chaque personne qui ouvre un de ces liens devient amie avec toutes celles qui l'ont ouvert (et celles d'après). Ouvre-le toi aussi pour en faire partie.">
-      {circles.map((c) => (
-        <SRow key={c.id} icon={<IconUsers size={18} />} label={c.name} onClick={() => setOpen(c)}
-          sub={`${c.members} personne${c.members > 1 ? 's' : ''}${c.active ? '' : ' · désactivé'}`} />
-      ))}
-      <SRow icon={<IconPlus size={18} />} label="Créer un lien" chevron={false} onClick={() => setCreating(true)} />
-    </SGroup>
 
     <Sheet open={creating} onClose={() => setCreating(false)} title="Nouveau cercle d'amis">
       <LimitedInput max={40} placeholder="Nom (ex. : Soirée ski)" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-      <button className="btn primary wide" disabled={!name.trim()} onClick={create}>Créer le lien</button>
+      <p className="muted small">Chaque personne qui ouvre son lien devient amie avec toutes celles du cercle. Tu en fais partie d'office.</p>
+      <button className="btn primary wide" disabled={!name.trim()} onClick={create}>Créer le cercle</button>
     </Sheet>
 
     <Sheet open={!!open} onClose={() => setOpen(null)} title={open?.name}>
@@ -88,9 +93,10 @@ export function AdminCircles() {
         <p className="muted small center">{open.members} personne{open.members > 1 ? 's' : ''} dans ce cercle</p>
       </div>}
       {open && <SheetButton onClick={() => manage(open)}>Gérer les membres</SheetButton>}
+      {open && <SheetButton onClick={() => rename(open)}>Renommer</SheetButton>}
       {open?.active && <SheetButton onClick={() => share(open)}>{copied ? 'Lien copié ✓' : 'Partager le lien'}</SheetButton>}
       {open && <SheetButton onClick={() => run('set_circle_active', { circle: open.id, on_: !open.active })}>{open.active ? 'Désactiver le lien' : 'Réactiver le lien'}</SheetButton>}
-      {open && <SheetButton danger onClick={async () => (await ask(`Supprimer le lien « ${open.name} » ? Les amitiés déjà créées restent.`)) && run('delete_circle', { circle: open.id })}>Supprimer le lien</SheetButton>}
+      {open && <SheetButton danger onClick={async () => (await ask(`Supprimer le cercle « ${open.name} » pour tout le monde ? Les amitiés déjà créées restent.`)) && run('delete_circle', { circle: open.id })}>Supprimer le cercle</SheetButton>}
     </Sheet>
 
     <Sheet open={!!managing} onClose={() => setManaging(null)} title={managing ? `Membres · ${managing.name}` : ''}>
@@ -107,7 +113,7 @@ export function AdminCircles() {
               <button className="icon-btn" onClick={() => removePerson(p)} aria-label="Retirer"><IconClose /></button>
             </div>
           ))}
-          <input type="search" placeholder="Ajouter quelqu'un de l'appli…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input type="search" placeholder="Ajouter un ami…" value={search} onChange={(e) => setSearch(e.target.value)} />
           {outside.map((p) => (
             <button key={p.id} className="circle-person add" onClick={() => add(p)}>
               <Avatar name={p.display_name} url={p.avatar_url} size={32} />
@@ -121,3 +127,23 @@ export function AdminCircles() {
     </Sheet>
   </>
 }
+
+/** Espace admin : tous les cercles */
+export function AdminCircles() {
+  const { circles, load } = useCircles()
+  const [open, setOpen] = useState<Circle | null>(null)
+  const [creating, setCreating] = useState(false)
+  if (!circles) return null
+  return <>
+    <SGroup title="Cercles d'amis (tous)" note="Chaque personne qui ouvre un de ces liens devient amie avec toutes celles du cercle.">
+      {circles.map((c) => <CircleRow key={c.id} c={c} onClick={() => setOpen(c)} />)}
+      <SRow icon={<IconPlus size={18} />} label="Créer un cercle" chevron={false} onClick={() => setCreating(true)} />
+    </SGroup>
+    <CircleSheets open={open} setOpen={setOpen} creating={creating} setCreating={setCreating} reload={load} />
+  </>
+}
+
+export const CircleRow = ({ c, onClick }: { c: Circle; onClick: () => void }) => (
+  <SRow icon={<IconUsers size={18} />} label={c.name} onClick={onClick}
+    sub={`${c.members} personne${c.members > 1 ? 's' : ''}${c.active ? '' : ' · lien désactivé'}`} />
+)

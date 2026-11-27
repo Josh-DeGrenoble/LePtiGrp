@@ -1,7 +1,7 @@
 import { Screen } from '../components/Layout'
 import { BackButton } from '../components/BackButton'
 import { AdminUsage } from '../components/AdminUsage'
-import { AdminCircles } from '../components/AdminCircles'
+import { AdminCircles } from '../components/Circles'
 import { AdminBeers, AdminFeedback } from '../components/Feedback'
 import { useIsAdmin } from '../lib/admin'
 

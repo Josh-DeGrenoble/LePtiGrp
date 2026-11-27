@@ -78,7 +78,7 @@ function Routed() {
       <Route path="/polls/:id" element={<PollPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/calendar" element={<CalendarPage />} />
-      <Route path="/calendar/new" element={<NewTool key="calendar" kind="calendar" />} />
+      <Route path="/calendar/new" element={<CalendarPage />} />
       <Route path="/calendar/:id" element={<EventPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

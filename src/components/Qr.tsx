@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import qrcode from 'qrcode-generator'
 import { Sheet } from './Sheet'
 import { IconScan, IconShare } from './Icons'
+import { shareLink } from '../lib/share'
 
 /** QR code en SVG (aucune requête réseau) */
 export function QrCode({ text, size = 220 }: { text: string; size?: number }) {
@@ -20,12 +21,13 @@ export function QrCode({ text, size = 220 }: { text: string; size?: number }) {
 }
 
 /** Feuille « mon QR code » : le QR, partager / copier le lien, et scanner celui d'un ami */
-export function QrSheet({ open, onClose, url, title, caption }: { open: boolean; onClose: () => void; url: string; title: string; caption?: string }) {
+export function QrSheet({ open, onClose, url, title, caption, text, children }: {
+  open: boolean; onClose: () => void; url: string; title: string; caption?: string; text?: string; children?: React.ReactNode
+}) {
   const [scan, setScan] = useState(false)
   const [copied, setCopied] = useState(false)
   const share = async () => {
-    if (navigator.share) { try { await navigator.share({ title: 'LePtiGrp', url }) } catch { /* annulé */ } return }
-    await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000)
+    if ((await shareLink({ text, url })) === 'copied') { setCopied(true); setTimeout(() => setCopied(false), 2000) }
   }
   return <>
     <Sheet open={open && !scan} onClose={onClose} title={title}>
@@ -37,6 +39,7 @@ export function QrSheet({ open, onClose, url, title, caption }: { open: boolean;
           <button className="btn primary" onClick={() => setScan(true)}><IconScan size={18} /> Scanner un QR code</button>
         </div>
       </div>
+      {children}
     </Sheet>
     <QrScanner open={scan} onClose={() => setScan(false)} />
   </>

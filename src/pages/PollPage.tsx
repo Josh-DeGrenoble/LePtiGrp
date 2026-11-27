@@ -7,7 +7,6 @@ import { PollCard } from '../components/PollCard'
 import { LimitedInput } from '../components/LimitedInput'
 import { Sheet, SheetButton, Toggle } from '../components/Sheet'
 import { DatePicker } from '../components/DatePicker'
-import { TimePicker } from '../components/TimePicker'
 import { ask, notify } from '../components/Dialog'
 import { IconCalendar, IconClose, IconLock, IconPencil, IconPlus, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type Poll, type Vote } from '../lib/supabase'
@@ -135,7 +134,7 @@ export default function PollPage() {
 
       <Sheet open={planning} onClose={() => setPlanning(false)} title="Clôture des votes">
         <DatePicker value={planDay} onChange={setPlanDay} max={1} single />
-        <TimePicker value={planTime} onChange={setPlanTime} />
+        <input type="time" value={planTime} onChange={(e) => setPlanTime(e.target.value)} aria-label="Heure" />
         <button className="btn primary wide" disabled={planDay.length !== 1 || !planTime}
           onClick={() => { const [h, m] = planTime.split(':').map(Number); const d = new Date(planDay[0]); d.setHours(h, m, 0, 0); close(d.toISOString()) }}>Programmer</button>
         {poll?.closes_at && <SheetButton danger onClick={() => close(null)}>Retirer la clôture programmée</SheetButton>}

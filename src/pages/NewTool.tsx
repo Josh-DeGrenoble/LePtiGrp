@@ -8,9 +8,6 @@ import { Toggle } from '../components/Sheet'
 import { notify } from '../components/Dialog'
 import { IconClose } from '../components/Icons'
 import { DatePicker, dateLabel } from '../components/DatePicker'
-import { TimePicker } from '../components/TimePicker'
-import { RepeatPicker } from '../components/RepeatPicker'
-import type { Repeat } from '../lib/supabase'
 import { supabase, errMsg } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { TOOLS, createTool, type Share, type ToolKind } from '../lib/tools'
@@ -29,21 +26,14 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
   const [byDates, setByDates] = useState(false)
   const [dates, setDates] = useState<Date[]>([])
   const [busy, setBusy] = useState(false)
-  // calendrier
-  const [day, setDay] = useState<Date[]>(() => { const d = params.get('day'); return d ? [new Date(`${d}T00:00:00`)] : [] })
-  const [time, setTime] = useState('')
-  const [place, setPlace] = useState('')
-  const [rep, setRep] = useState<{ repeat: Repeat | null; until: string | null }>({ repeat: null, until: null })
-
   const filled = byDates ? dates.map(dateLabel) : options.map((o) => o.trim()).filter(Boolean)
-  const valid = !!title.trim() && (share.mode !== 'conv' || !!share.conv) && (kind !== 'polls' || filled.length >= 2) && (kind !== 'calendar' || day.length === 1)
+  const valid = !!title.trim() && (share.mode !== 'conv' || !!share.conv) && (kind !== 'polls' || filled.length >= 2)
 
   const create = async () => {
     setBusy(true)
     try {
       const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const fields = kind === 'polls' ? { question: title.trim(), options: filled, multiple, ...(byDates && { dates: dates.map(ymd) }) }
-        : kind === 'calendar' ? { title: title.trim(), day: ymd(day[0]), at_time: time || null, place: place.trim() || null, repeat: rep.repeat, repeat_until: rep.repeat ? rep.until : null }
         : { name: title.trim() }
       const item = await createTool(kind, fields, share, me)
       // Un sondage de conv apparaît aussi dans le chat, comme un message votable
@@ -68,17 +58,8 @@ export default function NewTool({ kind }: { kind: ToolKind }) {
       <div className="footer-bar"><button className="btn primary wide" disabled={!valid || busy} onClick={create}>Créer</button></div>
     }>
       <div className="card form">
-        <LimitedInput placeholder={t.placeholder} value={title} max={kind === 'polls' ? 200 : kind === 'calendar' ? 100 : 40} onChange={(e) => setTitle(e.target.value)} autoFocus />
+        <LimitedInput placeholder={t.placeholder} value={title} max={kind === 'polls' ? 200 : 40} onChange={(e) => setTitle(e.target.value)} autoFocus />
       </div>
-      {kind === 'calendar' && <>
-        <div className="section-title">Date</div>
-        <DatePicker value={day} onChange={setDay} max={1} single />
-        <div className="card form event-extra">
-          <TimePicker value={time} onChange={setTime} />
-          <RepeatPicker repeat={rep.repeat} until={rep.until} onChange={setRep} />
-          <LimitedInput placeholder="Lieu (facultatif)" value={place} max={100} onChange={(e) => setPlace(e.target.value)} />
-        </div>
-      </>}
       {kind === 'polls' && <>
         <div className="section-title">Réponses</div>
         <div className="segmented share-modes">

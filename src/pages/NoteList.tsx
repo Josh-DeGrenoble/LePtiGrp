@@ -151,7 +151,7 @@ export default function NoteList() {
     nav(backTo, { replace: true })
   }
 
-  // Compte lié : « J'ai payé » y ajoute une dépense (payée par moi, partagée entre les gens du compte)
+  // Compte lié : « Ajouter une dépense » y ajoute une dépense (payée par moi, partagée entre les gens du compte)
   const ledgerId = list?.ledger_id ?? null
   useEffect(() => {
     if (!ledgerId) return setLedger(null)
@@ -223,7 +223,7 @@ export default function NoteList() {
             </button>
             {editing
               ? <button className="btn small" onClick={() => setLinking(true)}>Changer</button>
-              : <button className="btn primary small" disabled={!ledgerPeople.length} onClick={() => setPaying(true)}>J'ai payé</button>}
+              : <button className="btn primary small" disabled={!ledgerPeople.length} onClick={() => setPaying(true)}>Ajouter une dépense</button>}
           </div>
         : editing && <button className="ledger-link add" onClick={() => setLinking(true)}>
             <IconMoney size={18} /> Lier à un compte <small>pour noter ce que tu as payé</small>
