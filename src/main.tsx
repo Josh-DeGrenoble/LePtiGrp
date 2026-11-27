@@ -6,7 +6,9 @@ import './index.css'
 import App from './App.tsx'
 import { trackViewport } from './lib/viewport'
 import { applyTextScale } from './lib/textScale'
+import { applyAccent } from './lib/accent'
 applyTextScale()
+applyAccent()
 
 trackViewport()
 
