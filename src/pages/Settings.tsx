@@ -20,7 +20,7 @@ import { errMsg } from '../lib/supabase'
 import { identity } from '../lib/e2ee'
 import { useIsAdmin } from '../lib/admin'
 import { TEXT_SCALES, getTextScale, setTextScale } from '../lib/textScale'
-import { ACCENTS, getAccent, setAccent } from '../lib/accent'
+import { ACCENTS, appColor, getAccent, setAccent } from '../lib/accent'
 import { Link } from 'react-router-dom'
 
 /** Réglages par défaut de l'activité des outils (enregistrés sur le profil) */
@@ -137,7 +137,7 @@ function AccentColor() {
   return <SGroup title="Couleur de l'appli" note="Boutons, bulles de tes messages, liens… Sur cet appareil.">
     <div className="accent-chips">
       {ACCENTS.map((c) => (
-        <button key={c} className={`accent-dot${v === c ? ' on' : ''}`} style={{ background: c }} aria-label={`Couleur ${c}`} aria-pressed={v === c}
+        <button key={c} className={`accent-dot${v === c ? ' on' : ''}`} style={{ background: appColor(c) }} aria-label={`Couleur ${c}`} aria-pressed={v === c}
           onClick={() => { setV(c); setAccent(c) }}>{v === c && <IconCheck size={18} />}</button>
       ))}
     </div>

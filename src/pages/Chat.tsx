@@ -11,7 +11,7 @@ import { useConversation } from '../lib/conversation'
 import { eventLabel, hhmm, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar, colorOf } from '../components/Avatar'
-import { IconCheck, IconClose, IconFilter, IconPin, IconPoll, IconBell, IconSend, IconCamera, IconImage } from '../components/Icons'
+import { IconCheck, IconClose, IconFilter, IconPin, IconPoll, IconBell, IconSend, IconCamera, IconImage, IconCopy, IconTrash, IconSmile } from '../components/Icons'
 import { ToolIcon } from '../components/ToolIcon'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
@@ -32,6 +32,9 @@ type Kind = 'pinned' | 'polls' | 'activity'
 type Filter = { kinds: Kind[]; authors: string[] }
 const NO_FILTER: Filter = { kinds: [], authors: [] }
 const flip = <T,>(xs: T[], x: T) => xs.includes(x) ? xs.filter((y) => y !== x) : [...xs, x]
+/** Réactions proposées à l'appui court sur un message */
+const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🎉']
+type Reaction = { message_id: number; user_id: string; emoji: string }
 const TOOL_PATH = { list: 'notes', ledger: 'accounts', poll: 'polls', event: 'calendar' } as const
 const TOOL_KIND = TOOL_PATH
 
@@ -55,6 +58,9 @@ export default function Chat() {
   }
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Message | null>(null)
+  // appui court : réagir avec un smiley ou épingler
+  const [quick, setQuick] = useState<Message | null>(null)
+  const [reactions, setReactions] = useState<Reaction[]>([])
   const [pinDate, setPinDate] = useState('')
   const [viewPhoto, setViewPhoto] = useState<PhotoRef | null>(null)
   const [, tick] = useState(0)
@@ -75,6 +81,29 @@ export default function Chat() {
     markRead()
   }, [id, markRead])
   useOnResume(load)
+  const loadReactions = useCallback(async () => {
+    const { data, error } = await supabase.from('message_reactions').select('message_id, user_id, emoji, messages!inner(conversation_id)').eq('messages.conversation_id', id)
+    if (!error && data) setReactions((data as unknown as Reaction[]).map(({ message_id, user_id, emoji }) => ({ message_id, user_id, emoji })))
+  }, [id])
+  useEffect(() => {
+    loadReactions()
+    let t = 0
+    const soon = () => { clearTimeout(t); t = window.setTimeout(loadReactions, 250) }
+    const ch = supabase.channel(`reacts-${id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, soon).subscribe()
+    return () => { clearTimeout(t); supabase.removeChannel(ch) }
+  }, [id, loadReactions])
+  useOnResume(loadReactions)
+  // même smiley = on retire sa réaction ; autre smiley = on la remplace
+  const react = async (m: Message, emoji: string) => {
+    setQuick(null)
+    const mine = reactions.find((r) => r.message_id === m.id && r.user_id === me)
+    const off = mine?.emoji === emoji
+    setReactions((rs) => [...rs.filter((r) => !(r.message_id === m.id && r.user_id === me)), ...(off ? [] : [{ message_id: m.id, user_id: me, emoji }])])
+    const { error } = off
+      ? await supabase.from('message_reactions').delete().eq('message_id', m.id).eq('user_id', me)
+      : await supabase.from('message_reactions').upsert({ message_id: m.id, user_id: me, emoji })
+    if (error) { notify(errMsg(error)); loadReactions() }
+  }
 
   useEffect(() => {
     load()
@@ -151,6 +180,12 @@ export default function Chat() {
     setSelected(null); setPinDate('')
   }
   const pin = (until: Date | null) => selected && act(() => supabase.rpc('pin_message', { msg: selected.id, until: until?.toISOString() ?? null }))
+  const quickPin = async (m: Message) => {
+    setQuick(null)
+    const { error } = await (isPinned(m) ? supabase.rpc('unpin_message', { msg: m.id }) : supabase.rpc('pin_message', { msg: m.id, until: null }))
+    if (error) notify(errMsg(error))
+  }
+  const reactsOf = (mid: number) => reactions.filter((r) => r.message_id === mid)
 
   return (
     <Screen className="chat-screen" header={<>
@@ -201,7 +236,8 @@ export default function Chat() {
                   {showWho && <div className="bubble-name" style={{ color: colorOf(name) }}>{name}</div>}
                   {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)}>
                     {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} last={j === g.length - 1} onPhoto={setViewPhoto}
-                        onMenu={() => setSelected(it.m!)} />
+                        onMenu={() => setSelected(it.m!)} onTap={() => setQuick(it.m!)}
+                        reactions={reactsOf(it.m.id)} me={me} onReact={(e) => react(it.m!, e)} />
                       : <PendingLine p={it.p!} />}
                   </Fold>)}
                 </div>
@@ -247,6 +283,18 @@ export default function Chat() {
         </div>
       </Sheet>
 
+      <Sheet open={!!quick} onClose={() => setQuick(null)}>
+        {quick && <>
+          <div className="react-bar">
+            {EMOJIS.map((e) => <button key={e} className={`react-pick${reactions.some((r) => r.message_id === quick.id && r.user_id === me && r.emoji === e) ? ' on' : ''}`}
+              onClick={() => react(quick, e)} aria-label={`Réagir ${e}`}>{e}</button>)}
+          </div>
+          {c.can('pin') && <SheetButton icon={<IconPin size={20} filled={isPinned(quick)} />} onClick={() => quickPin(quick)}>
+            {isPinned(quick) ? 'Désépingler' : 'Épingler'}</SheetButton>}
+          <SheetButton icon={<IconSmile />} onClick={() => { const m = quick; setQuick(null); setSelected(m) }}>Plus d'options</SheetButton>
+        </>}
+      </Sheet>
+
       <Sheet open={!!selected} onClose={() => { setSelected(null); setPinDate('') }} title="Message">
         {selected && <>
           {c.can('pin') && <>
@@ -264,12 +312,12 @@ export default function Chat() {
               <input type="datetime-local" value={pinDate} onChange={(e) => setPinDate(e.target.value)} />
               <button className="btn" disabled={!pinDate || new Date(pinDate) <= new Date()} onClick={() => pin(new Date(pinDate))}>OK</button>
             </div>
-            {isPinned(selected) && <SheetButton onClick={() => act(() => supabase.rpc('unpin_message', { msg: selected.id }))}>Désépingler</SheetButton>}
+            {isPinned(selected) && <SheetButton icon={<IconPin size={20} />} onClick={() => act(() => supabase.rpc('unpin_message', { msg: selected.id }))}>Désépingler</SheetButton>}
           </>}
-          {selPlain?.text && <SheetButton onClick={() => { navigator.clipboard?.writeText(selPlain.text); setSelected(null) }}>Copier</SheetButton>}
+          {selPlain?.text && <SheetButton icon={<IconCopy />} onClick={() => { navigator.clipboard?.writeText(selPlain.text); setSelected(null) }}>Copier</SheetButton>}
           {(selected.author_id === me || c.can('delete_others')) && <>
             <div className="sheet-sep" />
-            <SheetButton danger onClick={async () => (await ask('Supprimer ce message ?')) && act(() => supabase.rpc('delete_message', { msg: selected.id }))}>Supprimer</SheetButton>
+            <SheetButton danger icon={<IconTrash />} onClick={async () => (await ask('Supprimer ce message ?')) && act(() => supabase.rpc('delete_message', { msg: selected.id }))}>Supprimer</SheetButton>
           </>}
         </>}
       </Sheet>
@@ -303,8 +351,14 @@ const follows = (prev: Item, it: Item) =>
   !!it.author && prev.author === it.author && Date.parse(it.created_at) - Date.parse(prev.created_at) < 5 * 60_000
 
 /** Une ligne d'une bulle = un message (appui long : épingler, supprimer…) ; petite coche quand il est arrivé */
-function Line({ m, plain, mine, names, onMenu, onPhoto, last }: { m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; onPhoto: (p: PhotoRef) => void; last: boolean }) {
-  const press = useLongPress(onMenu)
+function Line({ m, plain, mine, names, onMenu, onPhoto, last, onTap, reactions, me, onReact }: {
+  m: Message; plain: Plain | undefined; mine: boolean; names: Map<string, string>; onMenu: () => void; onPhoto: (p: PhotoRef) => void; last: boolean
+  onTap: () => void; reactions: Reaction[]; me: string; onReact: (emoji: string) => void
+}) {
+  // appui court = réagir / épingler (sauf sur une photo, un sondage, un lien ou un bouton) ; appui long = toutes les options
+  const press = useLongPress(onMenu, (e) => { if (!(e.target as HTMLElement).closest('button, a, input, .poll, .photo, .react-chips')) onTap() })
+  const counts = new Map<string, { n: number; mine: boolean }>()
+  for (const r of reactions) { const x = counts.get(r.emoji) ?? { n: 0, mine: false }; counts.set(r.emoji, { n: x.n + 1, mine: x.mine || r.user_id === me }) }
   const pinned = isPinned(m)
   const photo = plain?.photo
   return (
@@ -320,6 +374,9 @@ function Line({ m, plain, mine, names, onMenu, onPhoto, last }: { m: Message; pl
         {mine && last && <span className="tick" aria-label="Envoyé">✓</span>}</span>}
       {m.poll_id && <PollCard pollId={m.poll_id} compact />}
       {pinned && <div className="pin-until">{pinUntil(m.pinned_until)}</div>}
+      {counts.size > 0 && <div className="react-chips">
+        {[...counts].map(([e, x]) => <button key={e} className={`react-chip${x.mine ? ' mine' : ''}`} onClick={() => onReact(e)}>{e}{x.n > 1 && <small>{x.n}</small>}</button>)}
+      </div>}
     </div>
   )
 }

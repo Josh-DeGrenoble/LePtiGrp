@@ -47,8 +47,8 @@ export function Sheet({ open, onClose, title, children, tall, form, autoFocus }:
   )
 }
 
-export function SheetButton({ children, onClick, danger, disabled }: { children: ReactNode; onClick: () => void; danger?: boolean; disabled?: boolean }) {
-  return <button className={`sheet-btn${danger ? ' danger' : ''}`} onClick={onClick} disabled={disabled}>{children}</button>
+export function SheetButton({ children, onClick, danger, disabled, icon }: { children: ReactNode; onClick: () => void; danger?: boolean; disabled?: boolean; icon?: ReactNode }) {
+  return <button className={`sheet-btn${danger ? ' danger' : ''}${icon ? ' with-icon' : ''}`} onClick={onClick} disabled={disabled}>{icon}{children}</button>
 }
 
 export function Toggle({ label, checked, onChange, disabled }: { label: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
