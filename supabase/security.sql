@@ -1,7 +1,9 @@
 -- =====================================================================
 -- LePtiGrp - correctifs de sécurité (audit du 26/11). Relançable sans risque.
 -- À lancer EN DERNIER, après tous les autres fichiers (et à relancer si l'un d'eux est relancé).
--- Prérequis : schema.sql, permissions.sql, tools.sql, account.sql (et activity.sql, cleanup.sql s'ils sont installés).
+-- Prérequis : schema.sql, permissions.sql, tools.sql, account.sql. Optionnels, pris en compte s'ils sont installés :
+-- activity.sql, cleanup.sql, calendar.sql, circles.sql (tools2.sql, tool_rights.sql, reactions.sql n'ont rien à refermer ici).
+-- Dernière vérification : 27/11 (outils, calendrier, cercles, droits par outil, réactions).
 -- =====================================================================
 
 -- ---------- 1. Rôles : un non-membre ne peut plus changer les rôles d'un groupe ----------
