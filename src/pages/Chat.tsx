@@ -11,7 +11,7 @@ import { useConversation } from '../lib/conversation'
 import { eventLabel, hhmm, remaining } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar, colorOf } from '../components/Avatar'
-import { IconCheck, IconClose, IconFilter, IconPin, IconPoll, IconBell, IconSend, IconCamera, IconImage, IconCopy, IconTrash, IconSmile } from '../components/Icons'
+import { IconCheck, IconClose, IconFilter, IconPin, IconPoll, IconBell, IconSend, IconCamera, IconImage, IconCopy, IconTrash, IconMore } from '../components/Icons'
 import { ToolIcon } from '../components/ToolIcon'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { useLongPress } from '../components/useLongPress'
@@ -61,6 +61,14 @@ export default function Chat() {
   // appui court : réagir avec un smiley ou épingler
   const [quick, setQuick] = useState<Message | null>(null)
   const [reactions, setReactions] = useState<Reaction[]>([])
+  const bubbleTap = useRef<{ x: number; y: number; t: number } | null>(null)
+  // rangée ouverte : un toucher ailleurs (hors bulles et rangée) la ferme
+  useEffect(() => {
+    if (!quick) return
+    const close = (e: PointerEvent) => { if (!(e.target as HTMLElement).closest('.quick-bar, .bubble')) setQuick(null) }
+    document.addEventListener('pointerdown', close, true)
+    return () => document.removeEventListener('pointerdown', close, true)
+  }, [quick])
   const [pinDate, setPinDate] = useState('')
   const [viewPhoto, setViewPhoto] = useState<PhotoRef | null>(null)
   const [, tick] = useState(0)
@@ -202,7 +210,7 @@ export default function Chat() {
     </>} footer={!active && c.mine && (c.can('write')
       ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
       : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
-      <div className="messages" onClick={(e) => { if (quick && !(e.target as HTMLElement).closest('.quick-bar, .line')) setQuick(null) }}>
+      <div className="messages">
         {active && <div className="filter-chips-bar fade-in">
           {filter.kinds.map((k) => <span key={k} className="filter-chip">{kindLabel[k]}
             <button onClick={() => setFilter({ ...filter, kinds: flip(filter.kinds, k) })} aria-label="Retirer ce critère"><IconClose size={14} /></button></span>)}
@@ -232,7 +240,14 @@ export default function Chat() {
             <Fold hidden={!g.some(keep)}>
               <div className={`msg-row${mine ? ' mine' : ''}`}>
                 {showWho && <span className="msg-avatar"><Avatar name={name} url={c.members.find((m) => m.user_id === first.author)?.profiles?.avatar_url} size={30} /></span>}
-                <div className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}${g.every(pinnedLine) ? ' pinned' : ''}${!mine && g.some((it) => { const pl = it.m && plainOf(it.m); return !!pl && (pl.mention_all || pl.mentions.includes(me)) }) ? ' mentioned' : ''}`}>
+                <div onPointerDown={(e) => { bubbleTap.current = (e.target as HTMLElement).closest('.fold.line, button, a') ? null : { x: e.clientX, y: e.clientY, t: Date.now() } }}
+                  onPointerUp={(e) => {
+                    // toucher le nom ou le bord de la bulle = comme toucher son dernier message
+                    const d = bubbleTap.current; bubbleTap.current = null
+                    const lastM = [...g].reverse().find((it) => it.m && keep(it))?.m
+                    if (d && lastM && Date.now() - d.t < 450 && Math.abs(e.clientX - d.x) < 10 && Math.abs(e.clientY - d.y) < 10) setQuick((q) => q?.id === lastM.id ? null : lastM)
+                  }}
+                  className={`bubble${mine ? ' mine' : ''}${g.some((it) => it.m?.poll_id) ? ' has-poll' : ''}${g.every(pinnedLine) ? ' pinned' : ''}${!mine && g.some((it) => { const pl = it.m && plainOf(it.m); return !!pl && (pl.mention_all || pl.mentions.includes(me)) }) ? ' mentioned' : ''}`}>
                   {showWho && <div className="bubble-name" style={{ color: colorOf(name) }}>{name}</div>}
                   {g.map((it, j) => <Fold key={it.key} line hidden={!keep(it)}>
                     {it.m ? <Line m={it.m} plain={plainOf(it.m)} mine={mine} names={names} last={j === g.length - 1} onPhoto={setViewPhoto}
@@ -358,7 +373,7 @@ function QuickBar({ mine, indent, picked, pinned, canPin, onReact, onPin, onMore
     <div ref={ref} className={`quick-bar${mine ? ' mine' : ''}${indent ? ' indent' : ''}`} style={ready ? undefined : { pointerEvents: 'none' }}>
       <div className="quick-emojis">
         {EMOJIS.map((e) => <button key={e} className={`react-pick${picked === e ? ' on' : ''}`} onClick={() => onReact(e)} aria-label={`Réagir ${e}`}>{e}</button>)}
-        <button className="react-pick more" onClick={onMore} aria-label="Plus d'options"><IconSmile size={20} /></button>
+        <button className="react-pick more" onClick={onMore} aria-label="Plus d'options"><IconMore size={22} /></button>
       </div>
       {canPin && <button className="quick-pin" onClick={onPin}><IconPin size={16} filled={pinned} /> {pinned ? 'Désépingler' : 'Épingler'}</button>}
     </div>

@@ -53,6 +53,7 @@ export const IconInbox = ({ size = 18 }: P) => svg(size, <><path d="M22 12h-6l-2
 export const IconLogout = ({ size = 18 }: P) => svg(size, <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></>)
 export const IconFilter = ({ size = 22, filled }: P) => svg(size, <path d="M3 4h18l-7 8.5V19l-4 2v-8.5z" fill={filled ? 'currentColor' : 'none'} />)
 export const IconCopy = ({ size = 20 }: P) => svg(size, <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></>)
+export const IconMore = ({ size = 22 }: P) => svg(size, <><circle cx="5" cy="12" r="1.6" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /><circle cx="19" cy="12" r="1.6" fill="currentColor" /></>)
 export const IconSmile = ({ size = 20 }: P) => svg(size, <><circle cx="12" cy="12" r="9" /><path d="M8.5 14.5s1.3 1.8 3.5 1.8 3.5-1.8 3.5-1.8M9 9.5h.01M15 9.5h.01" /></>)
 export const IconCheck = ({ size = 20 }: P) => svg(size, <path d="M5 12.5l4.5 4.5L19 7.5" />)
 export const IconCamera = ({ size = 22 }: P) => svg(size, <><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="4" /></>)
