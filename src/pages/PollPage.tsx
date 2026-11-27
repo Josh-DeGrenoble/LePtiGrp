@@ -10,7 +10,9 @@ import { DatePicker } from '../components/DatePicker'
 import { ask, notify } from '../components/Dialog'
 import { IconCalendar, IconClose, IconLock, IconPencil, IconPlus, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type Poll, type Vote } from '../lib/supabase'
-import { readCache } from '../lib/network'
+import { OfflineLocked } from '../components/OfflineLocked'
+import { isShared } from '../lib/tools'
+import { readCache, useOnline } from '../lib/network'
 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const MONTHS = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'août', 'sept', 'oct', 'nov', 'déc']
@@ -34,6 +36,7 @@ export default function PollPage() {
   const [poll, setPoll] = useState<Poll | null>(() => readCache<Poll | null>(`poll:${id}`, null))
   const [votes, setVotes] = useState<Vote[]>([])
   const [missing, setMissing] = useState(false)
+  const online = useOnline()
   const [version, setVersion] = useState(0)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<{ q: string; opts: Opt[]; multi: boolean }>({ q: '', opts: [], multi: false })
@@ -97,7 +100,7 @@ export default function PollPage() {
 
   return (
     <Screen header={<><BackButton to={backTo} /><h1>Sondage</h1><HeaderMenu convId={poll?.conversation_id ?? undefined} /></>}>
-      {missing ? <p className="empty">Ce sondage n'existe plus ou tu n'y as plus accès.</p> : <>
+      {missing ? <p className="empty">Ce sondage n'existe plus ou tu n'y as plus accès.</p> : !online && poll && isShared(poll) ? <OfflineLocked /> : <>
         <div className="card"><PollCard pollId={id} version={version} /></div>
         {poll && <div className="list-card">
           {closed && isDates && <button className="settings-row" onClick={() => setMaking(true)}><IconCalendar size={20} /><span>Créer l'événement dans le calendrier</span></button>}

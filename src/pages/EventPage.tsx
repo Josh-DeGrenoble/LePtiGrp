@@ -9,9 +9,12 @@ import { EventForm, type EventFields } from '../components/EventForm'
 import { ask, notify } from '../components/Dialog'
 import { IconCalendar, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type CalEvent, type EventReply } from '../lib/supabase'
-import { readCache, writeCache, useOnResume } from '../lib/network'
+import { readCache, writeCache, useOnResume, useOnline } from '../lib/network'
+import { dbWrite, flushWrites } from '../lib/offlineDb'
 import { useMe } from '../lib/auth'
-import { eventWhen, repeatLabel, usePeople } from '../lib/tools'
+import { OfflineLocked } from '../components/OfflineLocked'
+import { isShared } from '../lib/tools'
+import { eventWhen, repeatLabel, usePeople, forgetTool } from '../lib/tools'
 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
@@ -24,11 +27,13 @@ export default function EventPage() {
   const [ev, setEv] = useState<CalEvent | null>(() => readCache<CalEvent | null>(`event:${id}`, null))
   const [replies, setReplies] = useState<EventReply[]>(() => readCache<EventReply[]>(`event-replies:${id}`, []))
   const [missing, setMissing] = useState(false)
+  const online = useOnline()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<EventFields>({ title: '', day: null, time: '', place: '', repeat: null, until: null })
   const people = usePeople(ev)
 
-  const load = () => {
+  const load = async () => {
+    await flushWrites()
     supabase.from('events').select('*').eq('id', id).maybeSingle().then(({ data }) => {
       if (data) { setEv(data); writeCache(`event:${id}`, data) } else if (navigator.onLine) setMissing(true)
     })
@@ -68,14 +73,15 @@ export default function EventPage() {
   }
   const save = async () => {
     const patch = { title: form.title.trim(), day: ymd(form.day!), at_time: form.time || null, place: form.place.trim() || null, repeat: form.repeat, repeat_until: form.repeat ? form.until : null }
-    const { error } = await supabase.from('events').update(patch).eq('id', id)
+    const { error } = await dbWrite({ table: 'events', op: 'update', values: patch, match: { id } })
     if (error) return notify(errMsg(error))
-    setEv((e) => e && { ...e, ...patch }); setEditing(false)
+    setEv((e) => { const n = e && { ...e, ...patch }; writeCache(`event:${id}`, n); return n }); setEditing(false)
   }
   const destroy = async () => {
     if (!(await ask('Supprimer cet événement pour tout le monde ?'))) return
-    const { error } = await supabase.from('events').delete().eq('id', id)
+    const { error } = await dbWrite({ table: 'events', op: 'delete', match: { id } })
     if (error) return notify(errMsg(error))
+    forgetTool('calendar', id)
     nav(backTo, { replace: true })
   }
 
@@ -87,7 +93,7 @@ export default function EventPage() {
 
   return (
     <Screen header={<><BackButton to={backTo} /><h1>Événement</h1><HeaderMenu convId={ev?.conversation_id ?? undefined} /></>}>
-      {missing ? <p className="empty">Cet événement n'existe plus ou tu n'y as plus accès.</p> : ev && <>
+      {missing ? <p className="empty">Cet événement n'existe plus ou tu n'y as plus accès.</p> : !online && ev && isShared(ev) ? <OfflineLocked /> : ev && <>
         <button className="card event-head" onClick={startEdit}>
           <span className="event-head-icon"><IconCalendar size={22} /></span>
           <span>
@@ -123,7 +129,7 @@ export default function EventPage() {
         <button className="settings-row danger note-delete" onClick={destroy}><IconTrash /><span>Supprimer l'événement</span></button>
       </>}
 
-      <Sheet open={editing} onClose={() => setEditing(false)} title="Modifier l'événement">
+      <Sheet open={editing} onClose={() => setEditing(false)} title="Modifier l'événement" tall>
         <EventForm value={form} onChange={setForm} />
         <button className="btn primary wide" disabled={!form.title.trim() || !form.day} onClick={save}>Enregistrer</button>
       </Sheet>

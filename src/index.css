@@ -773,6 +773,7 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .event-form { display: flex; flex-direction: column; gap: 10px; }
 .week-head { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 .week-head b:not(.plain) { text-transform: capitalize; }
+.week-head .week-today { margin-left: auto; margin-right: 8px; font-size: 13.5px; }
 .week-expand { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 99px; }
 .week-expand.on { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); }
 .week-strip { display: flex; align-items: center; gap: 2px; }
@@ -785,12 +786,10 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .week-day.on { background: var(--primary); color: var(--primary-text); }
 .week-day.on small { color: inherit; opacity: .8; }
 .week-day:disabled { opacity: .3; }
-.event-when { display: flex; gap: 8px; }
-.event-when input[type=time] { flex: 1; min-width: 0; }
-.event-when .repeat-select { max-width: 55%; flex: 1; }
-.event-until { display: flex; align-items: center; gap: 8px; }
-.event-until span { flex: 1; }
-.event-until input { width: auto; }
+.event-when { margin: 0; }
+.event-when input[type=time], .event-until input { flex: 1; min-width: 0; }
+.event-until { margin: 0; align-items: center; }
+.event-until span { flex: none; }
 .event-create { margin-top: 14px; }
 /* calendrier : filtre du mois, à qui s'adresse l'événement */
 .cal-filters { display: flex; gap: 8px; align-items: center; }
@@ -824,3 +823,23 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .add-option { display: inline-flex; align-items: center; gap: 4px; padding: 6px 0; }
 .sheet .inline-form input[type=datetime-local] { flex: 1; min-width: 0; }
 .repeat-select { max-width: 40%; }
+
+/* Appli toujours verticale : l'appli installée est bloquée en portrait (manifest) ;
+   dans le navigateur, un téléphone à l'horizontale affiche une invitation à le redresser */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #root { display: none; }
+  body::after {
+    content: "📱\A Tourne ton téléphone à la verticale"; white-space: pre; text-align: center;
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    font: 600 17px/1.8 var(--font, system-ui); color: var(--text); background: var(--bg);
+  }
+}
+
+/* hors ligne */
+.offline-dim { opacity: .45; }
+.offline-locked { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 48px 24px; color: var(--muted); }
+.offline-locked p { margin: 0; }
+.offline-locked b { color: var(--text); }
+
+/* pop-up d'événement : hauteur fixe, pour que le haut ne bouge pas quand le clavier s'ouvre ou se ferme */
+.sheet.tall { height: 85dvh; }

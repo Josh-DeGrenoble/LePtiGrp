@@ -10,7 +10,8 @@ import { EventForm, type EventFields } from '../components/EventForm'
 import { notify } from '../components/Dialog'
 import { errMsg } from '../lib/supabase'
 import { supabase, type CalEvent, type ConvSummary } from '../lib/supabase'
-import { readCache, useOnResume, writeCache } from '../lib/network'
+import { readCache, useOnResume, useOnline, writeCache } from '../lib/network'
+import { flushWrites } from '../lib/offlineDb'
 import { useMe } from '../lib/auth'
 import { cachedConversations, fetchConversations } from '../lib/myConversations'
 import { createTool, nextOccurrence, occursOn, type Share } from '../lib/tools'
@@ -57,7 +58,8 @@ export default function CalendarPage() {
     } catch (e) { notify(errMsg(e)) } finally { setBusy(false) }
   }
 
-  const load = () => {
+  const load = async () => {
+    await flushWrites()
     supabase.from('events').select('*, event_replies(user_id, going)').order('day').order('at_time', { nullsFirst: true })
       .then(({ data }) => {
         if (!data) return
@@ -66,7 +68,7 @@ export default function CalendarPage() {
       })
     fetchConversations().then((d) => { if (d) setConvs(d) })
   }
-  useEffect(load, [])
+  useEffect(() => { load() }, [])
   useOnResume(load)
 
   const convName = new Map(convs.map((c) => [c.id, c.name ?? 'Discussion']))
@@ -105,7 +107,8 @@ export default function CalendarPage() {
     const k = new Date(`${o.on}T12:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
     groups.set(k, [...(groups.get(k) ?? []), o])
   }
-  const open = (e: Row) => nav(`/calendar/${e.id}`, { state: { from: '/calendar', root: st?.root } })
+  const online = useOnline()
+  const open = (e: Row) => !online && scope(e) !== 'solo' ? notify('Pas de réseau : il faut être connecté pour ouvrir un événement partagé.') : nav(`/calendar/${e.id}`, { state: { from: '/calendar', root: st?.root } })
 
   return (
     <Screen header={<><BackButton to={st?.from ?? '/'} /><h1>Calendrier</h1><HeaderMenu /></>}>
@@ -151,7 +154,7 @@ export default function CalendarPage() {
               const yes = e.event_replies.filter((r) => r.going).length
               const d = new Date(`${on}T12:00:00`)
               return (
-                <button key={e.id + on} className="settings-row event-row" onClick={() => open(e)}>
+                <button key={e.id + on} className={`settings-row event-row${!online && scope(e) !== 'solo' ? ' offline-dim' : ''}`} onClick={() => open(e)}>
                   <span className="event-date"><b>{d.getDate()}</b><small>{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</small></span>
                   <span className="event-main">
                     <span className="note-name">{e.title}</span>
@@ -168,9 +171,9 @@ export default function CalendarPage() {
       ))}
       <button className="fab" onClick={() => startNew(picked ?? today)} aria-label="Nouvel événement"><IconPlus size={32} /></button>
 
-      <Sheet open={!!form} onClose={closeNew} title="Nouvel événement">
+      <Sheet open={!!form} onClose={closeNew} title="Nouvel événement" tall>
         {form && <>
-          <EventForm value={form} onChange={setForm} autoFocus={!form.title} />
+          <EventForm value={form} onChange={setForm} />
           <div className="section-title">Partagé avec</div>
           <ShareChooser value={share} onChange={setShare} />
           <button className="btn primary wide event-create" disabled={busy || !form.title.trim() || !form.day || (share.mode === 'conv' && !share.conv)} onClick={create}>Créer</button>

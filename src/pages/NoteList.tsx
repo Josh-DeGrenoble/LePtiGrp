@@ -10,9 +10,12 @@ import { IconBack, IconMoney, IconNext, IconPencil, IconTrash, IconCheck } from 
 import { Sheet, SheetButton } from '../components/Sheet'
 import { ExpenseSheet } from './LedgerPage'
 import { supabase, errMsg, type Ledger, type List, type ListItem } from '../lib/supabase'
-import { readCache, writeCache, useOnResume } from '../lib/network'
-import { cachedTools, itemStatus, useGhosts, usePeople } from '../lib/tools'
+import { readCache, writeCache, useOnResume, useOnline } from '../lib/network'
+import { cachedTools, itemStatus, useGhosts, usePeople, forgetTool } from '../lib/tools'
 import { between, sections } from '../lib/notes'
+import { dbWrite, flushWrites, tempId } from '../lib/offlineDb'
+import { OfflineLocked } from '../components/OfflineLocked'
+import { isShared } from '../lib/tools'
 import { useMe } from '../lib/auth'
 
 // Éléments en cache ou venant d'une ancienne version : valeurs par défaut des champs récents
@@ -36,6 +39,7 @@ export default function NoteList() {
   })
   const [items, setItems] = useState<ListItem[]>(() => normalize(readCache<ListItem[]>(`items:${id}`, [])))
   const [missing, setMissing] = useState(false)
+  const online = useOnline()
   const [editing, setEditing] = useState(false)
   const [collapsed, setCollapsed] = useState<string[]>(() => readCache<string[]>(`collapsed:${id}`, []))
   const [ledger, setLedger] = useState<Ledger | null>(null)
@@ -47,6 +51,7 @@ export default function NoteList() {
   const nameOf = new Map([...people, ...ghosts].map((p) => [p.id, p.id === me ? 'Moi' : p.display_name]))
 
   const load = async () => {
+    await flushWrites()
     const [{ data: l }, { data: its, error }] = await Promise.all([
       supabase.from('lists').select('*').eq('id', id).maybeSingle(),
       supabase.from('list_items').select('*, list_claims(*)').eq('list_id', id),
@@ -58,6 +63,8 @@ export default function NoteList() {
     if (!its?.length) setEditing(true)  // liste vide : on commence par la remplir
   }
   useOnResume(load)
+  // l'état local (modifs hors ligne comprises) reste affiché au prochain lancement sans réseau
+  useEffect(() => { writeCache(`items:${id}`, items) }, [id, items])
   useEffect(() => {
     load()
     // les autres membres voient les changements en direct
@@ -73,11 +80,11 @@ export default function NoteList() {
   const run = async (q: PromiseLike<{ error: unknown }>) => { const { error } = await q; if (error) { notify(errMsg(error)); load() } }
   const updateItem = (item: ListItem, changes: Partial<ListItem>) => {
     setItems((its) => its.map((i) => (i.id === item.id ? { ...i, ...changes } : i)))
-    return run(supabase.from('list_items').update(changes).eq('id', item.id))
+    return run(dbWrite({ table: 'list_items', op: 'update', values: changes, match: { id: item.id } }))
   }
   const setCategories = (categories: string[]) => {
     setList((l) => l && { ...l, categories })
-    return run(supabase.from('lists').update({ categories }).eq('id', id))
+    return run(dbWrite({ table: 'lists', op: 'update', values: { categories }, match: { id } }))
   }
   const cats = () => sections(list, items).slice(1).map((s) => s.cat!)
 
@@ -85,26 +92,30 @@ export default function NoteList() {
     update: updateItem,
     add: async (content, cat, quantity) => {
       const last = sections(list, items).find((s) => s.cat === cat)?.items.at(-1)
-      const { data, error } = await supabase.from('list_items').insert({ list_id: id, content, quantity, category: cat, position: between(last) }).select('*, list_claims(*)').single()
+      const values = { list_id: id, content, quantity, category: cat, position: between(last) }
+      const temp = tempId()
+      const { data, error } = await dbWrite({ table: 'list_items', op: 'insert', values, temp })
       if (error) return notify(errMsg(error))
-      setItems((its) => (its.some((i) => i.id === data.id) ? its : [...its, ...normalize([data])]))
+      // hors ligne : ligne locale (id provisoire), enregistrée au retour du réseau
+      const row = (data ?? { ...values, id: temp, created_at: new Date().toISOString() }) as unknown as ListItem
+      setItems((its) => (its.some((i) => i.id === row.id) ? its : [...its, ...normalize([{ ...row, list_claims: [] }])]))
     },
     remove: (item) => {
       setItems((its) => its.filter((i) => i.id !== item.id))
-      run(supabase.from('list_items').delete().eq('id', item.id))
+      run(dbWrite({ table: 'list_items', op: 'delete', match: { id: item.id } }))
     },
     addCategory: (name) => { if (!cats().includes(name)) setCategories([...cats(), name]) },
     renameCategory: async (from, to) => {
       if (cats().includes(to)) return notify('Cette catégorie existe déjà.')
       setItems((its) => its.map((i) => (i.category === from ? { ...i, category: to } : i)))
-      await run(supabase.from('list_items').update({ category: to }).eq('list_id', id).eq('category', from))
+      await run(dbWrite({ table: 'list_items', op: 'update', values: { category: to }, match: { list_id: id, category: from } }))
       setCategories(cats().map((c) => (c === from ? to : c)))
     },
     removeCategory: async (cat) => {
       const n = items.filter((i) => i.category === cat).length
       if (n && !(await ask(`Supprimer la catégorie « ${cat} » ? Ses ${n} élément${n > 1 ? 's' : ''} passeront dans « Sans catégorie ».`))) return
       setItems((its) => its.map((i) => (i.category === cat ? { ...i, category: null } : i)))
-      await run(supabase.from('list_items').update({ category: null }).eq('list_id', id).eq('category', cat))
+      await run(dbWrite({ table: 'list_items', op: 'update', values: { category: null }, match: { list_id: id, category: cat } }))
       setCategories(cats().filter((c) => c !== cat))
     },
   }
@@ -123,8 +134,8 @@ export default function NoteList() {
     // et « je prends » ignore une prise déjà enregistrée (plus d'erreur list_claims_pkey)
     const prev = claimQueue.current.get(item.id) ?? Promise.resolve()
     const next = prev.then(() => run(mine
-      ? supabase.from('list_claims').delete().eq('item_id', item.id).eq('user_id', me)
-      : supabase.from('list_claims').upsert({ item_id: item.id, user_id: me, qty }, { onConflict: 'item_id,user_id', ignoreDuplicates: true })))
+      ? dbWrite({ table: 'list_claims', op: 'delete', match: { item_id: item.id, user_id: me } })
+      : dbWrite({ table: 'list_claims', op: 'upsert', values: { item_id: item.id, user_id: me, qty }, onConflict: 'item_id,user_id', ignoreDuplicates: true })))
     claimQueue.current.set(item.id, next)
   }
   const setMyQty = (item: ListItem, raw: string) => {
@@ -132,7 +143,7 @@ export default function NoteList() {
     const qty = n > 0 ? n : null
     if (qty === item.list_claims.find((c) => c.user_id === me)?.qty) return
     setClaims(item, item.list_claims.map((c) => (c.user_id === me ? { ...c, qty } : c)))
-    run(supabase.from('list_claims').update({ qty }).eq('item_id', item.id).eq('user_id', me))
+    run(dbWrite({ table: 'list_claims', op: 'update', values: { qty }, match: { item_id: item.id, user_id: me } }))
   }
   const toggleSection = (key: string) => {
     const next = collapsed.includes(key) ? collapsed.filter((k) => k !== key) : [...collapsed, key]
@@ -142,12 +153,13 @@ export default function NoteList() {
   const rename = async (name: string) => {
     if (!list || !name.trim() || name.trim() === list.name) return
     setList({ ...list, name: name.trim() })
-    run(supabase.from('lists').update({ name: name.trim() }).eq('id', id))
+    run(dbWrite({ table: 'lists', op: 'update', values: { name: name.trim() }, match: { id } }))
   }
   const destroy = async () => {
     if (!list || !(await ask(`Supprimer le pense-bête « ${list.name} » et tout son contenu ?`))) return
-    const { error } = await supabase.from('lists').delete().eq('id', id)
+    const { error } = await dbWrite({ table: 'lists', op: 'delete', match: { id } })
     if (error) return notify(errMsg(error))
+    forgetTool('notes', id)
     nav(backTo, { replace: true })
   }
 
@@ -165,6 +177,7 @@ export default function NoteList() {
     setList((l) => (l ? { ...l, ledger_id: lid } : l))
   }
 
+  if (!online && list && isShared(list)) return <Screen header={<><BackButton to={backTo} /><h1>Pense-bête</h1><span className="icon-btn" /></>}><OfflineLocked /></Screen>
   if (missing) return <Screen header={<><BackButton to={backTo} /><h1>Introuvable</h1><span className="icon-btn" /></>}>
     <p className="empty">Ce pense-bête n'existe plus ou tu n'y as plus accès.</p>
   </Screen>

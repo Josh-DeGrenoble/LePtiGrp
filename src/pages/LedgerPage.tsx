@@ -9,9 +9,12 @@ import { Avatar } from '../components/Avatar'
 import { ask, notify } from '../components/Dialog'
 import { IconClose, IconTrash } from '../components/Icons'
 import { supabase, errMsg, type Expense, type Ledger } from '../lib/supabase'
-import { readCache, writeCache, useOnResume } from '../lib/network'
+import { readCache, writeCache, useOnResume, useOnline } from '../lib/network'
+import { dbWrite, flushWrites, tempId } from '../lib/offlineDb'
 import { useMe } from '../lib/auth'
-import { cachedTools, euro, useGhosts, usePeople } from '../lib/tools'
+import { OfflineLocked } from '../components/OfflineLocked'
+import { isShared } from '../lib/tools'
+import { cachedTools, euro, useGhosts, usePeople, forgetTool } from '../lib/tools'
 
 /** Dates où une dépense a eu lieu jusqu'à maintenant (une seule, ou chaque semaine / mois / an jusqu'à son arrêt) */
 export function occurrences(e: Expense): Date[] {
@@ -82,6 +85,7 @@ export default function LedgerPage() {
   })
   const [expenses, setExpenses] = useState<Expense[]>(() => readCache<Expense[]>(`expenses:${id}`, []))
   const [missing, setMissing] = useState(false)
+  const online = useOnline()
   // dépense ouverte dans la fenêtre : 'new' pour en ajouter une
   const [editing, setEditing] = useState<Expense | 'new' | null>(null)
   const [filter, setFilter] = useState<{ period: Period; payer: string | null; concerned: string | null }>({ period: 'all', payer: null, concerned: null })
@@ -92,6 +96,7 @@ export default function LedgerPage() {
   const nameOf = (uid: string) => (uid === me ? 'Moi' : everyone.find((p) => p.id === uid)?.display_name ?? '?')
 
   const load = async () => {
+    await flushWrites()
     const [{ data: l }, { data: ex }] = await Promise.all([
       supabase.from('ledgers').select('*').eq('id', id).maybeSingle(),
       supabase.from('expenses').select('*').eq('ledger_id', id).order('spent_at', { ascending: false }),
@@ -100,6 +105,7 @@ export default function LedgerPage() {
     setLedger(l); setExpenses(ex ?? []); writeCache(`expenses:${id}`, ex ?? [])
   }
   useOnResume(load)
+  useEffect(() => { writeCache(`expenses:${id}`, expenses) }, [id, expenses])
   useEffect(() => {
     load()
     const ch = supabase.channel(`ledger-${id}`)
@@ -111,16 +117,18 @@ export default function LedgerPage() {
   const remove = async (e: Expense) => {
     if (!(await ask(`Supprimer la dépense « ${e.label} » ?`))) return
     setExpenses((xs) => xs.filter((x) => x.id !== e.id))
-    const { error } = await supabase.from('expenses').delete().eq('id', e.id)
+    const { error } = await dbWrite({ table: 'expenses', op: 'delete', match: { id: e.id } })
     if (error) { notify(errMsg(error)); load() }
   }
   const destroy = async () => {
     if (!ledger || !(await ask(`Supprimer les comptes « ${ledger.name} » et toutes leurs dépenses ?`))) return
-    const { error } = await supabase.from('ledgers').delete().eq('id', id)
+    const { error } = await dbWrite({ table: 'ledgers', op: 'delete', match: { id } })
     if (error) return notify(errMsg(error))
+    forgetTool('accounts', id)
     nav(backTo, { replace: true })
   }
 
+  if (!online && ledger && isShared(ledger)) return <Screen header={<><BackButton to={backTo} /><h1>Comptes</h1><span className="icon-btn" /></>}><OfflineLocked /></Screen>
   if (missing) return <Screen header={<><BackButton to={backTo} /><h1>Introuvable</h1><span className="icon-btn" /></>}>
     <p className="empty">Ces comptes n'existent plus ou tu n'y as plus accès.</p>
   </Screen>
@@ -232,11 +240,13 @@ export function ExpenseSheet({ expense, onClose, ledgerId, people, me, onSaved, 
   const save = async () => {
     const fields = { label: label.trim(), amount: Math.round(value * 100) / 100, paid_by: paidBy, split: forWhom, spent_at: new Date(at).toISOString(),
       ...((repeat || expense?.repeat) && { repeat: repeat ?? null, repeat_until: repeat ? expense?.repeat_until ?? null : null }) }
+    const temp = tempId()
     const { data, error } = expense
-      ? await supabase.from('expenses').update(fields).eq('id', expense.id).select().single()
-      : await supabase.from('expenses').insert({ ledger_id: ledgerId, ...fields }).select().single()
+      ? await dbWrite({ table: 'expenses', op: 'update', values: fields, match: { id: expense.id } })
+      : await dbWrite({ table: 'expenses', op: 'insert', values: { ledger_id: ledgerId, ...fields }, temp })
     if (error) return notify(errMsg(error))
-    onSaved(data); onClose()
+    // hors ligne : on affiche tout de suite la version locale
+    onSaved((expense ? { ...expense, ...fields } : data ?? { id: temp, ledger_id: ledgerId, created_at: new Date().toISOString(), ...fields }) as Expense); onClose()
   }
 
   return (
@@ -252,9 +262,10 @@ export function ExpenseSheet({ expense, onClose, ledgerId, people, me, onSaved, 
         </select>
       </div>
       {expense?.repeat && !expense.repeat_until && <button className="link-btn" onClick={async () => {
-        const { data, error } = await supabase.from('expenses').update({ repeat_until: new Date().toISOString() }).eq('id', expense.id).select().single()
+        const repeat_until = new Date().toISOString()
+        const { error } = await dbWrite({ table: 'expenses', op: 'update', values: { repeat_until }, match: { id: expense.id } })
         if (error) return notify(errMsg(error))
-        onSaved(data); onClose()
+        onSaved({ ...expense, repeat_until }); onClose()
       }}>Arrêter la récurrence (garder ce qui a déjà eu lieu)</button>}
       <div className="sheet-section">Payé par</div>
       <div className="chip-row">

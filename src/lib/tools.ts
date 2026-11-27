@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, type CalEvent, type Claim, type Profile, type Repeat, type Shared } from './supabase'
 import { readCache, writeCache } from './network'
+import { dbWrite, flushWrites } from './offlineDb'
 
 /** Les outils du menu ▽ : même logique de partage, de liste et de création */
 export type ToolKind = 'notes' | 'accounts' | 'polls' | 'calendar'
@@ -105,6 +106,7 @@ export type ToolItem = Shared & { title: string; summary: string }
 export const cachedTools = (k: ToolKind) => readCache<ToolItem[]>(`tools:${k}`, [])
 
 export async function loadTools(k: ToolKind): Promise<ToolItem[]> {
+  await flushWrites()
   const t = TOOLS[k]
   const { data, error } = await supabase.from(t.table).select(t.select).order('created_at', { ascending: false })
   if (error) throw error
@@ -120,14 +122,32 @@ export async function loadTools(k: ToolKind): Promise<ToolItem[]> {
 export type Share = { mode: 'me' | 'conv' | 'free'; conv: string | null; ids: string[] }
 
 export async function createTool(k: ToolKind, fields: Record<string, unknown>, share: Share, me: string) {
-  const { data, error } = await supabase.from(TOOLS[k].table).insert({
-    ...fields,
+  if (share.mode !== 'me' && !navigator.onLine) throw new Error('Pas de réseau : seul un élément perso (Moi seul) peut être créé hors ligne.')
+  const row = {
+    id: crypto.randomUUID(), ...fields,
     conversation_id: share.mode === 'conv' ? share.conv : null,
     participants: share.mode === 'free' ? [me, ...share.ids] : [me],
-  }).select().single()
+  }
+  const { data, error } = await dbWrite({ table: TOOLS[k].table, op: 'insert', values: row })
   if (error) throw error
-  return data as Shared
+  const item = (data ?? { ...row, owner_id: me, created_at: new Date().toISOString() }) as Shared & Record<string, unknown>
+  // visible tout de suite, même hors ligne
+  writeCache(`tools:${k}`, [{ ...item, title: String(item[TOOLS[k].field]), summary: '' }, ...cachedTools(k).filter((t) => t.id !== item.id)])
+  if (k === 'calendar') {
+    writeCache(`event:${item.id}`, item)
+    writeCache('calendar', [...readCache<unknown[]>('calendar', []), { ...item, event_replies: [] }])
+  }
+  return item as Shared
 }
+
+/** Oublie un outil supprimé (listes en cache) */
+export function forgetTool(k: ToolKind, id: string) {
+  writeCache(`tools:${k}`, cachedTools(k).filter((t) => t.id !== id))
+  if (k === 'calendar') writeCache('calendar', readCache<{ id: string }[]>('calendar', []).filter((e) => e.id !== id))
+}
+
+/** Outil partagé (conv ou amis choisis) : il faut du réseau pour l'ouvrir */
+export const isShared = (i: Pick<Shared, 'conversation_id' | 'participants'>) => !!i.conversation_id || (i.participants?.length ?? 0) > 1
 
 /** Les personnes qui partagent un outil : membres de la conv, ou participants */
 export function usePeople(item: Pick<Shared, 'conversation_id' | 'participants'> | null) {

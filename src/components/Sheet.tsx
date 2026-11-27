@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 
 /** Pop-up qui monte du bas de l'écran ; se ferme en touchant à côté ou en balayant vers le bas */
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title?: string; children: ReactNode }) {
+export function Sheet({ open, onClose, title, children, tall }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; tall?: boolean }) {
   const [dy, setDy] = useState(0)
   const start = useRef<number | null>(null)
   if (!open) return null
@@ -21,7 +21,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog"
+      <div className={`sheet${tall ? ' tall' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog"
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}
         style={dy ? { transform: `translateY(${dy}px)`, transition: 'none' } : undefined}>
         <div className="sheet-handle" />

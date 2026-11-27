@@ -20,6 +20,7 @@ export function EventForm({ value, onChange, autoFocus }: { value: EventFields; 
   const today = startOfDay(new Date())
   const [week, setWeek] = useState(() => monday(value.day ?? today))
   const [full, setFull] = useState(false)
+  const [reset, setReset] = useState(0)  // « Aujourd'hui » ramène aussi le grand calendrier au mois en cours
   const set = (p: Partial<EventFields>) => onChange({ ...value, ...p })
   const days = Array.from({ length: 7 }, (_, i) => new Date(week.getFullYear(), week.getMonth(), week.getDate() + i))
   const shift = (n: number) => setWeek(new Date(week.getFullYear(), week.getMonth(), week.getDate() + 7 * n))
@@ -32,12 +33,13 @@ export function EventForm({ value, onChange, autoFocus }: { value: EventFields; 
 
       <div className="week-head">
         {full ? <b className="plain">Choisis le jour</b> : <b>{month}</b>}
+        {(full || +week !== +monday(today)) && <button type="button" className="link-btn week-today" onClick={() => { setWeek(monday(today)); setReset((n) => n + 1) }}>Aujourd'hui</button>}
         <button type="button" className={`link-btn week-expand${full ? ' on' : ''}`} onClick={() => setFull(!full)}>
           <IconCalendar size={16} /> {full ? 'Semaine' : 'Mois'}
         </button>
       </div>
       {full
-        ? <DatePicker value={value.day ? [value.day] : []} onChange={(d) => { if (d[0]) { pick(d[0]); setFull(false) } }} max={1} single />
+        ? <DatePicker key={reset} value={value.day ? [value.day] : []} onChange={(d) => { if (d[0]) { pick(d[0]); setFull(false) } }} max={1} single />
         : <div className="week-strip">
             <button type="button" className="icon-btn" onClick={() => shift(-1)} disabled={+week <= +monday(today)} aria-label="Semaine précédente"><IconBack size={18} /></button>
             {days.map((d, i) => (
@@ -49,7 +51,7 @@ export function EventForm({ value, onChange, autoFocus }: { value: EventFields; 
             <button type="button" className="icon-btn dp-next" onClick={() => shift(1)} aria-label="Semaine suivante"><IconBack size={18} /></button>
           </div>}
 
-      <div className="event-when">
+      <div className="inline-form event-when">
         <input type="time" value={value.time} onChange={(e) => set({ time: e.target.value })} aria-label="Heure (facultatif)" />
         <select className="repeat-select" value={value.repeat ?? ''} aria-label="Récurrence"
           onChange={(e) => set({ repeat: (e.target.value || null) as Repeat | null, ...(!e.target.value && { until: null }) })}>
@@ -57,7 +59,7 @@ export function EventForm({ value, onChange, autoFocus }: { value: EventFields; 
           {REPEATS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
         </select>
       </div>
-      {value.repeat && <label className="event-until">
+      {value.repeat && <label className="inline-form event-until">
         <span className="muted small">Jusqu'au (facultatif)</span>
         <input type="date" value={value.until ?? ''} onChange={(e) => set({ until: e.target.value || null })} />
       </label>}
