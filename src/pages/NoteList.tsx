@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../components/Layout'
-import { BackButton } from '../components/BackButton'
+import { BackButton, goBack, toolBack } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { LimitedInput } from '../components/LimitedInput'
 import { NoteEditor, type EditorActions } from '../components/NoteEditor'
@@ -32,11 +32,13 @@ export default function NoteList() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const me = useMe()
-  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/notes'
+  const navState = useLocation().state as { from?: string; root?: string } | null
+  const from = navState?.from
   const [list, setList] = useState<List | null>(() => {
     const c = cachedTools('notes').find((l) => l.id === id)
     return c ? { ...c, name: c.title } : null
   })
+  const backTo = toolBack(from, list?.conversation_id)
   const [items, setItems] = useState<ListItem[]>(() => normalize(readCache<ListItem[]>(`items:${id}`, [])))
   const [missing, setMissing] = useState(false)
   const online = useOnline()
@@ -160,7 +162,7 @@ export default function NoteList() {
     const { error } = await dbWrite({ table: 'lists', op: 'delete', match: { id } })
     if (error) return notify(errMsg(error))
     forgetTool('notes', id)
-    nav(backTo, { replace: true })
+    goBack(nav, backTo)
   }
 
   // Compte lié : « Ajouter une dépense » y ajoute une dépense (payée par moi, partagée entre les gens du compte)
@@ -231,7 +233,7 @@ export default function NoteList() {
     </>}>
       {list && (ledger
         ? <div className="ledger-link fade-in">
-            <button className="ledger-link-name" onClick={() => nav(`/accounts/${ledger.id}`, { state: { from: `/notes/${id}` } })}>
+            <button className="ledger-link-name" onClick={() => nav(`/accounts/${ledger.id}`, { state: { from: `/notes/${id}`, root: navState?.root } })}>
               <IconMoney size={18} /><span>{ledger.name}</span><IconNext size={14} />
             </button>
             {editing

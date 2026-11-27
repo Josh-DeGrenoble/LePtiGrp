@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../components/Layout'
-import { BackButton } from '../components/BackButton'
+import { BackButton, goBack, toolBack } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { PollCard } from '../components/PollCard'
 import { LimitedInput } from '../components/LimitedInput'
@@ -32,8 +32,9 @@ type Opt = { from: number | null; text: string; voted: boolean }
 export default function PollPage() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/polls'
+  const from = (useLocation().state as { from?: string } | null)?.from
   const [poll, setPoll] = useState<Poll | null>(() => readCache<Poll | null>(`poll:${id}`, null))
+  const backTo = toolBack(from, poll?.conversation_id)
   const [votes, setVotes] = useState<Vote[]>([])
   const [missing, setMissing] = useState(false)
   const online = useOnline()
@@ -87,7 +88,7 @@ export default function PollPage() {
     const { error } = await supabase.from('polls').delete().eq('id', id)
     if (error) return notify(errMsg(error))
     forgetTool('polls', id)
-    nav(backTo, { replace: true })
+    goBack(nav, backTo)
   }
   // créer l'événement : la date choisie, liée à la conv du sondage
   const makeEvent = (i: number) => {

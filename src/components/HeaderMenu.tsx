@@ -33,7 +33,9 @@ export function HeaderMenu({ convId }: { convId?: string }) {
   // Les outils sont des pages sœurs : passer de l'un à l'autre remplace la page (pas d'empilement)
   // et le retour ramène toujours à la page d'origine (la conv, ou la liste des convs)
   const inTool = /^\/(notes|accounts|polls|calendar)(\/|$)/.test(pathname)
-  const root = inTool ? (state as { root?: string } | null)?.root ?? '/' : pathname
+  const st = state as { root?: string; from?: string } | null
+  const fromOk = st?.from && !/^\/(notes|accounts|polls|calendar)(\/|$)/.test(st.from) ? st.from : undefined
+  const root = inTool ? st?.root ?? fromOk ?? '/' : pathname
   const go = (to: string) => { close(); nav(to, { replace: inTool, state: { from: root, root } }) }
 
   return <>
