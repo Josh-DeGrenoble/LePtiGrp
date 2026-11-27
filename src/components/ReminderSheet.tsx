@@ -8,7 +8,7 @@ import { addReminder, cancelReminder, localReminders, syncReminders, type LocalR
 import { enablePush, pushState } from '../lib/push'
 
 const UNITS = [{ label: 'min', ms: 60e3 }, { label: 'heures', ms: 3600e3 }, { label: 'jours', ms: 86400e3 }]
-const QUICK = [{ label: '10 min', n: 10, u: 0 }, { label: '30 min', n: 30, u: 0 }, { label: '1 h', n: 1, u: 1 }, { label: '3 h', n: 3, u: 1 }, { label: '1 jour', n: 1, u: 2 }]
+const QUICK = [1, 2, 3, 5, 10, 30]  // remplit le nombre ; l'unité reste celle choisie au-dessus
 const when = (d: Date) => d.toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 /** Pop-up « Notification » : programmer un rappel pour soi, reçu en notification à l'heure choisie */
@@ -63,7 +63,7 @@ export function ReminderSheet({ open, onClose, convId }: { open: boolean; onClos
         </div>
         <div className="chip-row">
           {QUICK.map((q) => (
-            <button key={q.label} className={`chip quick${Number(n) === q.n && unit === q.u ? ' on' : ''}`} onClick={() => { setN(String(q.n)); setUnit(q.u) }}>{q.label}</button>
+            <button key={q} className={`chip quick${Number(n) === q ? ' on' : ''}`} onClick={() => setN(String(q))}>{q}</button>
           ))}
         </div>
       </> : <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} aria-label="Date et heure" />}
