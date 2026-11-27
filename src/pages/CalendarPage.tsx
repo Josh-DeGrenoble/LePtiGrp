@@ -175,7 +175,7 @@ export default function CalendarPage() {
       ))}
       <button className="fab" onClick={() => startNew(picked ?? today)} aria-label="Nouvel événement"><IconPlus size={32} /></button>
 
-      <Sheet open={!!form} onClose={closeNew} title="Nouvel événement" tall>
+      <Sheet open={!!form} onClose={closeNew} title="Nouvel événement" form autoFocus>
         {form && <>
           <EventForm value={form} onChange={setForm} />
           <div className="section-title">Partagé avec</div>

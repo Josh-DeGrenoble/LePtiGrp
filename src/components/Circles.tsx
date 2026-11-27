@@ -81,8 +81,8 @@ export function CircleSheets({ open, setOpen, creating, setCreating, reload }: {
 
   return <>
 
-    <Sheet open={creating} onClose={() => setCreating(false)} title="Nouveau cercle d'amis">
-      <LimitedInput max={40} placeholder="Nom (ex. : Soirée ski)" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+    <Sheet open={creating} onClose={() => setCreating(false)} title="Nouveau cercle d'amis" form autoFocus>
+      <LimitedInput max={40} placeholder="Nom (ex. : Soirée ski)" value={name} onChange={(e) => setName(e.target.value)} />
       <p className="muted small">Chaque personne qui ouvre son lien devient amie avec toutes celles du cercle. Tu en fais partie d'office.</p>
       <button className="btn primary wide" disabled={!name.trim()} onClick={create}>Créer le cercle</button>
     </Sheet>

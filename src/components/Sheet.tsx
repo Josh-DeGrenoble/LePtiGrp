@@ -1,10 +1,24 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
-/** Pop-up qui monte du bas de l'écran ; se ferme en touchant à côté ou en balayant vers le bas */
-export function Sheet({ open, onClose, title, children, tall }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; tall?: boolean }) {
+const TYPABLE = 'input:not([type=date]):not([type=time]):not([type=datetime-local]):not([type=range]):not([type=checkbox]):not([type=radio]):not([disabled]), textarea'
+
+/**
+ * Pop-up qui monte du bas de l'écran ; se ferme en touchant à côté ou en balayant vers le bas.
+ * `form` : pop-up de saisie, accrochée en HAUT de l'écran : le clavier s'ouvre en bas sans rien faire bouger
+ * (les champs restent à leur place, clavier ouvert ou fermé). `autoFocus` : clavier ouvert sur le 1er champ.
+ */
+export function Sheet({ open, onClose, title, children, tall, form, autoFocus }: {
+  open: boolean; onClose: () => void; title?: string; children: ReactNode; tall?: boolean; form?: boolean; autoFocus?: boolean
+}) {
   const [dy, setDy] = useState(0)
   const start = useRef<number | null>(null)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (open && autoFocus) box.current?.querySelector<HTMLElement>(TYPABLE)?.focus({ preventScroll: true })
+  }, [open, autoFocus])
   if (!open) return null
+  // en haut : on balaie vers le haut pour fermer
+  const dir = form ? -1 : 1
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     // pas de balayage si le contenu est défilé ou si on manipule un élément qui gère son propre glisser
@@ -12,7 +26,7 @@ export function Sheet({ open, onClose, title, children, tall }: { open: boolean;
     start.current = e.currentTarget.scrollTop <= 0 && !noSwipe ? e.touches[0].clientY : null
   }
   const onTouchMove = (e: React.TouchEvent) => {
-    if (start.current !== null) setDy(Math.max(0, e.touches[0].clientY - start.current))
+    if (start.current !== null) setDy(Math.max(0, dir * (e.touches[0].clientY - start.current)))
   }
   const onTouchEnd = () => {
     if (dy > 90) onClose()
@@ -20,13 +34,14 @@ export function Sheet({ open, onClose, title, children, tall }: { open: boolean;
   }
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className={`sheet${tall ? ' tall' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog"
+    <div className={`sheet-backdrop${form ? ' top' : ''}`} onClick={onClose}>
+      <div ref={box} className={`sheet${tall ? ' tall' : ''}${form ? ' form' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog"
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}
-        style={dy ? { transform: `translateY(${dy}px)`, transition: 'none' } : undefined}>
-        <div className="sheet-handle" />
+        style={dy ? { transform: `translateY(${dir * dy}px)`, transition: 'none' } : undefined}>
+        {!form && <div className="sheet-handle" />}
         {title && <div className="sheet-title">{title}</div>}
         {children}
+        {form && <div className="sheet-handle bottom" />}
       </div>
     </div>
   )

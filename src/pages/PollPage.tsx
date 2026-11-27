@@ -117,7 +117,7 @@ export default function PollPage() {
         {poll && <button className="settings-row danger note-delete" onClick={destroy}><IconTrash /><span>Supprimer le sondage</span></button>}
       </>}
 
-      <Sheet open={editing} onClose={() => setEditing(false)} title="Modifier le sondage">
+      <Sheet open={editing} onClose={() => setEditing(false)} title="Modifier le sondage" form>
         <LimitedInput max={200} value={form.q} onChange={(e) => setForm({ ...form, q: e.target.value })} aria-label="Question" />
         <div className="poll-options-edit">
           {form.opts.map((o, i) => (

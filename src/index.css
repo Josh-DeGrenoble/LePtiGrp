@@ -877,3 +877,11 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 /* Appli : pas de sélection de texte à l'appui long (sauf dans les champs) ; « Copier » est dans le menu d'un message */
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+
+/* Pop-up de saisie : accrochée en haut, le clavier (en bas) ne fait plus bouger les champs */
+.sheet-backdrop.top { align-items: flex-start; padding: calc(env(safe-area-inset-top) + 10px) 8px 10px; }
+.sheet.form { border-radius: 22px; max-height: 100%; padding: 14px 16px 6px; animation: down .22s ease-out; box-shadow: var(--shadow); }
+.sheet.form.tall { height: auto; }
+.sheet.form > .sheet-title { margin-bottom: 12px; }
+.sheet-handle.bottom { margin: 12px auto 2px; }
+@keyframes down { from { transform: translateY(-40px); opacity: 0; } }
