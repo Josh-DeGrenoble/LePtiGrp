@@ -873,3 +873,7 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 .filter-sheet .srow .round-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; color: #fff; }
 .filter-sheet .srow.on .round-check { background: var(--primary); border-color: var(--primary); }
 .filter-hint { margin: -2px 2px 0; }
+
+/* Appli : pas de sélection de texte à l'appui long (sauf dans les champs) ; « Copier » est dans le menu d'un message */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
