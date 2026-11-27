@@ -46,6 +46,7 @@ export const IconBulb = ({ size = 22 }: P) => svg(size, <><path d="M9 18h6M10 22
 export const IconNext = ({ size = 18 }: P) => svg(size, <path d="M9 18l6-6-6-6" />)
 export const IconLock = ({ size = 18 }: P) => svg(size, <><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>)
 export const IconShield = ({ size = 18 }: P) => svg(size, <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></>)
+export const IconCrown = ({ size = 18 }: P) => svg(size, <><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5z" /><path d="M5 19h14" /></>)
 export const IconPhone = ({ size = 18 }: P) => svg(size, <><rect x="6" y="2" width="12" height="20" rx="3" /><path d="M11 18h2" /></>)
 export const IconLink = ({ size = 18 }: P) => svg(size, <><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></>)
 export const IconInbox = ({ size = 18 }: P) => svg(size, <><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z" /></>)

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth, signOut } from '../lib/auth'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShield } from '../components/Icons'
+import { IconBell, IconSend, IconLogout, IconLock, IconMail, IconNext, IconShield, IconCrown } from '../components/Icons'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { DevSection } from '../components/Feedback'
@@ -67,7 +67,7 @@ export default function Settings() {
   return (
     <Screen header={<>
       <BackButton to="/" />
-      <h1>Paramètres</h1>{isAdmin ? <Link to="/admin" className="icon-btn" aria-label="Admin"><IconShield size={22} /></Link> : <span className="icon-btn" />}
+      <h1>Paramètres</h1>{isAdmin ? <Link to="/admin" className="icon-btn" aria-label="Admin"><IconCrown size={22} /></Link> : <span className="icon-btn" />}
     </>}>
       <div className="settings-page">
         {profile && (
