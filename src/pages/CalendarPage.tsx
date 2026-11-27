@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
 import { Screen } from '../components/Layout'
 import { BackButton } from '../components/BackButton'
 import { HeaderMenu } from '../components/HeaderMenu'
-import { IconBack, IconPlus, IconUser, IconUsers, IconUserPlus } from '../components/Icons'
+import { IconBack, IconPlus, IconUser, IconUsers, IconUserPlus, IconCalendar } from '../components/Icons'
 import { Sheet } from '../components/Sheet'
 import { ShareChooser } from '../components/ShareChooser'
 import { EventForm, type EventFields } from '../components/EventForm'
@@ -15,6 +15,7 @@ import { flushWrites } from '../lib/offlineDb'
 import { useMe } from '../lib/auth'
 import { cachedConversations, fetchConversations } from '../lib/myConversations'
 import { createTool, nextOccurrence, occursOn, type Share } from '../lib/tools'
+import { EmptyState } from '../components/EmptyState'
 
 type Row = CalEvent & { event_replies: { user_id: string; going: boolean }[] }
 const DOW = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
@@ -148,7 +149,9 @@ export default function CalendarPage() {
         <button className="link-btn" onClick={() => setPicked(null)}>Tout voir</button>
       </div>}
 
-      {list.length === 0 && <p className="empty">{picked ? 'Rien ce jour-là.' : past ? 'Aucun événement passé.' : 'Aucun événement à venir. Touche + pour en proposer un.'}</p>}
+      {list.length === 0 && (picked || past ? <p className="empty">{picked ? 'Rien ce jour-là.' : 'Aucun événement passé.'}</p>
+        : <EmptyState icon={<IconCalendar size={34} />} title="Aucun événement à venir" text="Propose une sortie, un repas, un anniversaire…"
+          action={<Link to="/calendar/new" className="btn primary with-icon"><IconPlus size={18} /> Proposer un événement</Link>} />)}
       {[...groups.entries()].map(([title, rows]) => (
         <div key={title} className="fade-in">
           {!picked && <div className="section-title cap">{title}</div>}

@@ -17,6 +17,7 @@ import { QrSheet, QrScanner } from '../components/Qr'
 import { useCircles, CircleSheets, CircleRow, type Circle } from '../components/Circles'
 import { SGroup, SRow } from '../components/SettingsRow'
 import { ProfileEditor } from '../components/ProfileEditor'
+import { EmptyState } from '../components/EmptyState'
 
 export default function Friends() {
   const { profile } = useAuth()
@@ -160,7 +161,7 @@ export default function Friends() {
           </div>
         ))}
         {friends.length > 0 && shown.length === 0 && <p className="empty">Aucun ami trouvé.</p>}
-        {friends.length === 0 && <p className="empty">Partage ton code ou ton lien pour ajouter tes premiers amis.</p>}
+        {friends.length === 0 && <EmptyState icon={<IconUserPlus size={34} />} title="Pas encore d'amis" text="Partage ton code ou ton lien pour ajouter tes premiers amis." />}
       </div>
 
       <ProfileEditor open={editProfile} onClose={() => setEditProfile(false)} />

@@ -3,10 +3,11 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { supabase } from './supabase'
 import {
   ready, b64, deriveIdentity, randomEntropy, passwordKeys, sealBackup, openBackup, makeEpoch, epochSigOk, openEpoch,
-  sealMessage, openMessage, sigOk, local, type Identity, type EpochRow, type Pins, type Backup, type PhotoRef,
+  sealMessage, openMessage, sigOk, local, type Identity, type EpochRow, type Pins, type Backup, type PhotoRef, type ReplyRef,
 } from './crypto/core'
 
 export { parsePhrase, safetyCode } from './crypto/core'
+export type { ReplyRef } from './crypto/core'
 
 // ---------- État partagé ----------
 
@@ -297,21 +298,21 @@ async function sendEpoch(conv: string): Promise<{ epoch: number; key: Uint8Array
   throw new Error('Impossible de préparer la clé de la conversation, réessaie.')
 }
 
-export async function encryptMessage(p: { conversation_id: string; client_id: string; content: string; mentions: string[]; mention_all: boolean; photo?: PhotoRef }) {
+export async function encryptMessage(p: { conversation_id: string; client_id: string; content: string; mentions: string[]; mention_all: boolean; photo?: PhotoRef; reply?: ReplyRef }) {
   if (p.content.length > 4000) throw new Error('Message trop long (4000 caractères max).')
   await ready()
   const { epoch, key } = await sendEpoch(p.conversation_id)
   // Mon propre message : déjà connu en clair, pas besoin de le déchiffrer à son retour (pas de « Déchiffrement… » qui clignote)
   plainCache.set(cacheKey({ conversation_id: p.conversation_id, client_id: p.client_id, epoch, author_id: null, content: null }),
-    { status: 'ok', text: p.content, mentions: p.mentions, mention_all: p.mention_all, photo: p.photo })
-  return { epoch, ciphertext: sealMessage(me!, key, p.conversation_id, epoch, p.client_id, { t: p.content, m: p.mentions, a: p.mention_all, ...(p.photo ? { p: p.photo } : {}) }) }
+    { status: 'ok', text: p.content, mentions: p.mentions, mention_all: p.mention_all, photo: p.photo, reply: p.reply })
+  return { epoch, ciphertext: sealMessage(me!, key, p.conversation_id, epoch, p.client_id, { t: p.content, m: p.mentions, a: p.mention_all, ...(p.photo ? { p: p.photo } : {}), ...(p.reply ? { r: p.reply } : {}) }) }
 }
 
 // ---------- Déchiffrement ----------
 
 /** ok : chiffré et signé par une clé de confiance · unverified : signature valide mais clé non confirmée
  *  legacy : ancien message en clair · locked : clé indisponible · invalid : altéré ou signature fausse */
-export type Plain = { status: 'ok' | 'unverified' | 'legacy' | 'locked' | 'invalid'; text: string; mentions: string[]; mention_all: boolean; photo?: PhotoRef }
+export type Plain = { status: 'ok' | 'unverified' | 'legacy' | 'locked' | 'invalid'; text: string; mentions: string[]; mention_all: boolean; photo?: PhotoRef; reply?: ReplyRef }
 export type CipherRow = {
   conversation_id: string; author_id: string | null; content: string | null
   ciphertext?: string | null; epoch?: number | null; client_id?: string | null; mentions?: string[]; mention_all?: boolean
@@ -355,7 +356,7 @@ export async function decryptRows(rows: CipherRow[]) {
       continue
     }
     const status = signer && trusted(author, signer.sign_pk) ? 'ok' : 'unverified'
-    plainCache.set(cacheKey(r), { status, text: opened.body.t, mentions: opened.body.m, mention_all: opened.body.a, photo: opened.body.p })
+    plainCache.set(cacheKey(r), { status, text: opened.body.t, mentions: opened.body.m, mention_all: opened.body.a, photo: opened.body.p, reply: opened.body.r })
   }
 }
 

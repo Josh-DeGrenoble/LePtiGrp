@@ -33,7 +33,7 @@ export function useLongPress(onLongPress: () => void, onClick?: (e: React.Pointe
 }
 
 /** Annule le clic qui suit le relâchement d'un appui long (sinon il tombe sur un bouton du menu qui vient de s'ouvrir) */
-function swallowNextClick() {
+export function swallowNextClick() {
   const stop = (e: Event) => { e.preventDefault(); e.stopPropagation(); off() }
   const off = () => { document.removeEventListener('click', stop, true); clearTimeout(t) }
   document.addEventListener('click', stop, true)

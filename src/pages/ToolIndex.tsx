@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from '../components/EmptyState'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Screen } from '../components/Layout'
 import { BackButton } from '../components/BackButton'
@@ -17,11 +18,12 @@ export default function ToolIndex({ kind }: { kind: ToolKind }) {
   const st = useLocation().state as { from?: string; root?: string } | null
   const backTo = st?.from ?? '/'
   const [items, setItems] = useState<ToolItem[]>(() => cachedTools(kind))
+  const [loaded, setLoaded] = useState(() => items.length > 0)
   const online = useOnline()
   const [convs, setConvs] = useState<ConvSummary[]>(cachedConversations)
 
   const load = () => {
-    loadTools(kind).then(setItems).catch(() => {})
+    loadTools(kind).then(setItems).catch(() => {}).finally(() => setLoaded(true))
     fetchConversations().then((d) => { if (d) setConvs(d) })
   }
   useEffect(load, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -36,7 +38,12 @@ export default function ToolIndex({ kind }: { kind: ToolKind }) {
 
   return (
     <Screen header={<><BackButton to={backTo} /><h1>{TOOLS[kind].label}</h1><HeaderMenu /></>}>
-      {items.length === 0 && <p className="empty">Rien pour l'instant. Touche + pour commencer.</p>}
+      {!loaded && items.length === 0 && <div className="list-card skeleton-list" aria-label="Chargement…">
+        {[0, 1, 2].map((i) => <div key={i} className="sk-row" style={{ animationDelay: `${i * 90}ms` }}><span className="sk sk-icon" /><span className="sk" style={{ width: `${40 + i * 15}%` }} /></div>)}
+      </div>}
+      {loaded && items.length === 0 && <EmptyState icon={<ToolIcon kind={kind} size={34} />} title="Rien pour l'instant"
+        text="Crée le premier, pour toi seul ou à partager."
+        action={<Link to={`/${kind}/new`} state={{ root: st?.root }} className="btn primary with-icon"><IconPlus size={18} /> {TOOLS[kind].newTitle}</Link>} />}
       {sorted.map(([title, list]) => (
         <div key={title} className="fade-in">
           <div className="section-title">{title}</div>

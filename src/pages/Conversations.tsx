@@ -8,7 +8,9 @@ import { useMe } from '../lib/auth'
 import { norm, shortDate } from '../lib/format'
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
-import { IconGear, IconPlus, IconUser, IconStar, IconSearch } from '../components/Icons'
+import { IconGear, IconPlus, IconUser, IconStar, IconSearch, IconChat, IconUserPlus } from '../components/Icons'
+import { EmptyState } from '../components/EmptyState'
+import { readCache } from '../lib/network'
 import { Sheet, SheetButton } from '../components/Sheet'
 import { NotifToggles, ActivityToggles } from '../components/NotifToggles'
 import { useOnResume } from '../lib/network'
@@ -85,12 +87,15 @@ export default function Conversations() {
       <HeaderMenu />
       <Link to="/settings" className="icon-btn" aria-label="Paramètres"><IconGear /></Link>
     </>}>
-      {loaded && convs.length === 0 && (
-        <div className="empty">
-          <p>Aucune discussion pour l'instant.</p>
-          <p><Link to="/friends">Ajoute des amis</Link> puis touche l'un d'eux pour discuter, ou crée un groupe avec le bouton +.</p>
-        </div>
-      )}
+      {!loaded && convs.length === 0 && <div className="conv-list skeleton-list" aria-label="Chargement…">
+        {[0, 1, 2, 3, 4].map((i) => <div key={i} className="sk-conv" style={{ animationDelay: `${i * 90}ms` }}>
+          <span className="sk sk-avatar" /><span className="sk-lines"><span className="sk" style={{ width: `${45 + (i * 13) % 30}%` }} /><span className="sk" style={{ width: `${60 + (i * 17) % 30}%` }} /></span>
+        </div>)}
+      </div>}
+      {loaded && convs.length === 0 && <EmptyState icon={<IconChat size={36} />} title="Aucune discussion pour l'instant"
+        text="Ajoute des amis puis touche l'un d'eux pour discuter, ou crée un groupe."
+        action={<><Link to="/friends" className="btn primary with-icon"><IconUserPlus size={18} /> Ajouter des amis</Link>
+          <Link to="/new" className="btn">Créer un groupe</Link></>} />}
       {convs.length > 4 && <label className="conv-search"><IconSearch />
         <input placeholder="Rechercher" value={q} onChange={(e) => setQ(e.target.value)} type="search" /></label>}
       {favs.length > 0 && <section className="conv-section">
@@ -134,6 +139,7 @@ function ConvRow({ c, last, me, onMenu, crowd }: { c: ConvSummary; last: string 
   const unread = c.unread > 0
   // « Toi : » pour mes messages ; le prénom de l'auteur seulement dans les groupes
   const who = c.last_author_id === me ? 'Toi' : c.is_group ? c.last_author?.split(' ')[0] : null
+  const draft = readCache<string>(`draft:${c.id}`, '')
   return (
     <div className={`conv-row${unread ? ' unread' : ''}`} {...press} role="button" tabIndex={0}>
       <button className="avatar-btn" aria-label="Paramètres" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
@@ -146,7 +152,7 @@ function ConvRow({ c, last, me, onMenu, crowd }: { c: ConvSummary; last: string 
           <span className="conv-date">{shortDate(c.last_message_at)}</span>
         </div>
         <div className="conv-bottom">
-          <span className="conv-last">{last ? <>{who && <b>{who} : </b>}{last}</> : <i>Aucun message</i>}</span>
+          <span className="conv-last">{draft ? <><b className="conv-draft">Brouillon : </b>{draft}</> : last ? <>{who && <b>{who} : </b>}{last}</> : <i>Aucun message</i>}</span>
           {unread && <span className="badge">{c.unread > 99 ? '99+' : c.unread}</span>}
         </div>
       </div>

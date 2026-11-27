@@ -62,3 +62,6 @@ export const IconQr = ({ size = 20 }: P) => svg(size, <><rect x="3" y="3" width=
 export const IconScan = ({ size = 20 }: P) => svg(size, <><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" /><path d="M7 12h10" /></>)
 export const IconCalendar = ({ size = 18 }: P) => svg(size, <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>)
 export const IconUsers = ({ size = 20 }: P) => svg(size, <><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2.4.6 4 2.4 4 5.2" /></>)
+export const IconReply = ({ size = 20 }: P) => svg(size, <><path d="M9 14L4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></>)
+export const IconChat = ({ size = 24 }: P) => svg(size, <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-5.2A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />)
+export const IconArrowDown = ({ size = 22 }: P) => svg(size, <><path d="M12 5v14" /><path d="M6 13l6 6 6-6" /></>)
