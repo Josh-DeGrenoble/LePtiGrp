@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { supabase, errMsg } from '../lib/supabase'
 import { circleLink } from '../lib/friends'
 import { shareLink } from '../lib/share'
 import { SGroup, SRow } from './SettingsRow'
-import { Sheet, SheetButton } from './Sheet'
+import { Sheet } from './Sheet'
 import { LimitedInput } from './LimitedInput'
 import { ask, notify } from './Dialog'
 import { QrCode } from './Qr'
-import { IconPlus, IconUsers, IconClose } from './Icons'
+import { IconPlus, IconUsers, IconShare, IconPencil, IconLock, IconLink, IconTrash, IconCheck, IconSearch } from './Icons'
 import { Avatar } from './Avatar'
 import { norm } from '../lib/format'
 
@@ -36,25 +36,25 @@ export function CircleSheets({ open, setOpen, creating, setCreating, reload }: {
   const [people, setPeople] = useState<Person[]>([])
   const [search, setSearch] = useState('')
 
+  const [busy, setBusy] = useState<string | null>(null)
+  const [initIn, setInitIn] = useState(0)
+  // ordre figé au chargement (membres d'abord) : cocher / décocher ne fait pas sauter les lignes
   const loadPeople = (c: Circle) => supabase.rpc('circle_people', { circle: c.id }).then(({ data, error }) => {
-    if (error) notify(errMsg(error)); else setPeople(data as Person[])
+    if (error) return notify(errMsg(error))
+    setInitIn((data as Person[]).filter((p) => p.in_circle).length)
+    setPeople([...(data as Person[])].sort((a, b) => Number(b.in_circle) - Number(a.in_circle) || a.display_name.localeCompare(b.display_name)))
   })
   const manage = (c: Circle) => { setOpen(null); setSearch(''); setPeople([]); setManaging(c); loadPeople(c) }
-  const add = async (p: Person) => {
-    const { data, error } = await supabase.rpc('circle_add', { circle: managing!.id, who: p.id })
+  // une touche = ajouter ou retirer (les amitiés déjà créées restent)
+  const toggle = async (p: Person) => {
+    setBusy(p.id)
+    const { data, error } = await supabase.rpc(p.in_circle ? 'circle_remove' : 'circle_add', { circle: managing!.id, who: p.id })
+    setBusy(null)
     if (error) return notify(errMsg(error))
-    setPeople((xs) => xs.map((x) => x.id === p.id ? { ...x, in_circle: true } : x))
-    notify(`${p.display_name} ajouté${data ? ` : ${data} nouvel${data > 1 ? 'les' : 'le'} amitié${data > 1 ? 's' : ''}` : ''}`)
+    setPeople((xs) => xs.map((x) => x.id === p.id ? { ...x, in_circle: !p.in_circle } : x))
+    if (!p.in_circle && typeof data === 'number' && data > 0) notify(`${p.display_name} ajouté : ${data} nouvel${data > 1 ? 'les' : 'le'} amitié${data > 1 ? 's' : ''}`)
     load()
   }
-  const removePerson = async (p: Person) => {
-    if (!(await ask(`Retirer ${p.display_name} du cercle ? Ses amitiés déjà créées restent.`))) return
-    const { error } = await supabase.rpc('circle_remove', { circle: managing!.id, who: p.id })
-    if (error) return notify(errMsg(error))
-    setPeople((xs) => xs.map((x) => x.id === p.id ? { ...x, in_circle: false } : x))
-    load()
-  }
-
 
   const run = async (fn: string, args: Record<string, unknown>) => {
     const { error } = await supabase.rpc(fn, args)
@@ -92,37 +92,38 @@ export function CircleSheets({ open, setOpen, creating, setCreating, reload }: {
         {open.active ? <QrCode text={circleLink(open.token)} /> : <p className="muted small center">Lien désactivé : plus personne ne peut le rejoindre.</p>}
         <p className="muted small center">{open.members} personne{open.members > 1 ? 's' : ''} dans ce cercle</p>
       </div>}
-      {open && <SheetButton onClick={() => manage(open)}>Gérer les membres</SheetButton>}
-      {open && <SheetButton onClick={() => rename(open)}>Renommer</SheetButton>}
-      {open?.active && <SheetButton onClick={() => share(open)}>{copied ? 'Lien copié ✓' : 'Partager le lien'}</SheetButton>}
-      {open && <SheetButton onClick={() => run('set_circle_active', { circle: open.id, on_: !open.active })}>{open.active ? 'Désactiver le lien' : 'Réactiver le lien'}</SheetButton>}
-      {open && <SheetButton danger onClick={async () => (await ask(`Supprimer le cercle « ${open.name} » pour tout le monde ? Les amitiés déjà créées restent.`)) && run('delete_circle', { circle: open.id })}>Supprimer le cercle</SheetButton>}
+      {open && <div className="sgroup-card circle-actions">
+        <SRow icon={<IconUsers size={20} />} label="Gérer les membres" onClick={() => manage(open)} />
+        {open.active && <SRow icon={<IconShare size={20} />} label={copied ? 'Lien copié ✓' : 'Partager le lien'} chevron={false} onClick={() => share(open)} />}
+        <SRow icon={<IconPencil size={20} />} label="Renommer" chevron={false} onClick={() => rename(open)} />
+        <SRow icon={open.active ? <IconLock size={20} /> : <IconLink size={20} />} label={open.active ? 'Désactiver le lien' : 'Réactiver le lien'} chevron={false}
+          onClick={() => run('set_circle_active', { circle: open.id, on_: !open.active })} />
+        <SRow icon={<span className="danger"><IconTrash size={20} /></span>} label="Supprimer le cercle" danger chevron={false}
+          onClick={async () => { if (await ask(`Supprimer le cercle « ${open.name} » pour tout le monde ? Les amitiés déjà créées restent.`)) run('delete_circle', { circle: open.id }) }} />
+      </div>}
     </Sheet>
 
-    <Sheet open={!!managing} onClose={() => setManaging(null)} title={managing ? `Membres · ${managing.name}` : ''}>
+    <Sheet open={!!managing} onClose={() => { const c = managing!; setManaging(null); setOpen(people.length ? { ...c, members: people.filter((p) => p.in_circle).length } : c) }} title={managing ? `Membres · ${managing.name}` : ''} tall>
       {managing && (() => {
-        const inside = people.filter((p) => p.in_circle)
         const q = norm(search.trim())
-        const outside = q ? people.filter((p) => !p.in_circle && norm(p.display_name).includes(q)) : []
-        return <div className="circle-people">
-          {inside.length === 0 && <p className="muted small">Personne pour l'instant.</p>}
-          {inside.map((p) => (
-            <div key={p.id} className="circle-person">
-              <Avatar name={p.display_name} url={p.avatar_url} size={32} />
-              <span>{p.display_name}</span>
-              <button className="icon-btn" onClick={() => removePerson(p)} aria-label="Retirer"><IconClose /></button>
-            </div>
-          ))}
-          <input type="search" placeholder="Ajouter un ami…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          {outside.map((p) => (
-            <button key={p.id} className="circle-person add" onClick={() => add(p)}>
-              <Avatar name={p.display_name} url={p.avatar_url} size={32} />
-              <span>{p.display_name}</span>
-              <IconPlus size={18} />
-            </button>
-          ))}
-          {q && outside.length === 0 && <p className="muted small">Aucun compte trouvé.</p>}
-        </div>
+        const list = q ? people.filter((p) => norm(p.display_name).includes(q)) : people
+        const n = people.filter((p) => p.in_circle).length
+        return <>
+          <p className="muted small circle-count">{n} personne{n > 1 ? 's' : ''} dans le cercle · touche pour ajouter ou retirer</p>
+          {people.length > 6 && <label className="circle-search"><IconSearch />
+            <input type="search" placeholder="Chercher un ami…" value={search} onChange={(e) => setSearch(e.target.value)} /></label>}
+          <div className="circle-people">
+            {list.map((p, i) => <Fragment key={p.id}>
+              {!q && i === initIn && i > 0 && <div className="circle-sep">Autres amis</div>}
+              <button className={`circle-person${p.in_circle ? ' in' : ''}${busy === p.id ? ' busy' : ''}`} onClick={() => toggle(p)} aria-pressed={p.in_circle}>
+                <Avatar name={p.display_name} url={p.avatar_url} size={36} />
+                <span>{p.display_name}</span>
+                <span className="check">{p.in_circle && <IconCheck size={16} />}</span>
+              </button>
+            </Fragment>)}
+            {list.length === 0 && <p className="muted small">{q ? 'Aucun ami trouvé.' : 'Chargement…'}</p>}
+          </div>
+        </>
       })()}
     </Sheet>
   </>

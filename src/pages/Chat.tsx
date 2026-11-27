@@ -27,8 +27,11 @@ const PIN_DURATIONS: { label: string; ms: number | null }[] = [
   { label: 'Sans limite', ms: null },
 ]
 
-/** null = tout ; 'pinned' ; 'polls' ; 'activity' (modifs des outils) ; sinon l'id d'un membre */
-type Filter = null | 'pinned' | 'polls' | 'activity' | string
+/** Critères combinables : des types (épinglés, sondages, activité des outils) OU entre eux, ET des auteurs (OU entre eux) */
+type Kind = 'pinned' | 'polls' | 'activity'
+type Filter = { kinds: Kind[]; authors: string[] }
+const NO_FILTER: Filter = { kinds: [], authors: [] }
+const flip = <T,>(xs: T[], x: T) => xs.includes(x) ? xs.filter((y) => y !== x) : [...xs, x]
 const TOOL_PATH = { list: 'notes', ledger: 'accounts', poll: 'polls', event: 'calendar' } as const
 const TOOL_KIND = TOOL_PATH
 
@@ -41,8 +44,15 @@ export default function Chat() {
   const c = useConversation(id, me)
   const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(`msgs:${id}`, []))
   const pending = usePending(id)
-  // Filtre : épinglés, sondages, ou les messages d'un membre (null = tout)
-  const [filter, setFilter] = useState<Filter>(null)
+  // Filtre multicritère ; `since` = moment où il a été activé (pour compter les nouveaux messages qu'il masque)
+  const [filter, setFilterRaw] = useState<Filter>(NO_FILTER)
+  const [since, setSince] = useState(0)
+  const active = filter.kinds.length + filter.authors.length > 0
+  const setFilter = (f: Filter) => {
+    const on = f.kinds.length + f.authors.length > 0
+    if (on && !active) setSince(Date.now())
+    setFilterRaw(f)
+  }
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Message | null>(null)
   const [pinDate, setPinDate] = useState('')
@@ -84,8 +94,9 @@ export default function Chat() {
     return () => { supabase.removeChannel(ch); window.clearInterval(t); off() }
   }, [id, markRead, load])
 
-  const keep = (it: Item) => !filter || (!!it.m && (filter === 'pinned' ? isPinned(it.m) : filter === 'polls' ? !!it.m.poll_id
-    : filter === 'activity' ? it.m.kind === 'activity' : it.author === filter))
+  const keepMsg = (m: Message) => (!filter.kinds.length || filter.kinds.some((k) => k === 'pinned' ? isPinned(m) : k === 'polls' ? !!m.poll_id : m.kind === 'activity'))
+    && (!filter.authors.length || filter.authors.includes(m.author_id ?? ''))
+  const keep = (it: Item) => !active || (!!it.m && keepMsg(it.m))
   const sentIds = new Set(messages.map((m) => m.client_id))
   const waiting = pending.filter((p) => !sentIds.has(p.client_id))
   // Bas de la conversation : d'un coup à l'ouverture, en douceur quand un message arrive
@@ -101,7 +112,7 @@ export default function Chat() {
     const follow = () => { bottom.current?.scrollIntoView({ block: 'end' }); if (Date.now() < end) raf = requestAnimationFrame(follow) }
     follow()
     return () => cancelAnimationFrame(raf)
-  }, [filter])
+  }, [filter.kinds.join(), filter.authors.join()]) // eslint-disable-line react-hooks/exhaustive-deps
   // Clavier ouvert / fermé : on garde les derniers messages visibles, comme WhatsApp
   useEffect(() => {
     const keep = () => bottom.current?.scrollIntoView({ block: 'end' })
@@ -113,7 +124,7 @@ export default function Chat() {
 
   // Activité des outils (par outil) : réglage de la conv, sinon celui par défaut (Paramètres). Le filtre « Activité » la montre toujours.
   const showTools = c.mine?.show_tools ?? profile?.show_tools_default ?? []
-  const shown = filter === 'activity' ? messages : messages.filter((m) => m.kind !== 'activity' || (!!m.tool && showTools.includes(m.tool)))
+  const shown = filter.kinds.includes('activity') ? messages : messages.filter((m) => m.kind !== 'activity' || (!!m.tool && showTools.includes(m.tool)))
   const names = new Map(c.members.map((m) => [m.user_id, m.profiles?.display_name ?? '?']))
   // Messages + envois en cours, puis regroupés : même auteur à moins de 5 min = une seule bulle.
   // Clé = client_id quand il existe : l'envoi en cours devient le message reçu sans rien redessiner.
@@ -130,6 +141,9 @@ export default function Chat() {
     else groups.push([it])
   })
   const selPlain = selected && plainOf(selected)
+  // nouveaux messages des autres arrivés depuis l'activation du filtre et masqués par lui
+  const hiddenNew = active ? shown.filter((m) => m.author_id !== me && Date.parse(m.created_at) > since && !keepMsg(m)).length : 0
+  const kindLabel = { pinned: <><IconPin size={14} filled /> Épinglés</>, polls: <><IconPoll size={14} /> Sondages</>, activity: <><IconBell size={14} /> Activité</> }
 
   const act = async (fn: () => PromiseLike<{ error: unknown }>) => {
     const { error } = await fn()
@@ -147,19 +161,22 @@ export default function Chat() {
           <small>{c.conv?.is_group ? `${c.members.length} membres${c.conv.event_date ? ` · ${eventLabel(c.conv.event_date)}` : ''}` : 'Infos de la discussion'}</small></span>
       </Link>
       <HeaderMenu convId={id} />
-      <button className={`icon-btn chat-filter${filter ? ' on' : ''}`} onClick={() => setFilterOpen(true)}
-        aria-label="Filtrer les messages"><IconFilter filled={!!filter} /></button>
-    </>} footer={!filter && c.mine && (c.can('write')
+      <button className={`icon-btn chat-filter${active ? ' on' : ''}`} onClick={() => setFilterOpen(true)}
+        aria-label={hiddenNew ? `Filtrer les messages (${hiddenNew} nouveaux masqués)` : 'Filtrer les messages'}><IconFilter filled={active} />
+        {hiddenNew > 0 && <span className="filter-dot fade-in">{hiddenNew > 3 ? '+' : hiddenNew}</span>}</button>
+    </>} footer={!active && c.mine && (c.can('write')
       ? <Composer convId={id} members={c.members} me={me} canMentionAll={c.can('mention_all')} />
       : <div className="composer-locked">Seuls les admins peuvent écrire dans ce groupe.</div>)}>
       <div className="messages">
-        {filter && <div className="filter-chip fade-in">
-          {filter === 'pinned' ? <><IconPin size={14} filled /> Épinglés</> : filter === 'polls' ? <><IconPoll size={14} /> Sondages</>
-            : filter === 'activity' ? <><IconBell size={14} /> Activité</>
-            : <><Avatar name={names.get(filter) ?? '?'} url={c.members.find((m) => m.user_id === filter)?.profiles?.avatar_url} size={20} /> {filter === me ? 'Moi' : names.get(filter) ?? '?'}</>}
-          <button onClick={() => setFilter(null)} aria-label="Retirer le filtre"><IconClose size={14} /></button>
+        {active && <div className="filter-chips-bar fade-in">
+          {filter.kinds.map((k) => <span key={k} className="filter-chip">{kindLabel[k]}
+            <button onClick={() => setFilter({ ...filter, kinds: flip(filter.kinds, k) })} aria-label="Retirer ce critère"><IconClose size={14} /></button></span>)}
+          {filter.authors.map((a) => <span key={a} className="filter-chip">
+            <Avatar name={names.get(a) ?? '?'} url={c.members.find((m) => m.user_id === a)?.profiles?.avatar_url} size={20} /> {a === me ? 'Moi' : names.get(a) ?? '?'}
+            <button onClick={() => setFilter({ ...filter, authors: flip(filter.authors, a) })} aria-label="Retirer ce critère"><IconClose size={14} /></button></span>)}
+          {filter.kinds.length + filter.authors.length > 1 && <button className="filter-clear" onClick={() => setFilter(NO_FILTER)}>Tout effacer</button>}
         </div>}
-        {filter && !items.some(keep) && <p className="empty fade-in">Aucun message.</p>}
+        {active && !items.some(keep) && <p className="empty fade-in">Aucun message.</p>}
         {groups.map((g, gi) => {
           const first = g[0]
           const mine = first.author === me
@@ -167,7 +184,7 @@ export default function Chat() {
           const name = names.get(first.author ?? '') ?? 'Ancien membre'
           const showWho = !mine && !!c.conv?.is_group
           const day = dayLabel(first.created_at)
-          const newDay = !filter && (gi === 0 || dayLabel(groups[gi - 1][0].created_at) !== day)
+          const newDay = !active && (gi === 0 || dayLabel(groups[gi - 1][0].created_at) !== day)
           if (first.m?.kind === 'activity') return <div key={first.key} className="msg-block">
             {newDay && <div className="day-sep"><span>{day}</span></div>}
             <Fold hidden={!keep(first)}>
@@ -204,23 +221,29 @@ export default function Chat() {
             {([[null, 'Tous', null, messages.length],
               ['pinned', 'Épinglés', <IconPin size={15} />, messages.filter((m) => isPinned(m)).length],
               ['polls', 'Sondages', <IconPoll size={15} />, messages.filter((m) => m.poll_id).length],
-              ['activity', 'Activité', <IconBell size={15} />, messages.filter((m) => m.kind === 'activity').length]] as [Filter, string, React.ReactNode, number][])
-              .map(([f, label, icon, n]) => (
-                <button key={String(f)} className={`fchip${filter === f ? ' on' : ''}`} onClick={() => { setFilter(f); setFilterOpen(false) }}>
+              ['activity', 'Activité', <IconBell size={15} />, messages.filter((m) => m.kind === 'activity').length]] as [Kind | null, string, React.ReactNode, number][])
+              .map(([k, label, icon, n]) => (
+                <button key={String(k)} className={`fchip${(k ? filter.kinds.includes(k) : !active) ? ' on' : ''}`}
+                  onClick={() => setFilter(k ? { ...filter, kinds: flip(filter.kinds, k) } : NO_FILTER)} aria-pressed={k ? filter.kinds.includes(k) : !active}>
                   {icon}{label}<small>{n}</small>
                 </button>
               ))}
           </div>
           <div className="sgroup-title">Messages de</div>
           <div className="sgroup-card">
-            {c.members.filter((m) => m.profiles).map((m) => (
-              <button key={m.user_id} className="srow" onClick={() => { setFilter(m.user_id); setFilterOpen(false) }}>
+            {c.members.filter((m) => m.profiles).map((m) => {
+              const on = filter.authors.includes(m.user_id)
+              return <button key={m.user_id} className={`srow${on ? ' on' : ''}`} onClick={() => setFilter({ ...filter, authors: flip(filter.authors, m.user_id) })} aria-pressed={on}>
                 <Avatar name={m.profiles!.display_name} url={m.profiles!.avatar_url} size={28} />
                 <span className="srow-text">{m.user_id === me ? 'Moi' : m.profiles!.display_name}</span>
-                <span className="filter-right"><small>{messages.filter((x) => x.author_id === m.user_id && x.kind !== 'activity').length}</small>{filter === m.user_id && <IconCheck />}</span>
+                <span className="filter-right"><small>{messages.filter((x) => x.author_id === m.user_id && x.kind !== 'activity').length}</small>
+                  <span className="round-check">{on && <IconCheck size={14} />}</span></span>
               </button>
-            ))}
+            })}
           </div>
+          <p className="muted small filter-hint">Plusieurs critères possibles : par ex. Sondages + Léa = les sondages de Léa.</p>
+          <button className="btn primary wide" onClick={() => setFilterOpen(false)}>
+            {active ? `Voir ${items.filter(keep).length} message${items.filter(keep).length > 1 ? 's' : ''}` : 'Fermer'}</button>
         </div>
       </Sheet>
 

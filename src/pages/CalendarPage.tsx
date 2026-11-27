@@ -87,6 +87,9 @@ export default function CalendarPage() {
   const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
   const cells = [...Array(first).fill(null), ...Array.from({ length: count }, (_, i) => ymd(new Date(month.getFullYear(), month.getMonth(), i + 1)))]
   const shift = (n: number) => { setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1)); setPicked(null) }
+  const now = new Date()
+  const atToday = month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth() && !picked
+  const goToday = () => { setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setPicked(null) }
   // événements de chaque jour du mois affiché (récurrences comprises)
   const byDay = new Map<string, Row[]>()
   for (const d of cells) if (d) { const l = events.filter((e) => occursOn(e, d)); if (l.length) byDay.set(d, l) }
@@ -116,6 +119,7 @@ export default function CalendarPage() {
         <div className="dp-head">
           <button className="icon-btn" onClick={() => shift(-1)} aria-label="Mois précédent"><IconBack size={20} /></button>
           <b>{month.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</b>
+          <button className={`cal-today${atToday ? ' off' : ''}`} onClick={goToday} disabled={atToday}>Aujourd'hui</button>
           <button className="icon-btn dp-next" onClick={() => shift(1)} aria-label="Mois suivant"><IconBack size={20} /></button>
         </div>
         <div className="dp-grid">

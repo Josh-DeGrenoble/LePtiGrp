@@ -11,7 +11,7 @@ import { loadFriends, cachedFriends, friendLink, TAG_COLORS, type FriendWithTags
 import { Screen } from '../components/Layout'
 import { Avatar } from '../components/Avatar'
 import { TagChip } from '../components/TagChip'
-import { IconShare, IconTag, IconSearch, IconUserPlus, IconClose, IconQr, IconScan, IconPlus } from '../components/Icons'
+import { IconShare, IconTag, IconSearch, IconUserPlus, IconClose, IconScan, IconPlus } from '../components/Icons'
 import { Sheet } from '../components/Sheet'
 import { QrSheet, QrScanner } from '../components/Qr'
 import { useCircles, CircleSheets, CircleRow, type Circle } from '../components/Circles'
@@ -103,7 +103,6 @@ export default function Friends() {
             <div className="me-name">{profile.display_name}</div>
             <div className="me-code">Mon code : <b>{profile.friend_code}</b></div>
           </div>
-          <button className="icon-btn" onClick={() => setQr(true)} aria-label="Mon QR code"><IconQr size={22} /></button>
           <button className="icon-btn" onClick={() => setQr(true)} aria-label="Inviter"><IconShare /></button>
         </div>
       )}
