@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { restore, newKeys, unlock, createKeys, forgotKeys, parsePhrase, initE2EE, type E2EEState } from '../lib/e2ee'
 import { supabase, errMsg } from '../lib/supabase'
 import { signOut } from '../lib/auth'
@@ -29,9 +29,12 @@ function Unlock({ uid, hasPassword, email, create }: { uid: string; hasPassword:
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [forgot, setForgot] = useState(false)
+  const lock = useRef(false)
   const go = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setErr('')
-    try { await (create ? createKeys(uid, password, email) : unlock(uid, password)) } catch (x) { setErr(errMsg(x)); setBusy(false) }
+    e.preventDefault()
+    if (lock.current) return
+    lock.current = true; setBusy(true); setErr('')
+    try { await (create ? createKeys(uid, password, email) : unlock(uid, password)) } catch (x) { setErr(errMsg(x)); setBusy(false) } finally { lock.current = false }
   }
   if (forgot) return <Choose uid={uid} forgot onBack={() => setForgot(false)} />
   return (
@@ -53,12 +56,15 @@ function Choose({ uid, forgot, onBack }: { uid: string; forgot?: boolean; onBack
   const [pw2, setPw2] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const lock = useRef(false)
   const go = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (lock.current) return
     if (pw !== pw2) return setErr('Les deux mots de passe ne correspondent pas')
     if (forgot && !(await ask('Repartir avec de nouvelles clés ? Tes anciens messages chiffrés resteront illisibles pour toujours.'))) return
-    setBusy(true); setErr('')
-    try { await (forgot ? forgotKeys(uid, pw) : createKeys(uid, pw)) } catch (x) { setErr(errMsg(x)); setBusy(false) }
+    if (lock.current) return
+    lock.current = true; setBusy(true); setErr('')
+    try { await (forgot ? forgotKeys(uid, pw) : createKeys(uid, pw)) } catch (x) { setErr(errMsg(x)); setBusy(false) } finally { lock.current = false }
   }
   return (
     <form className="login e2ee" onSubmit={go}>

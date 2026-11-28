@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { supabase, errMsg } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Sheet } from './Sheet'
@@ -16,6 +16,7 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const lock = useRef(false)
   const email = session?.user.email ?? ''
   const google = !!session && !hasPassword(session.user)  // connexion Google : mot de passe de chiffrement seulement
 
@@ -23,9 +24,10 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (lock.current) return
     setError('')
     if (kind === 'password' && value !== confirm) return setError('Les deux mots de passe ne correspondent pas')
-    setBusy(true)
+    lock.current = true; setBusy(true)
     try {
       if (kind === 'password') await (google ? changeSecret(session!.user.id, current, value) : changePassword(email, current, value))
       else {
@@ -37,7 +39,7 @@ export function AccountForm({ kind, onClose }: { kind: Kind | null; onClose: () 
         ? `Un lien de confirmation a été envoyé à ${value.trim()}. Ton email changera une fois le lien validé.`
         : google ? 'Mot de passe de chiffrement modifié.' : 'Mot de passe modifié.')
       close()
-    } catch (err) { setError(errMsg(err)) } finally { setBusy(false) }
+    } catch (err) { setError(errMsg(err)) } finally { lock.current = false; setBusy(false) }
   }
 
   return (
