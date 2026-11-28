@@ -826,13 +826,13 @@ h1, .chat-title-text > span, .conv-name, .me-name, .sheet-title, .sgroup-title, 
 
 /* Appli toujours verticale : l'appli installée est bloquée en portrait (manifest) ;
    dans le navigateur, un téléphone à l'horizontale affiche une invitation à le redresser */
-@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
-  #root { display: none; }
-  body::after {
+/* Pas de media query (orientation) : sur Android, le clavier rétrécit la page qui passe « en paysage »,
+   l'appli disparaissait et le champ perdait le focus (champs de connexion inutilisables). La classe vient de l'écran réel (viewport.ts). */
+html.landscape-lock #root { display: none; }
+html.landscape-lock body::after {
     content: "📱\A Tourne ton téléphone à la verticale"; white-space: pre; text-align: center;
     position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
     font: 600 17px/1.8 var(--font, system-ui); color: var(--text); background: var(--bg);
-  }
 }
 
 /* hors ligne */
