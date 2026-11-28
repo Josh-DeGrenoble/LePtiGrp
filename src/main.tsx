@@ -7,6 +7,8 @@ import App from './App.tsx'
 import { trackViewport } from './lib/viewport'
 import { applyTextScale } from './lib/textScale'
 import { applyAccent } from './lib/accent'
+import { seedHome } from './components/BackButton'
+seedHome()
 applyTextScale()
 applyAccent()
 

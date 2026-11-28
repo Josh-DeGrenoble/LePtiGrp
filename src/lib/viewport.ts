@@ -4,6 +4,7 @@
  * l'en-tête reste en place, la liste des messages rétrécit et le champ de saisie colle au clavier.
  */
 export function trackViewport() {
+  trackOrientation()
   const vv = window.visualViewport
   if (!vv) return
   const update = () => {
@@ -14,5 +15,22 @@ export function trackViewport() {
   }
   vv.addEventListener('resize', update)
   vv.addEventListener('scroll', update)
+  update()
+}
+
+/**
+ * Téléphone tenu à l'horizontale (navigateur) : invitation à le redresser.
+ * On regarde l'écran physique et non la taille de la page, que le clavier réduit.
+ */
+function trackOrientation() {
+  const coarse = matchMedia('(pointer: coarse)')
+  const update = () => {
+    const type = screen.orientation?.type
+    const landscape = type ? type.startsWith('landscape') : Math.abs(Number(window.orientation ?? 0)) === 90
+    const phone = Math.min(screen.width, screen.height) <= 520
+    document.documentElement.classList.toggle('landscape-lock', landscape && phone && coarse.matches)
+  }
+  screen.orientation?.addEventListener?.('change', update)
+  window.addEventListener('orientationchange', update)
   update()
 }

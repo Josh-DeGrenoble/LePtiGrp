@@ -43,11 +43,13 @@ export function Lightbox({ photo, photos, onClose }: { photo: PhotoRef | null; p
   const list = photos?.length ? photos : photo ? [photo] : []
   const [idx, setIdx] = useState(0)
   const [dx, setDx] = useState(0)
+  const [dy, setDy] = useState(0)  // balayage vertical : vers le bas = fermer
   const [anim, setAnim] = useState(false)  // transition en cours (glissement fini ou retour en place)
   const touch = useRef<{ x: number; y: number; t: number; dir: 'h' | 'v' | null } | null>(null)
   const pending = useRef(0)  // -1 / +1 : changement de photo à faire à la fin de l'animation
+  const closing = useRef(false)  // glissée vers le bas : on ferme à la fin de l'animation
   useEffect(() => {
-    if (photo) { setIdx(Math.max(0, list.findIndex((p) => p.path === photo.path))); setDx(0); setAnim(false) }
+    if (photo) { setIdx(Math.max(0, list.findIndex((p) => p.path === photo.path))); setDx(0); setDy(0); setAnim(false); closing.current = false }
   }, [photo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const w = () => window.innerWidth
@@ -59,10 +61,11 @@ export function Lightbox({ photo, photos, onClose }: { photo: PhotoRef | null; p
   }
   const done = () => {
     if (!anim) return
+    if (closing.current) { closing.current = false; setAnim(false); setDy(0); onClose(); return }
     const d = pending.current
     pending.current = 0
     if (d) setIdx((i) => i + d)
-    setAnim(false); setDx(0)
+    setAnim(false); setDx(0); setDy(0)
   }
   useEffect(() => {
     if (!photo) return
@@ -85,7 +88,7 @@ export function Lightbox({ photo, photos, onClose }: { photo: PhotoRef | null; p
     if (!t || e.touches.length > 1) return
     const x = e.touches[0].clientX - t.x, y = e.touches[0].clientY - t.y
     if (!t.dir) { if (Math.hypot(x, y) < 10) return; t.dir = Math.abs(x) > Math.abs(y) * 1.2 ? 'h' : 'v' }
-    if (t.dir !== 'h') return
+    if (t.dir === 'v') { setDy(y > 0 ? y : y * 0.25); return }  // vers le haut : simple résistance
     // au bord de la liste : résistance élastique
     const edge = (x > 0 && idx === 0) || (x < 0 && idx === list.length - 1)
     setDx(edge ? x * 0.25 : x)
@@ -93,15 +96,23 @@ export function Lightbox({ photo, photos, onClose }: { photo: PhotoRef | null; p
   const onTouchEnd = () => {
     const t = touch.current
     touch.current = null
-    if (!t || t.dir !== 'h') return
+    if (!t || !t.dir) return
+    if (t.dir === 'v') {
+      const vy = dy / Math.max(1, Date.now() - t.t)
+      if (dy > window.innerHeight * 0.18 || (vy > 0.5 && dy > 40)) { closing.current = true; setAnim(true); setDy(window.innerHeight) }
+      else { setAnim(true); setDy(0) }
+      return
+    }
     const speed = Math.abs(dx) / Math.max(1, Date.now() - t.t)  // px/ms
     const far = Math.abs(dx) > w() * 0.33 || (speed > 0.6 && Math.abs(dx) > 50)
     slide(far ? (dx < 0 ? 1 : -1) : 0)
   }
 
-  const track = { transform: `translateX(calc(-100% + ${dx}px))`, transition: anim ? EASE : 'none' }
+  const track = { transform: `translate(calc(-100% + ${dx}px), ${dy}px)`, transition: anim ? EASE : 'none' }
+  // le fond s'éclaircit à mesure que la photo descend
+  const fade = Math.max(0, 1 - Math.abs(dy) / (window.innerHeight * 0.6))
   return (
-    <div className="lightbox" onClick={onClose} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+    <div className="lightbox" style={{ background: `rgba(0,0,0,${(0.93 * fade).toFixed(3)})` }} onClick={onClose} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
       <div className="lb-track" style={track} onTransitionEnd={done}>
         {[idx - 1, idx, idx + 1].map((i) => <Slide key={list[i]?.path ?? `vide${i - idx}`} photo={list[i]} />)}
       </div>
