@@ -18,12 +18,13 @@ let me: Identity | null = null
 let state: E2EEState = 'loading'
 let pins: Pins = {}
 let kekRoot: Uint8Array | null = null   // tiré du mot de passe à la connexion, gardé en mémoire seulement
+let checked = false   // clé locale confirmée par le serveur (ou serveur injoignable) : on peut envoyer
 let version = 0
 const listeners = new Set<() => void>()
 const emit = () => { version++; listeners.forEach((l) => l()) }
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l) } }
 
-export const useE2EE = () => { useSyncExternalStore(subscribe, () => version); return { state, me } }
+export const useE2EE = () => { useSyncExternalStore(subscribe, () => version); return { state, me, checked } }
 /** Se met à jour quand les clés connues changent (alerte, vérification) */
 export const usePins = () => { useSyncExternalStore(subscribe, () => version); return pins }
 export const identity = () => me
@@ -141,21 +142,25 @@ export function initE2EE(uid: string) {
     try { await doInit(uid) }
     catch (e) {  // réseau coupé en plein milieu, etc. : écran « Réessayer » plutôt qu'un chargement infini
       console.warn('initE2EE', e)
-      if (state === 'loading') { state = me ? 'ready' : 'offline'; emit() }
+      if (state === 'loading' || (state === 'ready' && !checked)) { state = me ? 'ready' : 'offline'; checked = !!me; emit() }
     }
   })
 }
 async function doInit(uid: string) {
   await ready()
-  state = 'loading'; emit()
   let id = await local.identity()
   if (id && id.uid !== uid) { await local.clear(); id = null }
   pins = await local.pins()
+  // Clé déjà sur le téléphone : l'appli s'ouvre tout de suite, la vérification auprès du serveur se fait derrière
+  // (si la clé n'est plus la bonne, on bascule ensuite sur l'écran mot de passe / réinitialisation)
+  checked = false
+  if (id && state === 'loading') { me = id; state = 'ready' } else state = 'loading'
+  emit()
   const [keys, bak] = await Promise.all([
     supabase.from('user_keys').select('*').eq('user_id', uid).order('created_at'),
     supabase.from('key_backups').select('salt, nonce, box').eq('user_id', uid).maybeSingle(),
   ])
-  if (keys.error || bak.error) { me = id; state = id ? 'ready' : 'offline'; emit(); return }
+  if (keys.error || bak.error) { me = id; state = id ? 'ready' : 'offline'; checked = !!id; emit(); return }
   const rows = keys.data as KeyRow[]
   const latest = rows.at(-1)
   const backup = bak.data as Backup | null
@@ -181,7 +186,7 @@ async function doInit(uid: string) {
 }
 
 function done(id: Identity, rows: KeyRow[]) {
-  me = id; state = 'ready'
+  me = id; state = 'ready'; checked = true
   pinMine(rows.length ? rows : [{ user_id: id.uid, sign_pk: b64(id.signPk), box_pk: b64(id.boxPk), created_at: '' }])
   emit()
 }
@@ -223,7 +228,7 @@ export async function restore(uid: string, entropy: Uint8Array) {
 
 /** Déconnexion : on efface les clés de ce téléphone (elles reviennent au prochain login) */
 export async function forgetDevice() {
-  me = null; pins = {}; kekRoot = null; state = 'loading'; epochs.clear(); plainCache.clear(); keyCache.clear()
+  me = null; pins = {}; kekRoot = null; state = 'loading'; checked = false; epochs.clear(); plainCache.clear(); keyCache.clear()
   await local.clear(); emit()
 }
 

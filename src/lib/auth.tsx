@@ -5,6 +5,17 @@ import { clearCache } from './network'
 import { resetWrites } from './offlineDb'
 import { forgetPushDevice } from './push'
 import { stopReminders } from './reminders'
+import { readCache, writeCache } from './network'
+
+/** Session gardée par Supabase sur le téléphone : lue directement pour afficher l'appli sans attendre
+ *  (getSession() attend le renouvellement du jeton par le réseau s'il a expiré, soit à chaque ouverture après 1 h) */
+function storedSession(): Session | null {
+  try {
+    const ref = new URL(import.meta.env.VITE_SUPABASE_URL as string).hostname.split('.')[0]
+    const s = JSON.parse(localStorage.getItem(`sb-${ref}-auth-token`) ?? 'null') as Session | null
+    return s?.user?.id && s.refresh_token ? s : null
+  } catch { return null }
+}
 
 /** Déconnexion : on détache d'abord ce téléphone des notifications (3 s max, hors réseau on n'attend pas) */
 export async function signOut() {
@@ -16,24 +27,30 @@ type AuthCtx = { session: Session | null; profile: Profile | null; loading: bool
 const Ctx = createContext<AuthCtx>({ session: null, profile: null, loading: true, refreshProfile: async () => {} })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [session, setSession] = useState<Session | null>(storedSession)
+  const [profile, setProfile] = useState<Profile | null>(() => {
+    const p = readCache<Profile | null>('profile', null)
+    return p && p.id === session?.user.id ? p : null
+  })
+  // Session déjà sur le téléphone : on affiche tout de suite (le profil et le jeton se mettent à jour derrière)
+  const [loading, setLoading] = useState(() => !session)
 
   const loadProfile = async (uid: string | undefined) => {
     if (!uid) { setProfile(null); return }
     const { data } = await supabase.from('profiles').select('*').eq('id', uid).single()
-    setProfile(data as Profile | null)
+    if (data) { setProfile(data as Profile); writeCache('profile', data) }
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session)
-      await loadProfile(data.session?.user.id)
+    supabase.auth.getSession().then(({ data, error }) => {
+      // jeton non renouvelé faute de réseau : on garde la session du téléphone (une vraie déconnexion arrive par SIGNED_OUT)
+      if (data.session || !error) setSession(data.session)
       setLoading(false)
+      if (data.session) loadProfile(data.session.user.id)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === 'SIGNED_OUT') { clearCache(); resetWrites(); stopReminders() }
+      if (event === 'INITIAL_SESSION') return  // déjà traité par getSession() ci-dessus
       setSession(s)
       setTimeout(() => loadProfile(s?.user.id), 0)
     })
