@@ -34,10 +34,33 @@ export type KeyRow = { user_id: string; sign_pk: string; box_pk: string; created
 
 const isBadLogin = (e: { message?: string } | null) => !!e && /invalid login credentials/i.test(e.message ?? '')
 
+/** Laisse le navigateur afficher « Connexion sécurisée… » avant le calcul Argon2id (il bloque l'écran 1 à 5 s) */
+const paint = () => new Promise((r) => setTimeout(r, 60))
+async function keysOf(password: string) { await ready(); await paint(); return passwordKeys(password) }
+
+/** Une seule opération sur les clés à la fois (double clic, écran relancé…) : sinon deux jeux de clés
+ *  peuvent être créés en même temps et la sauvegarde ne correspond plus à la clé publiée */
+let queue: Promise<unknown> = Promise.resolve()
+function serial<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queue.then(fn, fn)
+  queue = run.catch(() => {})
+  return run
+}
+/** Connexion / inscription en cours : un 2e appel identique attend le 1er au lieu d'en relancer un */
+let pending: { key: string; p: Promise<unknown> } | null = null
+function once<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  if (pending?.key === key) return pending.p as Promise<T>
+  const p = fn().finally(() => { if (pending?.p === p) pending = null })
+  pending = { key, p }
+  return p
+}
+
 /** Connexion avec le mot de passe ; convertit au passage les comptes créés avant le chiffrement */
-export async function signIn(email: string, password: string) {
-  await ready()
-  const k = passwordKeys(password)
+export function signIn(email: string, password: string) {
+  return once(`in:${email}`, () => doSignIn(email, password))
+}
+async function doSignIn(email: string, password: string) {
+  const k = await keysOf(password)
   kekRoot = k.kekRoot
   let { error } = await supabase.auth.signInWithPassword({ email, password: k.authPassword })
   if (isBadLogin(error)) {
@@ -47,9 +70,11 @@ export async function signIn(email: string, password: string) {
   if (error) { kekRoot = null; throw isBadLogin(error) ? new Error('Email ou mot de passe incorrect') : error }
 }
 
-export async function signUp(email: string, password: string, displayName: string) {
-  await ready()
-  const k = passwordKeys(password)
+export function signUp(email: string, password: string, displayName: string) {
+  return once(`up:${email}`, () => doSignUp(email, password, displayName))
+}
+async function doSignUp(email: string, password: string, displayName: string) {
+  const k = await keysOf(password)
   kekRoot = k.kekRoot
   const { data, error } = await supabase.auth.signUp({ email, password: k.authPassword, options: { data: { display_name: displayName }, emailRedirectTo: `${window.location.origin}/confirmed` } })
   if (error) { kekRoot = null; throw error }
@@ -58,11 +83,10 @@ export async function signUp(email: string, password: string, displayName: strin
 
 /** Changement de mot de passe : la sauvegarde des clés est rechiffrée avec le nouveau */
 export async function changePassword(email: string, current: string, next: string) {
-  await ready()
-  const cur = passwordKeys(current)
+  const cur = await keysOf(current)
   const check = await supabase.auth.signInWithPassword({ email, password: cur.authPassword })
   if (check.error) throw new Error('Mot de passe actuel incorrect')
-  const k = passwordKeys(next)
+  const k = await keysOf(next)
   const { error } = await supabase.auth.updateUser({ password: k.authPassword })
   if (error) throw error
   kekRoot = k.kekRoot
@@ -71,10 +95,9 @@ export async function changePassword(email: string, current: string, next: strin
 
 /** Écran de déverrouillage : le mot de passe est bon s'il ouvre la sauvegarde des clés */
 export async function unlock(uid: string, password: string) {
-  await ready()
+  const root = (await keysOf(password)).kekRoot
   const { data, error } = await supabase.from('key_backups').select('salt, nonce, box').eq('user_id', uid).maybeSingle()
   if (error) throw error
-  const root = passwordKeys(password).kekRoot
   if (!data || !openBackup(data as Backup, root)) throw new Error('Mot de passe incorrect')
   kekRoot = root
   await initE2EE(uid)
@@ -85,23 +108,22 @@ export async function unlock(uid: string, password: string) {
 export async function createKeys(uid: string, password: string, email?: string) {
   await ready()
   if (email) await signIn(email, password)
-  else kekRoot = passwordKeys(password).kekRoot
+  else kekRoot = (await keysOf(password)).kekRoot
   await initE2EE(uid)
 }
 
 /** Mot de passe de chiffrement oublié : nouvelles clés protégées par un nouveau mot de passe (historique perdu) */
 export async function forgotKeys(uid: string, newPassword: string) {
-  await ready()
-  kekRoot = passwordKeys(newPassword).kekRoot
+  kekRoot = (await keysOf(newPassword)).kekRoot
   await newKeys(uid)
 }
 
 /** Compte Google : changement du mot de passe de chiffrement (rien à changer côté Supabase) */
 export async function changeSecret(uid: string, current: string, next: string) {
-  await ready()
+  const cur = (await keysOf(current)).kekRoot
   const { data } = await supabase.from('key_backups').select('salt, nonce, box').eq('user_id', uid).maybeSingle()
-  if (!data || !openBackup(data as Backup, passwordKeys(current).kekRoot)) throw new Error('Mot de passe de chiffrement actuel incorrect')
-  kekRoot = passwordKeys(next).kekRoot
+  if (!data || !openBackup(data as Backup, cur)) throw new Error('Mot de passe de chiffrement actuel incorrect')
+  kekRoot = (await keysOf(next)).kekRoot
   if (me) await saveBackup(me)
 }
 
@@ -114,7 +136,16 @@ async function saveBackup(id: Identity) {
 }
 
 /** Au lancement : clé locale valable ? sinon on la récupère depuis la sauvegarde avec le mot de passe */
-export async function initE2EE(uid: string) {
+export function initE2EE(uid: string) {
+  return serial(async () => {
+    try { await doInit(uid) }
+    catch (e) {  // réseau coupé en plein milieu, etc. : écran « Réessayer » plutôt qu'un chargement infini
+      console.warn('initE2EE', e)
+      if (state === 'loading') { state = me ? 'ready' : 'offline'; emit() }
+    }
+  })
+}
+async function doInit(uid: string) {
   await ready()
   state = 'loading'; emit()
   let id = await local.identity()
@@ -146,7 +177,7 @@ export async function initE2EE(uid: string) {
   }
   if (latest) { state = 'restore'; me = null; return emit() }  // ancien compte à phrase, jamais sauvegardé
   if (!kekRoot) { state = 'create'; me = null; return emit() }
-  return newKeys(uid)
+  return makeKeys(uid)
 }
 
 function done(id: Identity, rows: KeyRow[]) {
@@ -167,7 +198,8 @@ function pinMine(rows: KeyRow[]) {
 }
 
 /** Nouvelles clés (premier lancement, ou après une réinitialisation du mot de passe) */
-export async function newKeys(uid: string) {
+export function newKeys(uid: string) { return serial(() => makeKeys(uid)) }
+async function makeKeys(uid: string) {
   await ready()
   const id = deriveIdentity(uid, randomEntropy())
   await publish(id)
